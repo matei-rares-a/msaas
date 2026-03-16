@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "module": "esnext",
+    "target": "esnext",
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "resolveJsonModule": true,
+    "lib": ["DOM", "ESNext"],
+    "allowJs": false,
+    "checkJs": false,
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "useDefineForClassFields": true
+  },
+  "include": ["src/**/*.d.ts", "src/**/*.ts", "src/**/*.js", "src/**/*.svelte"],
+  "exclude": ["node_modules", "dist"]
+}

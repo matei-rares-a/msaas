@@ -13,7 +13,7 @@ body {
   background-color: #f5f5f5;
 }
 
-#root {
+#app {
   min-height: 100vh;
 }
 
@@ -89,3 +89,4 @@ p {
   border-bottom-color: #4CAF50;
   font-weight: 600;
 }
+
