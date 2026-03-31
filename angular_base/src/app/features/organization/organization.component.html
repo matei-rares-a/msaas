@@ -1,0 +1,134 @@
+<div class="organization-container">
+  <div class="page-header">
+    <button class="back-button" (click)="navigateBack()">← Back to Dashboard</button>
+    <h1 *ngIf="organization">{{ organization.name }}</h1>
+  </div>
+
+  <div *ngIf="error" class="alert alert-error">
+    {{ error }}
+  </div>
+
+  <div *ngIf="success" class="alert alert-success">
+    {{ success }}
+  </div>
+
+  <div class="loading-spinner" *ngIf="loading">
+    <p>Loading organization and members...</p>
+  </div>
+
+  <div class="organization-content" *ngIf="!loading">
+    <!-- Members Section -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Members</h2>
+        <button
+          class="btn btn-primary"
+          (click)="showInviteForm = !showInviteForm"
+        >
+          {{ showInviteForm ? 'Cancel' : '+ Invite Member' }}
+        </button>
+      </div>
+
+      <div class="card-body">
+        <!-- Invite Form -->
+        <div class="invite-form" *ngIf="showInviteForm">
+          <form [formGroup]="inviteForm" (ngSubmit)="inviteMember()">
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label for="email">Email Address</label>
+                <input
+                  type="email"
+                  id="email"
+                  class="form-control"
+                  formControlName="email"
+                  placeholder="user@example.com"
+                  [class.is-invalid]="f['email'].errors"
+                />
+                <div *ngIf="f['email'].errors" class="invalid-feedback">
+                  <span *ngIf="f['email'].errors['required']">Email is required</span>
+                  <span *ngIf="f['email'].errors['email']">Invalid email format</span>
+                </div>
+              </div>
+
+              <div class="form-group flex-1">
+                <label for="role">Role</label>
+                <select id="role" class="form-control" formControlName="role">
+                  <option value="MEMBER">Member</option>
+                  <option value="MANAGER">Manager</option>
+                  <option value="ADMIN">Admin</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <button
+                  type="submit"
+                  class="btn btn-primary"
+                  [disabled]="inviteForm.invalid || invitationLoading"
+                >
+                  {{ invitationLoading ? 'Sending...' : 'Send Invitation' }}
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- Members List -->
+        <div class="members-list">
+          <div class="members-header">
+            <span class="member-email">Email</span>
+            <span class="member-role">Role</span>
+            <span class="member-joined">Joined</span>
+            <span class="member-actions">Actions</span>
+          </div>
+
+          <div class="member-item" *ngFor="let member of members">
+            <span class="member-email">{{ member.userId }}</span>
+            <span class="member-role">
+              <select
+                class="role-select"
+                [value]="member.role"
+                (change)="updateMemberRole(member.id, $any($event.target).value)"
+              >
+                <option value="MEMBER">Member</option>
+                <option value="MANAGER">Manager</option>
+                <option value="ADMIN">Admin</option>
+              </select>
+            </span>
+            <span class="member-joined">{{ member.createdAt | date:'short' }}</span>
+            <span class="member-actions">
+              <button
+                class="btn btn-sm btn-danger"
+                (click)="removeMember(member.id)"
+              >
+                Remove
+              </button>
+            </span>
+          </div>
+
+          <div class="no-members" *ngIf="members.length === 0">
+            <p>No members yet. Invite your first team member!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pending Invitations Section -->
+    <div class="card" *ngIf="invitations.length > 0">
+      <div class="card-header">
+        <h2>Pending Invitations</h2>
+      </div>
+
+      <div class="card-body">
+        <div class="invitations-list">
+          <div class="invitation-item" *ngFor="let invitation of invitations">
+            <span class="invitation-email">{{ invitation.email }}</span>
+            <span class="invitation-role">{{ invitation.role }}</span>
+            <span class="invitation-expires">
+              Expires {{ invitation.expiresAt | date:'short' }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

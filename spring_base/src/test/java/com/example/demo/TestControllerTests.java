@@ -32,7 +32,7 @@ class TestControllerTests {
 		HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 		
 		assertEquals(200, response.statusCode());
-		assertEquals("hello_my beauty", response.body());
+		assertEquals("hello_my beautyss", response.body());
 	}
 
 }

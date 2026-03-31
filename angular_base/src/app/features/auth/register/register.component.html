@@ -1,0 +1,76 @@
+<div class="register-container">
+  <div class="register-card">
+    <h1>Create Your Account</h1>
+    <p class="subtitle">Join our SaaS platform and start managing your organization</p>
+
+    <div *ngIf="error" class="alert alert-error">
+      {{ error }}
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()">
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <input
+          type="email"
+          id="email"
+          class="form-control"
+          formControlName="email"
+          placeholder="your@email.com"
+          [class.is-invalid]="submitted && f['email'].errors"
+        />
+        <div *ngIf="submitted && f['email'].errors" class="invalid-feedback">
+          <span *ngIf="f['email'].errors['required']">Email is required</span>
+          <span *ngIf="f['email'].errors['email']">Please enter a valid email</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input
+          type="password"
+          id="password"
+          class="form-control"
+          formControlName="password"
+          placeholder="••••••••"
+          [class.is-invalid]="submitted && f['password'].errors"
+        />
+        <div *ngIf="submitted && f['password'].errors" class="invalid-feedback">
+          <span *ngIf="f['password'].errors['required']">Password is required</span>
+          <span *ngIf="f['password'].errors['minlength']">Password must be at least 8 characters</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="confirmPassword">Confirm Password</label>
+        <input
+          type="password"
+          id="confirmPassword"
+          class="form-control"
+          formControlName="confirmPassword"
+          placeholder="••••••••"
+          [class.is-invalid]="submitted && (f['confirmPassword'].errors || form.errors?.['passwordMismatch'])"
+        />
+        <div *ngIf="submitted && (f['confirmPassword'].errors || form.errors?.['passwordMismatch'])" class="invalid-feedback">
+          <span *ngIf="f['confirmPassword'].errors?.['required']">Please confirm your password</span>
+          <span *ngIf="form.errors?.['passwordMismatch']">Passwords do not match</span>
+        </div>
+      </div>
+
+      <button
+        type="submit"
+        class="btn btn-primary btn-block"
+        [disabled]="loading"
+      >
+        <span *ngIf="!loading">Create Account</span>
+        <span *ngIf="loading">Creating account...</span>
+      </button>
+    </form>
+
+    <div class="footer-links">
+      <p>
+        Already have an account?
+        <a routerLink="/login">Log in here</a>
+      </p>
+    </div>
+  </div>
+</div>

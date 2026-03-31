@@ -1,0 +1,141 @@
+<div class="billing-container">
+  <div class="page-header">
+    <button class="back-button" (click)="navigateBack()">← Back to Dashboard</button>
+    <h1>Billing & Subscription</h1>
+  </div>
+
+  <div *ngIf="error" class="alert alert-error">
+    {{ error }}
+  </div>
+
+  <div *ngIf="success" class="alert alert-success">
+    {{ success }}
+  </div>
+
+  <div class="loading-spinner" *ngIf="loading">
+    <p>Loading billing information...</p>
+  </div>
+
+  <div class="billing-content" *ngIf="!loading">
+    <!-- Current Subscription -->
+    <div class="card subscription-card">
+      <div class="card-header">
+        <h2>Current Subscription</h2>
+      </div>
+
+      <div class="card-body">
+        <div *ngIf="subscription" class="subscription-details">
+          <div class="subscription-item">
+            <span class="label">Status:</span>
+            <span class="value" [ngClass]="getStatusClass(subscription.status)">
+              {{ subscription.status }}
+            </span>
+          </div>
+          <div class="subscription-item">
+            <span class="label">Plan ID:</span>
+            <span class="value">{{ subscription.planId }}</span>
+          </div>
+          <div class="subscription-item">
+            <span class="label">Start Date:</span>
+            <span class="value">{{ subscription.startDate | date:'medium' }}</span>
+          </div>
+          <div class="subscription-item" *ngIf="subscription.endDate">
+            <span class="label">End Date:</span>
+            <span class="value">{{ subscription.endDate | date:'medium' }}</span>
+          </div>
+
+          <div class="subscription-actions">
+            <button class="btn btn-danger" (click)="cancelSubscription()">
+              Cancel Subscription
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="!subscription" class="no-subscription">
+          <p>You don't have an active subscription yet.</p>
+          <p>Choose a plan below to get started!</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Available Plans -->
+    <div class="card plans-card">
+      <div class="card-header">
+        <h2>Available Plans</h2>
+      </div>
+
+      <div class="card-body">
+        <div class="plans-grid">
+          <div class="plan-card" *ngFor="let plan of plans">
+            <div class="plan-header">
+              <h3 class="plan-name">{{ plan.name }}</h3>
+              <div class="plan-price">
+                <span class="amount">${{ plan.price }}</span>
+                <span class="period">/month</span>
+              </div>
+            </div>
+
+            <div class="plan-body">
+              <div class="plan-details">
+                <span class="detail">Max Users: {{ plan.maxUsers }}</span>
+              </div>
+
+              <div class="plan-features">
+                <h4>Features:</h4>
+                <ul>
+                  <li *ngFor="let feature of plan.features">{{ feature }}</li>
+                </ul>
+              </div>
+
+              <button
+                class="btn btn-primary btn-block"
+                (click)="subscribe(plan.id)"
+                [disabled]="subscription?.planId === plan.id || selectingPlanId === plan.id"
+              >
+                <span *ngIf="selectingPlanId !== plan.id">
+                  {{ subscription?.planId === plan.id ? 'Current Plan' : 'Subscribe' }}
+                </span>
+                <span *ngIf="selectingPlanId === plan.id">Subscribing...</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Invoices Section -->
+    <div class="card invoices-card" *ngIf="invoices.length > 0">
+      <div class="card-header">
+        <h2>Invoices</h2>
+      </div>
+
+      <div class="card-body">
+        <div class="invoices-table">
+          <div class="invoices-header">
+            <span class="invoice-id">Invoice ID</span>
+            <span class="invoice-amount">Amount</span>
+            <span class="invoice-status">Status</span>
+            <span class="invoice-date">Issued Date</span>
+            <span class="invoice-paid">Paid Date</span>
+          </div>
+
+          <div class="invoice-row" *ngFor="let invoice of invoices">
+            <span class="invoice-id">{{ invoice.id | slice:0:8 }}...</span>
+            <span class="invoice-amount">${{ invoice.amount }}</span>
+            <span class="invoice-status" [ngClass]="'status-' + invoice.status.toLowerCase()">
+              {{ invoice.status }}
+            </span>
+            <span class="invoice-date">{{ invoice.issuedAt | date:'short' }}</span>
+            <span class="invoice-paid">{{ invoice.paidAt | date:'short' || 'Pending' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" *ngIf="invoices.length === 0">
+      <div class="card-body">
+        <p class="text-center">No invoices yet.</p>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,155 @@
+<div class="dashboard-container">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h2>SaaS Platform</h2>
+      <button class="close-sidebar" (click)="showOrgDropdown = false">×</button>
+    </div>
+
+    <!-- User Info -->
+    <div class="user-info" *ngIf="user">
+      <div class="user-avatar">{{ user.email.charAt(0).toUpperCase() }}</div>
+      <div class="user-details">
+        <p class="user-email">{{ user.email }}</p>
+        <p class="user-role">{{ user.role }}</p>
+      </div>
+    </div>
+
+    <!-- Organization Switcher -->
+    <div class="org-switcher">
+      <button
+        class="org-button"
+        (click)="showOrgDropdown = !showOrgDropdown"
+        *ngIf="selectedOrg"
+      >
+        <span class="org-icon">🏢</span>
+        <span class="org-name">{{ selectedOrg.name }}</span>
+        <span class="dropdown-arrow">▼</span>
+      </button>
+
+      <div class="org-dropdown" *ngIf="showOrgDropdown">
+        <div
+          class="org-item"
+          *ngFor="let org of organizations"
+          (click)="switchOrganization(org)"
+          [class.active]="selectedOrg?.id === org.id"
+        >
+          <span class="org-icon">🏢</span>
+          {{ org.name }}
+        </div>
+        <div class="org-divider"></div>
+        <button class="org-item new-org" (click)="createNewOrganization()">
+          <span class="org-icon">+</span>
+          Create New Organization
+        </button>
+      </div>
+    </div>
+
+    <!-- Navigation Menu -->
+    <nav class="nav-menu">
+      <a routerLink="#" class="nav-item" (click)="navigateToOrganization()">
+        <span class="icon">📋</span>
+        <span class="label">Organization</span>
+      </a>
+      <a routerLink="#" class="nav-item" (click)="navigateToMembers()">
+        <span class="icon">👥</span>
+        <span class="label">Members</span>
+      </a>
+      <a routerLink="#" class="nav-item" (click)="navigateToBilling()">
+        <span class="icon">💳</span>
+        <span class="label">Billing</span>
+      </a>
+      <a routerLink="#" class="nav-item">
+        <span class="icon">⚙️</span>
+        <span class="label">Settings</span>
+      </a>
+    </nav>
+
+    <!-- Logout Button -->
+    <button class="logout-btn" (click)="logout()">
+      <span class="icon">🚪</span>
+      Logout
+    </button>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="content-header">
+      <h1>Dashboard</h1>
+      <p class="subtitle" *ngIf="selectedOrg">{{ selectedOrg.name }} - Welcome back!</p>
+    </div>
+
+    <div class="error-message" *ngIf="error">
+      <p>{{ error }}</p>
+    </div>
+
+    <div class="loading-spinner" *ngIf="loading">
+      <p>Loading organizations...</p>
+    </div>
+
+    <div class="dashboard-grid" *ngIf="!loading && selectedOrg">
+      <!-- Quick Stats -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Organization Overview</h3>
+        </div>
+        <div class="card-body">
+          <div class="stat">
+            <span class="stat-label">Organization ID:</span>
+            <span class="stat-value">{{ selectedOrg.id | slice:0:8 }}...</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Owner ID:</span>
+            <span class="stat-value">{{ selectedOrg.ownerId | slice:0:8 }}...</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Created:</span>
+            <span class="stat-value">{{ selectedOrg.createdAt | date:'short' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Quick Actions</h3>
+        </div>
+        <div class="card-body">
+          <button class="btn btn-primary" (click)="navigateToMembers()">
+            👥 Manage Members
+          </button>
+          <button class="btn btn-secondary" (click)="navigateToBilling()">
+            💳 View Billing
+          </button>
+          <button class="btn btn-secondary" (click)="createNewOrganization()">
+            ➕ New Organization
+          </button>
+        </div>
+      </div>
+
+      <!-- Organizations List -->
+      <div class="card full-width">
+        <div class="card-header">
+          <h3>Your Organizations</h3>
+        </div>
+        <div class="card-body">
+          <div class="org-list">
+            <div class="org-list-item" *ngFor="let org of organizations">
+              <div class="org-list-item-content">
+                <span class="org-name">{{ org.name }}</span>
+                <span class="org-date">Created {{ org.createdAt | date:'short' }}</span>
+              </div>
+              <button
+                class="btn btn-sm btn-outline"
+                (click)="switchOrganization(org)"
+                [disabled]="selectedOrg?.id === org.id"
+              >
+                {{ selectedOrg?.id === org.id ? 'Current' : 'Switch' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>

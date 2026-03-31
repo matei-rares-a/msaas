@@ -1,0 +1,27 @@
+<div class="page">
+  <h1>Admin Dashboard</h1>
+  <p>Manage optional platform features and review internal notifications.</p>
+
+  <p *ngIf="errorMessage" style="color: #dc2626; font-weight: 600;">{{ errorMessage }}</p>
+
+  <h2>Feature Flags</h2>
+  <ul>
+    <li *ngFor="let flag of featureFlags | keyvalue">
+      <strong>{{ flag.key }}</strong>
+      <span>: {{ flag.value ? 'ENABLED' : 'DISABLED' }}</span>
+      <button style="margin-left: 10px;" (click)="toggleFlag(flag.key)">Toggle</button>
+    </li>
+  </ul>
+
+  <h2>In-App Notifications</h2>
+  <ul>
+    <li *ngFor="let notification of notifications">
+      <strong>[{{ notification.level }}]</strong>
+      <span>{{ notification.title }} - {{ notification.message }}</span>
+      <span style="margin-left: 8px; color: #6b7280;">({{ notification.read ? 'read' : 'unread' }})</span>
+      <button *ngIf="!notification.read" style="margin-left: 10px;" (click)="markAsRead(notification.id)">
+        Mark as Read
+      </button>
+    </li>
+  </ul>
+</div>
