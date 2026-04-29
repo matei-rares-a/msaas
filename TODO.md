@@ -2,6 +2,9 @@ Project: Multi-Tenant SaaS Subscription Platform (Local-First)
 
 A production-style SaaS platform simulating real-world enterprise architecture, focused on multi-tenancy, role-based access, billing simulation, and internal tooling.
 
+
+ADD GRAPQL API
+
 📌 1. Architecture Overview
 Backend (Microservices)
 
