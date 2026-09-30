@@ -21,8 +21,8 @@ public class CorrelationIdFilter implements GlobalFilter, Ordered {
 
         ServerWebExchange mutated = exchange.mutate()
                 .request(r -> r.header("X-Correlation-Id", correlationId))
-                .response(r -> r.getHeaders().add("X-Correlation-Id", correlationId))
                 .build();
+        mutated.getResponse().getHeaders().add("X-Correlation-Id", correlationId);
 
         log.debug("Request [{}] {} - correlationId={}", correlationId,
                 exchange.getRequest().getURI(), correlationId);

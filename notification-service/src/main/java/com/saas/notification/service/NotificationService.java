@@ -21,15 +21,15 @@ public class NotificationService {
         String subject = "You're invited to join " + organizationName;
         String body = buildInvitationBody(organizationName, inviteToken);
 
-        EmailLog log = new EmailLog();
-        log.setId(UUID.randomUUID());
-        log.setToEmail(toEmail);
-        log.setSubject(subject);
-        log.setBody(body);
-        log.setStatus("SENT");
-        log.setEventType("USER_INVITED");
+        EmailLog emailLog = new EmailLog();
+        emailLog.setId(UUID.randomUUID());
+        emailLog.setToEmail(toEmail);
+        emailLog.setSubject(subject);
+        emailLog.setBody(body);
+        emailLog.setStatus("SENT");
+        emailLog.setEventType("USER_INVITED");
 
-        emailLogRepository.save(log);
+        emailLogRepository.save(emailLog);
         log.info("Invitation email sent to: {}", toEmail);
     }
 
@@ -38,15 +38,15 @@ public class NotificationService {
         String subject = "Password Reset Request";
         String body = buildPasswordResetBody(resetToken);
 
-        EmailLog log = new EmailLog();
-        log.setId(UUID.randomUUID());
-        log.setToEmail(toEmail);
-        log.setSubject(subject);
-        log.setBody(body);
-        log.setStatus("SENT");
-        log.setEventType("PASSWORD_RESET");
+        EmailLog emailLog = new EmailLog();
+        emailLog.setId(UUID.randomUUID());
+        emailLog.setToEmail(toEmail);
+        emailLog.setSubject(subject);
+        emailLog.setBody(body);
+        emailLog.setStatus("SENT");
+        emailLog.setEventType("PASSWORD_RESET");
 
-        emailLogRepository.save(log);
+        emailLogRepository.save(emailLog);
         log.info("Password reset email sent to: {}", toEmail);
     }
 
