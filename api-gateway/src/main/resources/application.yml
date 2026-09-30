@@ -2,6 +2,8 @@ server:
   port: 8080
 
 spring:
+  config:
+    import: optional:file:.env[.properties],optional:file:../.env[.properties]
   application:
     name: api-gateway
   cloud:
@@ -35,7 +37,7 @@ spring:
             - Path=/notifications/**
 
 jwt:
-  secret: ${JWT_SECRET:my-super-secret-key-that-is-at-least-32-chars-long}
+  secret: ${JWT_SECRET}
 
 management:
   endpoints:

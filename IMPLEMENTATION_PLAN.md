@@ -177,6 +177,7 @@ Comenzi standard (`mvnw.cmd` pe Windows / `./mvnw` pe Linux; necesita JDK 21 in 
 ### Faza 2 - Fundatia de date multi-tenant
 - [ ] **P2.1 Topologia Postgres**: DB `saas_global` + DB `saas_shard_1` cu schemele `org`, `billing`, `notif`; un rol DB per serviciu cu acces doar la schema lui; rol separat pentru relay-ul de outbox; PgBouncer in transaction pooling in `docker-compose.yml`. REQ: DATA-04, DATA-05, SCALE-04.
   - Teste: fiecare rol se conecteaza la schema lui; accesul la schema altui serviciu esueaza cu "permission denied"; conexiunea prin PgBouncer functioneaza.
+  - Reamintire: verifica daca imaginile `bitnami/kafka:latest` / `bitnami/zookeeper:latest` din `docker-compose.yml` mai pot fi descarcate (Bitnami a retras imaginile gratuite); daca nu, trecere la o imagine oficiala cu versiune fixata (ex. `apache/kafka`, KRaft, fara Zookeeper).
 - [ ] **P2.2 Tenancy in `shared-lib`**: `TenantContext`, `TenantScopedEntity` (`tenant_id`), repository de baza care filtreaza automat si executa `SET LOCAL app.tenant_id` la inceputul fiecarei tranzactii; exceptie daca lipseste contextul. REQ: DATA-03, DATA-08, ARCH-01.
   - Teste: fara context -> zero randuri/exceptie; tenantul A nu vede datele lui B nici prin repository, nici prin SQL brut (RLS).
 - [ ] **P2.3 Migrari Flyway noi**: scheme recreate de la zero; `tenant_id` peste tot; roluri `ADMIN/MANAGER/USER`; RLS activat si fortat, fail-closed; cheie unica (`tenant_id`, `id`) si FK compuse; fara FK intre scheme. REQ: DATA-02, DATA-03, DATA-07, DATA-09, DATA-10, DATA-11.
@@ -213,6 +214,7 @@ Comenzi standard (`mvnw.cmd` pe Windows / `./mvnw` pe Linux; necesita JDK 21 in 
   - Teste: cele trei cazuri; `loginSessionId` refolosit sau expirat -> respins; un user eliminat din tenant nu mai primeste token pentru el imediat dupa eliminare.
 - [ ] **P5.3 Token per tenant**: o singura implementare JWT in `shared-lib` (se elimina copiile din gateway/auth/org); claims exact cele cerute; access 15 min, refresh cu rotatie; gateway-ul valideaza si transmite contextul. REQ: AUTH-04, AUTH-05, PWD-04.
   - Teste: tokenul contine doar claims-urile cerute; tokenul tenantului A e respins pe resursele tenantului B; access token expirat -> 401 (cu `MutableClock`).
+  - Reamintire: secretele de dev sunt temporar publice in `.env` (radacina); decide daca raman asa sau se muta in afara repo-ului.
 - [ ] **P5.4 Resetarea parolei**: token 1h single-use, o cerere noua le invalideaza pe cele vechi; raspuns identic pentru email existent/inexistent si aceeasi munca de hashing pe ambele ramuri; revocarea tuturor refresh token-urilor; comanda de email de confirmare; fara intrare in jurnalul de tenant; fara endpoint de reset initiat de admin; rate limit 3/ora per email, 10/ora per IP. REQ: PWD-02, PWD-03, PWD-04, PWD-05, PWD-07, PWD-08, PWD-09.
   - Teste: fiecare regula de mai sus; pentru anti-enumerare se verifica raspunsul identic si ca ambele ramuri executa hashing-ul (nu masurare de timp).
 

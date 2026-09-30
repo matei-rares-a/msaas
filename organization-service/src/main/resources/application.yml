@@ -1,10 +1,12 @@
 spring:
+  config:
+    import: optional:file:.env[.properties],optional:file:../.env[.properties]
   application:
     name: organization-service
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:5432/saas_org
-    username: ${DB_USER:admin}
-    password: ${DB_PASSWORD:admin}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -27,14 +29,14 @@ spring:
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
     port: 5672
-    username: ${RABBITMQ_USER:guest}
-    password: ${RABBITMQ_PASSWORD:guest}
+    username: ${RABBITMQ_USER}
+    password: ${RABBITMQ_PASSWORD}
 
 server:
   port: 8082
 
 jwt:
-  secret: ${JWT_SECRET:my-super-secret-key-that-is-at-least-32-chars-long}
+  secret: ${JWT_SECRET}
 
 springdoc:
   swagger-ui:

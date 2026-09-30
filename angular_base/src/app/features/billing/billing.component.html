@@ -126,7 +126,7 @@
               {{ invoice.status }}
             </span>
             <span class="invoice-date">{{ invoice.issuedAt | date:'short' }}</span>
-            <span class="invoice-paid">{{ invoice.paidAt | date:'short' || 'Pending' }}</span>
+            <span class="invoice-paid">{{ (invoice.paidAt | date:'short') || 'Pending' }}</span>
           </div>
         </div>
       </div>

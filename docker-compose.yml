@@ -6,15 +6,15 @@ services:
     image: postgres:15-alpine
     container_name: saas-postgres
     environment:
-      POSTGRES_PASSWORD: admin
-      POSTGRES_INITDB_ARGS: "-U admin"
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_INITDB_ARGS: "-U ${DB_USER}"
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -55,8 +55,8 @@ services:
       - "5672:5672"
       - "15672:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 10s
@@ -87,7 +87,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      JWT_SECRET: my-super-secret-key-that-is-at-least-32-chars-long
+      JWT_SECRET: ${JWT_SECRET}
     depends_on:
       - auth-service
       - organization-service
@@ -109,9 +109,9 @@ services:
       - "8081:8081"
     environment:
       DB_HOST: postgres
-      DB_USER: admin
-      DB_PASSWORD: admin
-      JWT_SECRET: my-super-secret-key-that-is-at-least-32-chars-long
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
       KAFKA_BROKERS: kafka:9092
     depends_on:
       postgres:
@@ -134,13 +134,13 @@ services:
       - "8082:8082"
     environment:
       DB_HOST: postgres
-      DB_USER: admin
-      DB_PASSWORD: admin
-      JWT_SECRET: my-super-secret-key-that-is-at-least-32-chars-long
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
       KAFKA_BROKERS: kafka:9092
       RABBITMQ_HOST: rabbitmq
-      RABBITMQ_USER: guest
-      RABBITMQ_PASSWORD: guest
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy
@@ -164,13 +164,13 @@ services:
       - "8083:8083"
     environment:
       DB_HOST: postgres
-      DB_USER: admin
-      DB_PASSWORD: admin
-      JWT_SECRET: my-super-secret-key-that-is-at-least-32-chars-long
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
       KAFKA_BROKERS: kafka:9092
       RABBITMQ_HOST: rabbitmq
-      RABBITMQ_USER: guest
-      RABBITMQ_PASSWORD: guest
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
       REDIS_HOST: redis
     depends_on:
       postgres:
@@ -197,12 +197,12 @@ services:
       - "8084:8084"
     environment:
       DB_HOST: postgres
-      DB_USER: admin
-      DB_PASSWORD: admin
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
       KAFKA_BROKERS: kafka:9092
       RABBITMQ_HOST: rabbitmq
-      RABBITMQ_USER: guest
-      RABBITMQ_PASSWORD: guest
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy

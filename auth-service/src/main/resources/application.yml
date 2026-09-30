@@ -1,10 +1,12 @@
 spring:
+  config:
+    import: optional:file:.env[.properties],optional:file:../.env[.properties]
   application:
     name: auth-service
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:5432/saas_auth
-    username: ${DB_USER:admin}
-    password: ${DB_PASSWORD:admin}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -29,7 +31,7 @@ server:
   port: 8081
 
 jwt:
-  secret: ${JWT_SECRET:my-super-secret-key-that-is-at-least-32-chars-long}
+  secret: ${JWT_SECRET}
   access-token-expiry-ms: 86400000
   refresh-token-expiry-ms: 604800000
 
