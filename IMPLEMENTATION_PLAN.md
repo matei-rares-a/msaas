@@ -12,14 +12,14 @@ Sursa de adevar pentru CUM si IN CE ORDINE: acest document.
 3. Fiecare pas se considera terminat doar daca:
    - codul pentru toate REQ-urile pasului este implementat;
    - fiecare REQ al pasului are cel putin un test automat marcat cu `@Tag("REQ-...")` (sau `describe('REQ-...')` in frontend);
-   - `mvn verify` pentru modulele atinse trece (fara teste sarite/`@Disabled`);
+   - `mvnw verify` pentru modulele atinse trece (fara teste sarite/`@Disabled`); pentru frontend `npm run build` + `npm run test:ci`;
    - scriptul de trasabilitate (P0.3) trece;
-   - pasul este bifat (`[x]`) si are o linie in Jurnalul de progres (sectiunea 5).
-4. Schimbarile de cerinte se fac intai in REQUIREMENTS.md, apoi in catalogul din sectiunea 1, apoi in pasii afectati.
+   - pasul este bifat (`[x]`), are o linie in Jurnalul de progres (sectiunea 5) si un commit local `P<faza>.<pas>: <rezumat>`.
+4. Schimbarile de cerinte (doar la cerere explicita) se fac in ordinea: clarificarea deciziilor deschise -> REQUIREMENTS.md (inclusiv sectiunile existente atinse) -> verificarea contradictiilor in tot documentul -> catalogul din sectiunea 1 (toti pasii care implementeaza ID-ul, inclusiv frontend) -> pasii afectati si testele lor -> sectiunea 4 -> Jurnalul de progres -> commit `P<pas curent> (cerinte): ...`.
 5. Parametrii din sectiunea 4 sunt valori implicite configurabile, nu cerinte; se schimba doar in configurare.
 6. Nu se sterg/rescriu teste existente ale unui pas deja terminat fara a explica de ce si fara a pastra acoperirea REQ-urilor lui.
 7. Nu se fac push-uri, stergeri de branch-uri sau alte actiuni ireversibile fara confirmare.
-8. La fiecare prompt care modifica cod se verifica conformitatea codului atins cu REQUIREMENTS.md (REQ-urile pasului curent + orice REQ afectat); nepotrivirile se raporteaza explicit in raspuns.
+8. La fiecare prompt care modifica cod sau cerinte se verifica conformitatea cu REQUIREMENTS.md (REQ-urile pasului curent + orice REQ afectat); nepotrivirile se raporteaza explicit in raspuns.
 9. Mesajele de commit incep cu ID-ul pasului (`P0.2: ...`); modificarile din afara pasului folosesc pasul curent + sufix (`P0.3 (cerinte): ...`, `P0.3 (deviere): ...`).
 
 ---
@@ -120,19 +120,19 @@ Fiecare ID trebuie sa apara in cel putin un test (tag) dupa ce pasul lui e bifat
 | REQ-EVT-08 | Fara tenant automat la inregistrare | P4.1, P5.1 |
 | REQ-EVT-09 | Autorizare sincrona la login; proiectii locale in rest | P5.2, P7.1 |
 | REQ-EVT-10 | Ordine per tenant: cheie `tenantId` (`userId` pentru identitate) | P3.4 |
-| REQ-MOD-01 | Module de business in org-service, tenant-scoped; activare per tenant doar de ADMIN, implicit dezactivate; doar-citire blocheaza orice scriere; gratie/suspendare aplicate; fus orar per tenant (implicit `Europe/Bucharest`) | P9.6, P9.7 |
+| REQ-MOD-01 | Module de business in org-service, tenant-scoped; activare per tenant doar de ADMIN (setare de organizatie, nu feature flag), implicit dezactivate, datele pastrate la dezactivare; doar-citire blocheaza orice scriere; gratie/suspendare aplicate si actiunilor automate; fus orar per tenant ales de ADMIN (implicit `Europe/Bucharest`) | P9.6, P9.7, P11.5 |
 | REQ-LEAVE-01 | Cerere pentru sine: `ODIHNA`/`FARA_PLATA`, zile intregi in acelasi an, motiv vizibil doar aprobatorilor | P9.6 |
 | REQ-LEAVE-02 | Se numara doar zilele lucratoare (fara weekend si zile libere definite de ADMIN) | P9.6 |
 | REQ-LEAVE-03 | Sold `ODIHNA`: implicit per tenant + suprascriere per user (ADMIN); disponibil = alocat - aprobat - pending; depasire sau suprapunere respinsa | P9.6 |
 | REQ-LEAVE-04 | Stari `PENDING`/`APPROVED`/`REJECTED`/`CANCELLED`; anulare doar inainte de inceput, zilele revin | P9.6 |
-| REQ-LEAVE-05 | Aproba MANAGER/ADMIN, niciodata propria cerere; singurul MANAGER/ADMIN -> auto-aprobare jurnalizata | P9.6 |
-| REQ-LEAVE-06 | Vizibilitate: proprii + sold; calendar echipa fara tip/motiv; aprobatorii vad tot | P9.6 |
-| REQ-LEAVE-07 | Notificari (cerere noua, decizie) + intrari in jurnal | P9.6 |
+| REQ-LEAVE-05 | Aproba MANAGER/ADMIN fara flag doar-citire, niciodata propria cerere; solicitantul e singurul aprobator -> auto-aprobare jurnalizata | P9.6 |
+| REQ-LEAVE-06 | Vizibilitate: proprii + sold; calendar echipa fara tip/motiv; aprobatorii vad tot | P9.6, P11.5 |
+| REQ-LEAVE-07 | Notificari (cerere noua catre ceilalti aprobatori; aprobare/respingere/anulare de catre aprobator catre solicitant) + intrari in jurnal | P9.6 |
 | REQ-LEAVE-08 | Offboarding: cererile userului din tenant se sterg | P9.6 |
 | REQ-LUNCH-01 | Configurare (zi, ora limita, marime grup 2-4) de MANAGER/ADMIN | P9.7 |
 | REQ-LUNCH-02 | O runda pe saptamana; inscriere per runda, retragere pana la ora limita; anulare de MANAGER/ADMIN | P9.7 |
 | REQ-LUNCH-03 | Grupare aleatoare la ora limita, minim 2 per grup, evitarea perechilor recente; sub 2 participanti -> runda anulata | P9.7 |
-| REQ-LUNCH-04 | Notificare cu grupul (sau anularea); participantii isi vad grupul, MANAGER/ADMIN toate grupurile | P9.7 |
+| REQ-LUNCH-04 | Notificare cu grupul (sau anularea); participantii isi vad grupul, MANAGER/ADMIN toate grupurile | P9.7, P11.5 |
 | REQ-LUNCH-05 | Retentie 90 zile; offboarding sterge participarile; nu apare in jurnal | P9.7 |
 
 In afara scopului acestei versiuni (nu se testeaza, doar se verifica ca nu au fost introduse): read replicas, autoscaling, monitorizare cross-tenant, rolul TEMP, broadcast de anunturi, multi-moneda, multi-regiune, concediu medical, jumatati de zi si report de zile de concediu.
@@ -255,7 +255,7 @@ Comenzi standard (`mvnw.cmd` pe Windows / `./mvnw` pe Linux; necesita JDK 21 in 
 ### Faza 7 - Invitatii si offboarding
 - [ ] **P7.1 Invitatii**: ADMIN invita cu orice rol, MANAGER doar USER, USER deloc; expirare configurabila per tenant; revocare de catre ADMIN; limita `maxUsers` din proiectia locala; email trimis prin comanda RabbitMQ (PII doar in comanda); acceptarea creeaza membership-ul. REQ: ROLE-02, ROLE-05, MGR-01, INV-01, INV-02, BILL-03, EVT-02, EVT-09.
   - Teste: matricea rol-invitator x rol-invitat; invitatie expirata/revocata respinsa; invitare peste `maxUsers` respinsa; evenimentul Kafka nu contine email.
-- [ ] **P7.2 Offboarding**: anonimizarea numelui/email-ului in tenant, stergerea PII tenant-scoped, stergerea notificarilor userului din tenant; identitatea globala neatinsa; stergerea identitatii globale la cererea userului sau cand nu mai are tenanti. REQ: DATA-01, NOTIF-05.
+- [ ] **P7.2 Offboarding**: anonimizarea numelui/email-ului in tenant, stergerea PII tenant-scoped, stergerea notificarilor userului din tenant; identitatea globala neatinsa; stergerea identitatii globale la cererea userului sau cand nu mai are tenanti; offboarding-ul publica un eveniment (doar ID-uri) pe care modulele adaugate ulterior (P9.6, P9.7) il consuma ca sa-si stearga datele userului. REQ: DATA-01, NOTIF-05.
   - Teste: dupa offboarding datele din tenant sunt anonimizate/sterse, facturile raman valide, userul se poate loga in celelalte tenanturi.
 
 ### Faza 8 - Personalizare
@@ -278,9 +278,9 @@ Comenzi standard (`mvnw.cmd` pe Windows / `./mvnw` pe Linux; necesita JDK 21 in 
 - [ ] **P9.5 Notificari in-app**: generate din lista de evenimente v1; per tenant; listare, numar necitite, marcare ca citit; retentie 90 zile. REQ: NOTIF-01, NOTIF-02, NOTIF-03, NOTIF-04, NOTIF-05.
   - Teste: fiecare eveniment din lista genereaza notificarea catre destinatarul corect; notificarile altui tenant nu sunt vizibile; stergerea dupa 90 zile (cu `MutableClock`).
 - [ ] **P9.6 Modulul cereri de concediu** (org-service, schema `org`): activarea modulelor per tenant din `tenant_settings` (doar ADMIN, implicit dezactivat) + fus orar al tenantului; cereri, calculul zilelor lucratoare, sold si suprascrieri, zile libere, tranzitii de stare, aprobare cu regula anti-auto-aprobare, calendarul echipei, evenimente Kafka doar cu ID-uri, notificari si intrari in jurnal, stergere la offboarding. REQ: MOD-01, LEAVE-01..08, MON-01, NOTIF-03.
-  - Teste: modul dezactivat -> inaccesibil, activarea de non-ADMIN -> 403; membru doar-citire nu poate cere; calcul zile peste weekend si zile libere; depasire sold si suprapunere respinse; pending rezerva din sold; anulare dupa inceput respinsa (cu `MutableClock`); matrice `(rol, actiune, status)`; propria cerere nu se poate aproba; singurul ADMIN -> auto-aprobare + intrare in jurnal; calendarul echipei nu expune tipul/motivul; izolare A/B (`RlsAssertions`); evenimentul Kafka nu contine motivul sau nume; offboarding sterge cererile.
+  - Teste: modul dezactivat -> inaccesibil, activarea de non-ADMIN -> 403, activarea/dezactivarea -> intrare in jurnal, dezactivare + reactivare -> datele pastrate; fusul orar se schimba doar de ADMIN; membru doar-citire nu poate cere si nu poate aproba; calcul zile peste weekend si zile libere; depasire sold si suprapunere respinse; pending rezerva din sold; anulare dupa inceput respinsa (cu `MutableClock`); matrice `(rol, actiune, status)`; propria cerere nu se poate aproba; solicitantul e singurul aprobator (inclusiv cand ceilalti MANAGER/ADMIN sunt doar-citire) -> auto-aprobare + intrare in jurnal; anularea de catre aprobator -> notificare catre solicitant; calendarul echipei nu expune tipul/motivul; scrierea blocata in perioada de gratie; izolare A/B (`RlsAssertions`); evenimentul Kafka nu contine motivul sau nume; evenimentul de offboarding sterge cererile.
 - [ ] **P9.7 Modulul lunch roulette** (org-service): configurare, runde saptamanale cu inscriere per runda, job la ora limita in fusul orar al tenantului (cu `Clock`), grupare aleatoare cu `Random` injectabil, evitarea perechilor recente, notificari, vizibilitate, retentie 90 zile, stergere la offboarding. Notificarea refera grupul; numele membrilor se citesc din org la afisare, nu se copiaza in evenimente. REQ: MOD-01, LUNCH-01..05, NOTIF-03.
-  - Teste: inscriere/retragere inainte si dupa ora limita; marimi 2-4 si distribuirea celor ramasi (niciun grup sub 2); sub 2 participanti -> anulare + notificare; perechile din rundele recente evitate cand e posibil (seed fix); USER nu poate configura/anula; doar-citire nu se poate inscrie; ora limita respecta fusul orar; stergere dupa 90 zile; nicio intrare in jurnal.
+  - Teste: inscriere/retragere inainte si dupa ora limita; marimi 2-4 si distribuirea celor ramasi (niciun grup sub 2); sub 2 participanti -> anulare + notificare; perechile din rundele recente evitate cand e posibil (seed fix); USER nu poate configura/anula; doar-citire nu se poate inscrie si nu poate configura; ora limita respecta fusul orar; in perioada de gratie/suspendare runda se anuleaza fara grupuri; stergere dupa 90 zile; evenimentul de offboarding sterge participarile; nicio intrare in jurnal.
 
 ### Faza 10 - Scalabilitate si gateway
 - [ ] **P10.1 Cache Redis** pentru tema, status subscriptie, roluri membership, cu invalidare la evenimentele de schimbare. REQ: SCALE-01.
@@ -337,3 +337,4 @@ Valorile de mai jos nu sunt fixate in REQUIREMENTS.md; se folosesc ca implicite 
 | P0.3 | 2026-10-01 | `scripts/check-traceability.ps1`: citeste catalogul (90 REQ) si pasii bifati, cauta `@Tag("REQ-...")` in `src/test/**/*.java` si `describe('REQ-...')` in `*.spec.ts` (fara `target`/`node_modules`/`dist`); esueaza la REQ datorat fara test sau la tag necunoscut. `scripts/check-traceability.tests.ps1`: 5 cazuri pe un catalog de exemplu, toate trec. Pe planul real: OK (0 REQ datorate) |
 | P0.4 | 2026-10-01 | `.github/workflows/ci.yml`: backend `./mvnw -B -ntp verify` (unit + integrare cu Testcontainers, rapoarte la esec), traceability (self-test + verificare), frontend (`npm ci`, build, `test:ci`). Angular: pachete aliniate la 19.2 (CLI era 21), Karma/Jasmine + `tsconfig.spec.json` + primul spec (`AuthGuard`, 3 teste); `package-lock.json` regenerat. `mvnw` marcat executabil. `CiPipelineTest` (`REQ-ARCH-04`) pazeste configurarea CI. Verificat local: test rosu -> `mvnw verify` exit 1; pas bifat cu REQ fara test -> trasabilitate exit 1. Rularea efectiva pe GitHub necesita push (neefectuat) |
 | - | 2026-10-01 | Cerinte noi: module de business (REQ-MOD-01), cereri de concediu (REQ-LEAVE-01..08), lunch roulette (REQ-LUNCH-01..05). Decizii: auto-aprobare jurnalizata cand solicitantul e singurul aprobator; doar-citire blocheaza si actiunile proprii; offboarding sterge cererile; tipuri `ODIHNA` + `FARA_PLATA`; inscriere la lunch per runda. Pasi noi P9.6, P9.7, P11.5; actualizate REQ-MON-01, REQ-NOTIF-03, P12.1, sectiunea 4 |
+| - | 2026-10-01 | Verificare de conflicte: aprobatorii de concediu exclud membrii doar-citire (altfel cererile se puteau bloca); dezactivarea unui modul pastreaza datele; activarea modulelor e setare ADMIN, distincta de feature flag-urile de platforma; fusul orar il seteaza ADMIN; in gratie/suspendare runda de lunch se anuleaza; notificarea de decizie include anularea de catre aprobator. Plan: P11.5 adaugat in catalog la MOD-01/LEAVE-06/LUNCH-04, teste noi in P9.6/P9.7, P7.2 publica eveniment de offboarding pentru module. Instructiunile agentului restructurate (pasi la fiecare prompt, definitia "terminat", procedura pentru cerinte, mediu local); sectiunea 0 aliniata |
