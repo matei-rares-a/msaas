@@ -47,7 +47,7 @@ Capacitatea de a personaliza functionalitatile si interfata aplicatiei pentru fi
 - Personalizarea nu se limiteaza la tema vizuala: pot exista ulterior si optiuni de personalizare functionala (feature flags per tenant) nelegate de aspectul vizual, adaugate in acelasi mod flexibil.(De-a lungul vietii aplicatiei, va exista posibilitatea de a adauga mai multe optiuni de personalizare.)
 
 Monitorizarea si raportarea activitatilor la nivel de tenant.
-- Se jurnalizeaza doar actiuni sensibile/administrative (login, schimbari de rol, invitatii, retragere drepturi admin, modificari de subscriptie/billing, schimbari de tema) si livrarea email-urilor legate de tenant (`EMAIL_SENT` / `EMAIL_FAILED`, vezi sectiunea de notificari), nu fiecare operatie CRUD.
+- Se jurnalizeaza doar actiuni sensibile/administrative (login, schimbari de rol, invitatii, retragere drepturi admin, modificari de subscriptie/billing, schimbari de tema, activarea/dezactivarea modulelor de business, aprobarea/respingerea/auto-aprobarea/anularea concediilor si schimbarile politicii de concediu) si livrarea email-urilor legate de tenant (`EMAIL_SENT` / `EMAIL_FAILED`, vezi sectiunea de notificari), nu fiecare operatie CRUD.
 - ADMIN si MANAGER pot vedea jurnalul de activitate al tenantului lor (vezi sectiunea MANAGER); ceilalti useri nu au acces.
 - Retentie: 6 luni in productie, configurabila (in medii de testare se foloseste o valoare de ordinul minutelor/orelor).
 - Raportul se obtine la cerere, paginat si filtrabil (dupa data, tip eveniment, actor); nu exista feed live in timp real.
@@ -88,6 +88,7 @@ Un rol suplimentar MANAGER, cu privilegii intre ADMIN si USER, existent deja in 
 - Managementul rolurilor (promovare/retrogradare a altor useri) ramane exclusiv ADMIN; MANAGER nu poate schimba rolul niciunui user.
 - MANAGER poate vedea jurnalul de activitate al tenantului, alaturi de ADMIN.
 - Nu exista o limita minima sau maxima de MANAGER per organizatie (poate fi si zero), spre deosebire de regula "cel putin un ADMIN".
+- In modulele de business, MANAGER aproba/respinge cererile de concediu si configureaza lunch roulette; politica de concediu si activarea modulelor raman exclusiv ADMIN (vezi sectiunea Module de business).
 
 Un flux de resetare a parolei pentru useri care si-au uitat credentialele.
 - Parola este globala, per identitate (email), nu per tenant; resetarea se aplica accesului la toate tenanturile userului, consistent cu fluxul de login (email+parola, apoi selectie tenant).
@@ -103,7 +104,7 @@ Un flux de resetare a parolei pentru useri care si-au uitat credentialele.
 Notificari in-app pentru useri, separate de email-uri, si un jurnal de email-uri trimise vizibil pentru audit.
 - Notificarile in-app sunt per tenant (`tenant_id` + `user_id`): userul vede doar notificarile tenantului activ din token. Evenimentele identitatii globale (ex. schimbarea parolei) se comunica doar prin email.
 - Notificarile in-app sunt generate exclusiv de sistem, pe baza evenimentelor interne; nu exista endpoint public prin care un user sa creeze notificari. Anunturile de tip broadcast trimise de ADMIN/MANAGER catre tot tenantul pot fi adaugate ulterior, prin feature flag.
-- Evenimente care genereaza notificari in-app in v1: schimbarea rolului (catre userul afectat), cererea de acceptare a retrogradarii ultimului ADMIN (catre adminul vizat), invitatie acceptata (catre ADMIN/MANAGER), subscriptie trecuta in PAST_DUE sau trial care expira in 3 zile (catre ADMIN/MANAGER), export asincron gata de descarcare (catre userul care l-a cerut).
+- Evenimente care genereaza notificari in-app in v1: schimbarea rolului (catre userul afectat), cererea de acceptare a retrogradarii ultimului ADMIN (catre adminul vizat), invitatie acceptata (catre ADMIN/MANAGER), subscriptie trecuta in PAST_DUE sau trial care expira in 3 zile (catre ADMIN/MANAGER), export asincron gata de descarcare (catre userul care l-a cerut), cerere de concediu noua (catre ceilalti MANAGER/ADMIN), decizie asupra unei cereri de concediu (catre solicitant), grupul de lunch roulette format sau runda anulata (catre participanti).
 - Notificarile se incarca la deschiderea aplicatiei; numarul de notificari necitite se actualizeaza prin polling la 60 de secunde. Nu exista websocket/SSE in aceasta versiune.
 - Retentia notificarilor in-app este de 90 de zile (citite sau necitite), dupa care se sterg automat. La offboarding-ul unui user dintr-un tenant, notificarile lui din acel tenant se sterg.
 - Din email-urile trimise se pastreaza doar metadate (destinatar, template/tip eveniment, subiect, status, data), fara body, pentru a nu stoca secrete precum linkuri de resetare sau tokenuri de invitatie.
@@ -140,3 +141,23 @@ Alinierea strategiei curente de baze de date (o schema separata per serviciu) cu
 - Nu exista chei straine intre schemele unor servicii diferite si nici intre shard-uri si baza globala: referintele intre servicii se fac doar prin ID, iar consistenta se mentine prin evenimente.
 - In interiorul unui serviciu, cheile straine intre tabele tenant-scoped sunt compuse (`tenant_id`, `id`), iar tabelele referite au o cheie unica pe (`tenant_id`, `id`); astfel baza de date respinge orice referinta catre un rand al altui tenant, chiar si in cazul unui bug in aplicatie.
 - Datele din cataloagele globale referite din shard-uri (ex. planurile) nu se sterg niciodata, ci doar se dezactiveaza, pentru ca subscriptiile existente sa nu ramana cu referinte catre inregistrari inexistente.
+
+Module de business (functionalitati folosite de toti membrii organizatiei, cu permisiuni suplimentare pentru MANAGER si ADMIN).
+- Reguli comune: modulele traiesc in organization-service (schema `org`), sunt tenant-scoped (`tenant_id` + RLS) si se activeaza per tenant doar de ADMIN, din setarile tenantului (`tenant_settings`), implicit dezactivate; un modul dezactivat nu este accesibil. Flag-ul doar-citire de pe membership blocheaza orice scriere in module, inclusiv actiunile asupra propriei persoane. Regimul read-only din perioada de gratie billing si suspendarea se aplica si modulelor. Evenimentele Kafka ale modulelor contin doar identificatori. Fiecare tenant are un fus orar in setari (implicit `Europe/Bucharest`), folosit pentru date calendaristice si ore limita.
+
+Cereri de concediu.
+- Orice membru fara flag doar-citire poate cere concediu pentru sine: tip `ODIHNA` sau `FARA_PLATA`, interval de zile intregi (data de inceput si de sfarsit inclusiv, in acelasi an calendaristic) si un motiv optional, vizibil doar aprobatorilor. Nu exista concediu medical, jumatati de zi sau report de zile in aceasta versiune.
+- Se numara doar zilele lucratoare: fara sambata, duminica si zilele libere legale definite de ADMIN in lista tenantului.
+- Doar `ODIHNA` consuma din sold. Soldul anual implicit e configurat de ADMIN per tenant, cu posibilitate de suprascriere per user; soldul disponibil = alocat - aprobat - in asteptare. O cerere care depaseste soldul disponibil sau care se suprapune cu o alta cerere in asteptare/aprobata a aceluiasi user este respinsa la creare.
+- Stari: `PENDING` -> `APPROVED` / `REJECTED` (cu comentariu optional) / `CANCELLED`. Solicitantul isi poate anula cererea `PENDING`; o cerere `APPROVED` poate fi anulata de solicitant sau de un aprobator doar daca nu a inceput inca, iar zilele revin in sold. Concediile inceput sau trecute nu se mai modifica.
+- Aproba sau resping MANAGER si ADMIN, dar nimeni nu isi aproba propria cerere. Daca solicitantul este singurul MANAGER/ADMIN din tenant, cererea se aproba automat la creare, cu intrare in jurnalul de activitate.
+- Vizibilitate: fiecare membru isi vede propriile cereri si soldul; toti membrii vad calendarul echipei cu concediile aprobate (doar nume si interval, fara tip sau motiv); MANAGER si ADMIN vad toate cererile, inclusiv tipul si motivul.
+- Notificari in-app: cerere noua catre ceilalti MANAGER/ADMIN; decizia catre solicitant. Aprobarile, respingerile, auto-aprobarile, anularea concediilor aprobate si schimbarile de sold/zile libere apar in jurnalul de activitate.
+- La offboarding-ul unui user dintr-un tenant, cererile lui de concediu din acel tenant se sterg.
+
+Lunch roulette.
+- ADMIN activeaza modulul; MANAGER si ADMIN configureaza ziua saptamanii, ora limita de inscriere din acea zi (in fusul orar al tenantului) si marimea grupului (intre 2 si 4).
+- Exista o runda pe saptamana. Inscrierea este per runda: fiecare membru fara flag doar-citire se inscrie explicit si se poate retrage pana la ora limita. MANAGER si ADMIN pot anula o runda inainte de ora limita.
+- La ora limita participantii sunt impartiti aleator in grupuri de marimea configurata; cei ramasi sunt distribuiti in grupurile existente, astfel incat niciun grup sa nu aiba mai putin de 2 persoane. Se evita, pe cat posibil, repetarea acelorasi perechi din rundele recente. Sub 2 participanti, runda se anuleaza.
+- Fiecare participant primeste o notificare in-app cu membrii grupului sau (sau cu anularea rundei). Participantii isi vad propriul grup; MANAGER si ADMIN vad toate grupurile rundei.
+- Rundele si grupurile se pastreaza 90 de zile, apoi se sterg automat; la offboarding, participarile userului in acel tenant se sterg. Inscrierile si rundele nu apar in jurnalul de activitate.

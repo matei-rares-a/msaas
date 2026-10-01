@@ -68,7 +68,7 @@ Fiecare ID trebuie sa apara in cel putin un test (tag) dupa ce pasul lui e bifat
 | REQ-PERS-05 | Tema implicita la crearea tenantului | P8.1 |
 | REQ-PERS-06 | Tema prin endpoint dedicat, aplicata la reload | P8.1, P11.2 |
 | REQ-PERS-07 | Feature flags per tenant in `tenant_settings` | P8.3 |
-| REQ-MON-01 | Se jurnalizeaza actiunile sensibile + livrarea email-urilor de tenant; nu CRUD | P9.1, P9.4 |
+| REQ-MON-01 | Se jurnalizeaza actiunile sensibile + livrarea email-urilor de tenant; nu CRUD | P9.1, P9.4, P9.6 |
 | REQ-MON-02 | Jurnal vizibil ADMIN+MANAGER | P9.2 |
 | REQ-MON-03 | Retentie 6 luni configurabila (minute/ore in test) | P3.5 |
 | REQ-MON-04 | Raport la cerere, paginat, filtrabil | P9.2 |
@@ -102,7 +102,7 @@ Fiecare ID trebuie sa apara in cel putin un test (tag) dupa ce pasul lui e bifat
 | REQ-PWD-09 | Resetul poate fi initiat doar de user | P5.4 |
 | REQ-NOTIF-01 | Notificari in-app per tenant | P9.5 |
 | REQ-NOTIF-02 | Generate doar de sistem; fara endpoint public de creare | P1.3, P9.5 |
-| REQ-NOTIF-03 | Lista de evenimente v1 care genereaza notificari | P9.5 |
+| REQ-NOTIF-03 | Lista de evenimente v1 care genereaza notificari | P9.5, P9.6, P9.7 |
 | REQ-NOTIF-04 | Incarcare la deschidere, numar necitite prin polling 60s | P9.5, P11.3 |
 | REQ-NOTIF-05 | Retentie 90 zile; stergere la offboarding | P9.5, P7.2 |
 | REQ-NOTIF-06 | Din email-uri se pastreaza doar metadate | P1.1, P9.4 |
@@ -120,8 +120,22 @@ Fiecare ID trebuie sa apara in cel putin un test (tag) dupa ce pasul lui e bifat
 | REQ-EVT-08 | Fara tenant automat la inregistrare | P4.1, P5.1 |
 | REQ-EVT-09 | Autorizare sincrona la login; proiectii locale in rest | P5.2, P7.1 |
 | REQ-EVT-10 | Ordine per tenant: cheie `tenantId` (`userId` pentru identitate) | P3.4 |
+| REQ-MOD-01 | Module de business in org-service, tenant-scoped; activare per tenant doar de ADMIN, implicit dezactivate; doar-citire blocheaza orice scriere; gratie/suspendare aplicate; fus orar per tenant (implicit `Europe/Bucharest`) | P9.6, P9.7 |
+| REQ-LEAVE-01 | Cerere pentru sine: `ODIHNA`/`FARA_PLATA`, zile intregi in acelasi an, motiv vizibil doar aprobatorilor | P9.6 |
+| REQ-LEAVE-02 | Se numara doar zilele lucratoare (fara weekend si zile libere definite de ADMIN) | P9.6 |
+| REQ-LEAVE-03 | Sold `ODIHNA`: implicit per tenant + suprascriere per user (ADMIN); disponibil = alocat - aprobat - pending; depasire sau suprapunere respinsa | P9.6 |
+| REQ-LEAVE-04 | Stari `PENDING`/`APPROVED`/`REJECTED`/`CANCELLED`; anulare doar inainte de inceput, zilele revin | P9.6 |
+| REQ-LEAVE-05 | Aproba MANAGER/ADMIN, niciodata propria cerere; singurul MANAGER/ADMIN -> auto-aprobare jurnalizata | P9.6 |
+| REQ-LEAVE-06 | Vizibilitate: proprii + sold; calendar echipa fara tip/motiv; aprobatorii vad tot | P9.6 |
+| REQ-LEAVE-07 | Notificari (cerere noua, decizie) + intrari in jurnal | P9.6 |
+| REQ-LEAVE-08 | Offboarding: cererile userului din tenant se sterg | P9.6 |
+| REQ-LUNCH-01 | Configurare (zi, ora limita, marime grup 2-4) de MANAGER/ADMIN | P9.7 |
+| REQ-LUNCH-02 | O runda pe saptamana; inscriere per runda, retragere pana la ora limita; anulare de MANAGER/ADMIN | P9.7 |
+| REQ-LUNCH-03 | Grupare aleatoare la ora limita, minim 2 per grup, evitarea perechilor recente; sub 2 participanti -> runda anulata | P9.7 |
+| REQ-LUNCH-04 | Notificare cu grupul (sau anularea); participantii isi vad grupul, MANAGER/ADMIN toate grupurile | P9.7 |
+| REQ-LUNCH-05 | Retentie 90 zile; offboarding sterge participarile; nu apare in jurnal | P9.7 |
 
-In afara scopului acestei versiuni (nu se testeaza, doar se verifica ca nu au fost introduse): read replicas, autoscaling, monitorizare cross-tenant, rolul TEMP, broadcast de anunturi, multi-moneda, multi-regiune.
+In afara scopului acestei versiuni (nu se testeaza, doar se verifica ca nu au fost introduse): read replicas, autoscaling, monitorizare cross-tenant, rolul TEMP, broadcast de anunturi, multi-moneda, multi-regiune, concediu medical, jumatati de zi si report de zile de concediu.
 
 ---
 
@@ -252,7 +266,7 @@ Comenzi standard (`mvnw.cmd` pe Windows / `./mvnw` pe Linux; necesita JDK 21 in 
 - [ ] **P8.3 Feature flags per tenant** in `tenant_settings`. REQ: PERS-07, ARCH-02.
   - Teste: flag activ pentru un tenant nu afecteaza alt tenant; valoarea implicita e dezactivat.
 
-### Faza 9 - Jurnal de activitate si notificari (functionalitati)
+### Faza 9 - Jurnal de activitate, notificari si module de business
 - [ ] **P9.1 Scrierea in jurnal**: consumatori de evenimente pentru lista de actiuni sensibile (login, roluri, invitatii, retrogradarea ultimului ADMIN, subscriptie, tema); evenimentele de parola sunt ignorate. REQ: MON-01, PWD-08.
   - Teste: fiecare tip de eveniment produce exact o intrare; evenimentele de parola nu produc intrari; operatiile CRUD obisnuite nu produc intrari.
 - [ ] **P9.2 Citirea jurnalului prin GraphQL** (`spring-boot-starter-graphql` in notification-service, rutat prin gateway): query doar-citire, paginat, filtrabil (data, tip, actor); fara mutatii; tenantul din token, nu din argumente; doar ADMIN si MANAGER; limite de adancime/complexitate; introspectie dezactivata in profilul de productie. REQ: MON-02, MON-04, MON-08, MGR-04.
@@ -263,6 +277,10 @@ Comenzi standard (`mvnw.cmd` pe Windows / `./mvnw` pe Linux; necesita JDK 21 in 
   - Teste: furnizor care esueaza de 3 ori -> `FAILED`; email de invitatie -> intrare in jurnal; email de reset -> nicio intrare; nu exista endpoint de preferinte.
 - [ ] **P9.5 Notificari in-app**: generate din lista de evenimente v1; per tenant; listare, numar necitite, marcare ca citit; retentie 90 zile. REQ: NOTIF-01, NOTIF-02, NOTIF-03, NOTIF-04, NOTIF-05.
   - Teste: fiecare eveniment din lista genereaza notificarea catre destinatarul corect; notificarile altui tenant nu sunt vizibile; stergerea dupa 90 zile (cu `MutableClock`).
+- [ ] **P9.6 Modulul cereri de concediu** (org-service, schema `org`): activarea modulelor per tenant din `tenant_settings` (doar ADMIN, implicit dezactivat) + fus orar al tenantului; cereri, calculul zilelor lucratoare, sold si suprascrieri, zile libere, tranzitii de stare, aprobare cu regula anti-auto-aprobare, calendarul echipei, evenimente Kafka doar cu ID-uri, notificari si intrari in jurnal, stergere la offboarding. REQ: MOD-01, LEAVE-01..08, MON-01, NOTIF-03.
+  - Teste: modul dezactivat -> inaccesibil, activarea de non-ADMIN -> 403; membru doar-citire nu poate cere; calcul zile peste weekend si zile libere; depasire sold si suprapunere respinse; pending rezerva din sold; anulare dupa inceput respinsa (cu `MutableClock`); matrice `(rol, actiune, status)`; propria cerere nu se poate aproba; singurul ADMIN -> auto-aprobare + intrare in jurnal; calendarul echipei nu expune tipul/motivul; izolare A/B (`RlsAssertions`); evenimentul Kafka nu contine motivul sau nume; offboarding sterge cererile.
+- [ ] **P9.7 Modulul lunch roulette** (org-service): configurare, runde saptamanale cu inscriere per runda, job la ora limita in fusul orar al tenantului (cu `Clock`), grupare aleatoare cu `Random` injectabil, evitarea perechilor recente, notificari, vizibilitate, retentie 90 zile, stergere la offboarding. Notificarea refera grupul; numele membrilor se citesc din org la afisare, nu se copiaza in evenimente. REQ: MOD-01, LUNCH-01..05, NOTIF-03.
+  - Teste: inscriere/retragere inainte si dupa ora limita; marimi 2-4 si distribuirea celor ramasi (niciun grup sub 2); sub 2 participanti -> anulare + notificare; perechile din rundele recente evitate cand e posibil (seed fix); USER nu poate configura/anula; doar-citire nu se poate inscrie; ora limita respecta fusul orar; stergere dupa 90 zile; nicio intrare in jurnal.
 
 ### Faza 10 - Scalabilitate si gateway
 - [ ] **P10.1 Cache Redis** pentru tema, status subscriptie, roluri membership, cu invalidare la evenimentele de schimbare. REQ: SCALE-01.
@@ -277,10 +295,11 @@ Comenzi standard (`mvnw.cmd` pe Windows / `./mvnw` pe Linux; necesita JDK 21 in 
 - [ ] **P11.2 Tema si logo**: aplicarea temei la incarcare; editor de tema pentru ADMIN cu selectie din paleta. REQ: PERS-01, PERS-06.
 - [ ] **P11.3 Notificari**: incarcare la deschidere, numar necitite prin polling la 60s. REQ: NOTIF-04.
 - [ ] **P11.4 UI pe roluri**: ADMIN/MANAGER/USER si flag doar-citire; billing vizibil doar-citire pentru MANAGER; pagina de jurnal pentru ADMIN/MANAGER (client GraphQL). REQ: ROLE-05, MGR-02, MGR-04, ROLE-06.
-  - Teste (toata faza): teste unit pe servicii/guard-uri + Playwright pe fluxurile de login, tema si notificari.
+- [ ] **P11.5 UI module de business**: activarea modulelor (ADMIN); concediu: cerere, sold, calendarul echipei, ecran de aprobare (MANAGER/ADMIN), politica de concediu (ADMIN); lunch roulette: inscriere/retragere, grupul meu, configurare si toate grupurile (MANAGER/ADMIN). REQ: MOD-01, LEAVE-06, LUNCH-04.
+  - Teste (toata faza): teste unit pe servicii/guard-uri + Playwright pe fluxurile de login, tema, notificari si cerere de concediu.
 
 ### Faza 12 - E2E si finalizare
-- [ ] **P12.1 Suita E2E** pe Docker Compose: izolare intre tenanti, invitatie -> accept -> login, perioada de gratie billing, resetare parola.
+- [ ] **P12.1 Suita E2E** pe Docker Compose: izolare intre tenanti, invitatie -> accept -> login, perioada de gratie billing, resetare parola, cerere de concediu -> aprobare -> notificare, runda de lunch roulette.
 - [ ] **P12.2 Trasabilitate 100%**: toate REQ-urile din catalog au teste; documentele vechi care descriu alt comportament (ex. rezumate "production ready") sunt actualizate sau marcate ca depasite.
 - [ ] **P12.3 Verificari non-cod**: configuratia de deployment foloseste doar regiunea EU (REQ-DATA-13); elementele din afara scopului nu au fost introduse.
 
@@ -300,6 +319,9 @@ Valorile de mai jos nu sunt fixate in REQUIREMENTS.md; se folosesc ca implicite 
 | Limita agregata per tenant per user activ | 5 req/s | P10.2 |
 | Pragul de timp pentru trecerea la async | 5 secunde | P9.3 |
 | Retentia jurnalului / topic-urilor Kafka in test | 10 minute | P3.4, P3.5 |
+| Sold anual implicit `ODIHNA` (suprascris de ADMIN per tenant/user) | 21 zile lucratoare | P9.6 |
+| Lunch roulette: zi / ora limita / marime grup (suprascrise de MANAGER/ADMIN) | joi / 11:00 / 2 | P9.7 |
+| Lunch roulette: runde recente luate in calcul la evitarea perechilor | 4 | P9.7 |
 
 ---
 
@@ -314,3 +336,4 @@ Valorile de mai jos nu sunt fixate in REQUIREMENTS.md; se folosesc ca implicite 
 | P0.2 | 2026-09-30 | `test-support`: `SharedContainers` (Postgres 15-alpine, Kafka cp 7.6.1 KRaft, RabbitMQ 3.13, Redis 7; pornite lazy, o data per JVM) + interfete `*TestContainer` cu `@ServiceConnection`; `MutableClock`, `TenantFixtures` (in memorie), `JwtTestTokens`, `RlsAssertions` (JDBC, rol non-superuser), `EventAssertions` (Kafka/RabbitMQ cu Awaitility). Teste: 6 unit + 9 integrare (`SharedContainersIT` = testul de fum, `RlsAssertionsIT`). `mvnw verify` din radacina: BUILD SUCCESS |
 | P0.3 | 2026-10-01 | `scripts/check-traceability.ps1`: citeste catalogul (90 REQ) si pasii bifati, cauta `@Tag("REQ-...")` in `src/test/**/*.java` si `describe('REQ-...')` in `*.spec.ts` (fara `target`/`node_modules`/`dist`); esueaza la REQ datorat fara test sau la tag necunoscut. `scripts/check-traceability.tests.ps1`: 5 cazuri pe un catalog de exemplu, toate trec. Pe planul real: OK (0 REQ datorate) |
 | P0.4 | 2026-10-01 | `.github/workflows/ci.yml`: backend `./mvnw -B -ntp verify` (unit + integrare cu Testcontainers, rapoarte la esec), traceability (self-test + verificare), frontend (`npm ci`, build, `test:ci`). Angular: pachete aliniate la 19.2 (CLI era 21), Karma/Jasmine + `tsconfig.spec.json` + primul spec (`AuthGuard`, 3 teste); `package-lock.json` regenerat. `mvnw` marcat executabil. `CiPipelineTest` (`REQ-ARCH-04`) pazeste configurarea CI. Verificat local: test rosu -> `mvnw verify` exit 1; pas bifat cu REQ fara test -> trasabilitate exit 1. Rularea efectiva pe GitHub necesita push (neefectuat) |
+| - | 2026-10-01 | Cerinte noi: module de business (REQ-MOD-01), cereri de concediu (REQ-LEAVE-01..08), lunch roulette (REQ-LUNCH-01..05). Decizii: auto-aprobare jurnalizata cand solicitantul e singurul aprobator; doar-citire blocheaza si actiunile proprii; offboarding sterge cererile; tipuri `ODIHNA` + `FARA_PLATA`; inscriere la lunch per runda. Pasi noi P9.6, P9.7, P11.5; actualizate REQ-MON-01, REQ-NOTIF-03, P12.1, sectiunea 4 |
