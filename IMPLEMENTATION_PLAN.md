@@ -19,6 +19,8 @@ Sursa de adevar pentru CUM si IN CE ORDINE: acest document.
 5. Parametrii din sectiunea 4 sunt valori implicite configurabile, nu cerinte; se schimba doar in configurare.
 6. Nu se sterg/rescriu teste existente ale unui pas deja terminat fara a explica de ce si fara a pastra acoperirea REQ-urilor lui.
 7. Nu se fac push-uri, stergeri de branch-uri sau alte actiuni ireversibile fara confirmare.
+8. La fiecare prompt care modifica cod se verifica conformitatea codului atins cu REQUIREMENTS.md (REQ-urile pasului curent + orice REQ afectat); nepotrivirile se raporteaza explicit in raspuns.
+9. Mesajele de commit incep cu ID-ul pasului (`P0.2: ...`); modificarile din afara pasului folosesc pasul curent + sufix (`P0.3 (cerinte): ...`, `P0.3 (deviere): ...`).
 
 ---
 
