@@ -152,6 +152,8 @@ Comenzi standard (`mvnw.cmd` pe Windows / `./mvnw` pe Linux; necesita JDK 21 in 
 - Doar teste unit (fara Docker): `mvnw verify -DskipITs`
 - Conventie: testele de integrare se numesc `*IT` sau `*IntegrationTests` (ruleaza in failsafe), restul in surefire
 - Trasabilitate: `pwsh scripts/check-traceability.ps1` (testul scriptului: `pwsh scripts/check-traceability.tests.ps1`)
+- Frontend (din `angular_base`): `npm run build`, `npm run test:ci` (Karma headless; local fara Chrome: `$env:CHROME_BIN` catre `msedge.exe`)
+- CI: `.github/workflows/ci.yml` (joburi backend, traceability, frontend); ruleaza la push pe `main` si la pull request
 - Conventie tag-uri: Java `@Tag("REQ-XXX-NN")` pe clasa sau metoda de test (in `src/test`); frontend `describe('REQ-XXX-NN ...')` in `*.spec.ts`. Un REQ devine obligatoriu de acoperit cand oricare dintre pasii lui din catalog e bifat; tag-urile care nu exista in catalog fac verificarea sa esueze.
 
 ---
@@ -165,7 +167,7 @@ Comenzi standard (`mvnw.cmd` pe Windows / `./mvnw` pe Linux; necesita JDK 21 in 
   - Teste: un test de fum care porneste toate containerele o singura data si se conecteaza la fiecare.
 - [x] **P0.3 Trasabilitate**: conventia `@Tag("REQ-...")` + `scripts/check-traceability.ps1`, care citeste catalogul din sectiunea 1 si esueaza daca un REQ al unui pas bifat nu are niciun test.
   - Teste: scriptul raporteaza corect un REQ lipsa (test al scriptului pe un catalog de exemplu).
-- [ ] **P0.4 CI**: GitHub Actions cu `mvn verify` (unit + integrare), scriptul de trasabilitate, build + teste Angular. REQ: ARCH-04.
+- [x] **P0.4 CI**: GitHub Actions cu `mvn verify` (unit + integrare), scriptul de trasabilitate, build + teste Angular. REQ: ARCH-04.
   - Teste: pipeline-ul esueaza la un test rosu si la un REQ fara test.
 
 ### Faza 1 - Inchiderea gaurilor de securitate existente
@@ -311,3 +313,4 @@ Valorile de mai jos nu sunt fixate in REQUIREMENTS.md; se folosesc ca implicite 
 | - | 2026-09-30 | Cerinta noua: citirea jurnalului prin GraphQL doar-citire (REQ-MON-08); actualizate P9.2, P10.3, P11.4 si REQ-ARCH-03 (corectat si maparea P10.4 -> P10.3). Secretele de dev mutate temporar in `.env`; build-ul Angular reparat |
 | P0.2 | 2026-09-30 | `test-support`: `SharedContainers` (Postgres 15-alpine, Kafka cp 7.6.1 KRaft, RabbitMQ 3.13, Redis 7; pornite lazy, o data per JVM) + interfete `*TestContainer` cu `@ServiceConnection`; `MutableClock`, `TenantFixtures` (in memorie), `JwtTestTokens`, `RlsAssertions` (JDBC, rol non-superuser), `EventAssertions` (Kafka/RabbitMQ cu Awaitility). Teste: 6 unit + 9 integrare (`SharedContainersIT` = testul de fum, `RlsAssertionsIT`). `mvnw verify` din radacina: BUILD SUCCESS |
 | P0.3 | 2026-10-01 | `scripts/check-traceability.ps1`: citeste catalogul (90 REQ) si pasii bifati, cauta `@Tag("REQ-...")` in `src/test/**/*.java` si `describe('REQ-...')` in `*.spec.ts` (fara `target`/`node_modules`/`dist`); esueaza la REQ datorat fara test sau la tag necunoscut. `scripts/check-traceability.tests.ps1`: 5 cazuri pe un catalog de exemplu, toate trec. Pe planul real: OK (0 REQ datorate) |
+| P0.4 | 2026-10-01 | `.github/workflows/ci.yml`: backend `./mvnw -B -ntp verify` (unit + integrare cu Testcontainers, rapoarte la esec), traceability (self-test + verificare), frontend (`npm ci`, build, `test:ci`). Angular: pachete aliniate la 19.2 (CLI era 21), Karma/Jasmine + `tsconfig.spec.json` + primul spec (`AuthGuard`, 3 teste); `package-lock.json` regenerat. `mvnw` marcat executabil. `CiPipelineTest` (`REQ-ARCH-04`) pazeste configurarea CI. Verificat local: test rosu -> `mvnw verify` exit 1; pas bifat cu REQ fara test -> trasabilitate exit 1. Rularea efectiva pe GitHub necesita push (neefectuat) |

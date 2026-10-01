@@ -52,6 +52,14 @@
           "options": {
             "port": 4200
           }
+        },
+        "test": {
+          "builder": "@angular-devkit/build-angular:karma",
+          "options": {
+            "polyfills": ["zone.js", "zone.js/testing"],
+            "tsConfig": "tsconfig.spec.json",
+            "styles": ["src/styles.css"]
+          }
         }
       }
     }
