@@ -73,13 +73,14 @@ Fiecare ID trebuie sa apara in cel putin un test (tag) dupa ce pasul lui e bifat
 | REQ-MON-05 | Export CSV (ADMIN) | P9.3 |
 | REQ-MON-06 | Intrare generica (`event_type`, `actor_user_id`, `tenant_id`, `metadata`, `created_at`) | P3.5 |
 | REQ-MON-07 | Partitii lunare, index `tenant_id`, `DROP PARTITION`; job de stergere in test | P3.5 |
+| REQ-MON-08 | Citirea jurnalului prin GraphQL doar-citire; tenant din token; limite de adancime/complexitate; introspectie oprita in productie | P9.2, P10.3 |
 | REQ-SCALE-01 | Cache Redis cu invalidare prin evenimente; emiterea tokenului fara cache | P5.2, P10.1 |
 | REQ-SCALE-02 | Rate limiting per user + agregat per tenant proportional cu userii activi | P10.2 |
 | REQ-SCALE-03 | Sync/async decis dinamic pe baza timpilor de executie | P9.3 |
 | REQ-SCALE-04 | PgBouncer in transaction pooling | P2.1 |
 | REQ-ARCH-01 | Repository de baza cu filtrare automata `tenant_id` | P2.2, P2.5 |
 | REQ-ARCH-02 | Feature flags booleene in `tenant_settings` | P8.3 |
-| REQ-ARCH-03 | API doar-adaugare; versionare doar la schimbari incompatibile | P10.4 |
+| REQ-ARCH-03 | API doar-adaugare; versionare doar la schimbari incompatibile (GraphQL: `@deprecated`, fara versionare) | P10.3 |
 | REQ-ARCH-04 | Teste de integrare obligatorii in CI | P0.4 |
 | REQ-BILL-01 | Payment gateway abstract + implementare simulata | P6.2 |
 | REQ-BILL-02 | Schimbare plan = cancel + resubscribe, fara proratare | P6.3 |
@@ -157,7 +158,7 @@ Comenzi standard (`mvnw.cmd` pe Windows / `./mvnw` pe Linux; necesita JDK 21 in 
 ### Faza 0 - Fundatie de build si test
 - [x] **P0.1 POM agregator la radacina**: `pom.xml` parinte cu Java 21, Spring Boot 3.2.x, BOM-uri (Testcontainers, Spring Cloud), surefire (unit) + failsafe (integrare); module: `shared-lib`, `test-support`, `api-gateway`, `auth-service`, `organization-service`, `billing-service`, `notification-service`.
   - Teste: build-ul complet `mvn verify` ruleaza din radacina.
-- [ ] **P0.2 Modulul `test-support`**: containere singleton + `@ServiceConnection`, `MutableClock`, `TenantFixtures`, `JwtTestTokens`, `RlsAssertions`, `EventAssertions`. Testele existente care nu mai corespund cerintelor se rescriu in pasul care atinge zona respectiva.
+- [x] **P0.2 Modulul `test-support`**: containere singleton + `@ServiceConnection`, `MutableClock`, `TenantFixtures`, `JwtTestTokens`, `RlsAssertions`, `EventAssertions`. Testele existente care nu mai corespund cerintelor se rescriu in pasul care atinge zona respectiva.
   - Teste: un test de fum care porneste toate containerele o singura data si se conecteaza la fiecare.
 - [ ] **P0.3 Trasabilitate**: conventia `@Tag("REQ-...")` + `scripts/check-traceability.ps1`, care citeste catalogul din sectiunea 1 si esueaza daca un REQ al unui pas bifat nu are niciun test.
   - Teste: scriptul raporteaza corect un REQ lipsa (test al scriptului pe un catalog de exemplu).
@@ -202,6 +203,7 @@ Comenzi standard (`mvnw.cmd` pe Windows / `./mvnw` pe Linux; necesita JDK 21 in 
 ### Faza 4 - Organizatii si membership-uri
 - [ ] **P4.1 Tenanti si membership-uri**: creare organizatie (creatorul devine ADMIN); membership cu rol + flag doar-citire; API intern pentru auth (tenanturile si rolurile unui user); se elimina crearea automata a organizatiei la inregistrare. REQ: AUTH-03, ROLE-06, EVT-08.
   - Teste: crearea face creatorul ADMIN; userul doar-citire primeste 403 la scriere; niciun tenant creat la evenimentul de inregistrare.
+  - Extinde `TenantFixtures` din `test-support` ca sa persiste tenantul si membership-urile.
 - [ ] **P4.2 Matricea de permisiuni in org**: ADMIN/MANAGER/USER pe baza claim-urilor din token; managementul rolurilor doar ADMIN; oricati MANAGER (inclusiv zero). REQ: ROLE-01, ROLE-05, MGR-03, MGR-05.
   - Teste: test parametrizat `(rol, endpoint, status)` pentru toate endpoint-urile org.
 - [ ] **P4.3 Regulile pentru ultimul ADMIN**: nu se poate elimina/retrograda ultimul ADMIN; o retrogradare care lasa un singur ADMIN cere acceptul celui vizat; fara raspuns in termen -> status `ESCALATED` + eveniment catre suport. REQ: ROLE-03, ROLE-04.
@@ -215,6 +217,7 @@ Comenzi standard (`mvnw.cmd` pe Windows / `./mvnw` pe Linux; necesita JDK 21 in 
 - [ ] **P5.3 Token per tenant**: o singura implementare JWT in `shared-lib` (se elimina copiile din gateway/auth/org); claims exact cele cerute; access 15 min, refresh cu rotatie; gateway-ul valideaza si transmite contextul. REQ: AUTH-04, AUTH-05, PWD-04.
   - Teste: tokenul contine doar claims-urile cerute; tokenul tenantului A e respins pe resursele tenantului B; access token expirat -> 401 (cu `MutableClock`).
   - Reamintire: secretele de dev sunt temporar publice in `.env` (radacina); decide daca raman asa sau se muta in afara repo-ului.
+  - Numele claims-urilor trebuie sa coincida cu `JwtTestTokens` din `test-support` (sau se actualizeaza ambele).
 - [ ] **P5.4 Resetarea parolei**: token 1h single-use, o cerere noua le invalideaza pe cele vechi; raspuns identic pentru email existent/inexistent si aceeasi munca de hashing pe ambele ramuri; revocarea tuturor refresh token-urilor; comanda de email de confirmare; fara intrare in jurnalul de tenant; fara endpoint de reset initiat de admin; rate limit 3/ora per email, 10/ora per IP. REQ: PWD-02, PWD-03, PWD-04, PWD-05, PWD-07, PWD-08, PWD-09.
   - Teste: fiecare regula de mai sus; pentru anti-enumerare se verifica raspunsul identic si ca ambele ramuri executa hashing-ul (nu masurare de timp).
 
@@ -247,8 +250,8 @@ Comenzi standard (`mvnw.cmd` pe Windows / `./mvnw` pe Linux; necesita JDK 21 in 
 ### Faza 9 - Jurnal de activitate si notificari (functionalitati)
 - [ ] **P9.1 Scrierea in jurnal**: consumatori de evenimente pentru lista de actiuni sensibile (login, roluri, invitatii, retrogradarea ultimului ADMIN, subscriptie, tema); evenimentele de parola sunt ignorate. REQ: MON-01, PWD-08.
   - Teste: fiecare tip de eveniment produce exact o intrare; evenimentele de parola nu produc intrari; operatiile CRUD obisnuite nu produc intrari.
-- [ ] **P9.2 Citirea jurnalului**: paginat, filtrabil (data, tip, actor); doar ADMIN si MANAGER. REQ: MON-02, MON-04, MGR-04.
-  - Teste: filtre si paginare; USER primeste 403; tenantul A nu vede intrarile lui B.
+- [ ] **P9.2 Citirea jurnalului prin GraphQL** (`spring-boot-starter-graphql` in notification-service, rutat prin gateway): query doar-citire, paginat, filtrabil (data, tip, actor); fara mutatii; tenantul din token, nu din argumente; doar ADMIN si MANAGER; limite de adancime/complexitate; introspectie dezactivata in profilul de productie. REQ: MON-02, MON-04, MON-08, MGR-04.
+  - Teste: filtre si paginare; USER respins (eroare `FORBIDDEN`); tenantul A nu vede intrarile lui B; o mutatie sau un argument `tenantId` sunt respinse de schema; query peste limita de adancime/complexitate respins; introspectia raspunde doar in afara profilului de productie.
 - [ ] **P9.3 Export CSV**: doar ADMIN; decizie sync/async pe baza timpului mediu masurat al operatiei; async ruleaza ca job RabbitMQ si genereaza notificarea "export gata". REQ: MON-05, SCALE-03.
   - Teste: export mic sincron; export peste prag asincron + notificare; MANAGER nu poate exporta.
 - [ ] **P9.4 Trimiterea email-urilor**: consumator de comenzi RabbitMQ; 3 reincercari cu backoff -> `FAILED`; doar metadate; `EMAIL_SENT`/`EMAIL_FAILED` in jurnalul tenantului, email-urile de identitate nelogate; fara setari de dezactivare. REQ: MON-01, NOTIF-06, NOTIF-07, NOTIF-08, NOTIF-09.
@@ -261,14 +264,14 @@ Comenzi standard (`mvnw.cmd` pe Windows / `./mvnw` pe Linux; necesita JDK 21 in 
   - Teste: a doua citire vine din cache; dupa evenimentul de schimbare se citeste valoarea noua.
 - [ ] **P10.2 Rate limiting** la gateway: limita per user + limita agregata per tenant proportionala cu userii activi, stocate in Redis. REQ: SCALE-02.
   - Teste: depasirea limitei per user -> 429; limita tenantului creste cu numarul de useri activi.
-- [ ] **P10.3 Compatibilitatea API**: snapshot OpenAPI per serviciu comparat in CI; o schimbare incompatibila fara versiune noua de path esueaza build-ul. REQ: ARCH-03.
-  - Teste: eliminarea unui camp din raspuns face verificarea sa esueze.
+- [ ] **P10.3 Compatibilitatea API**: snapshot OpenAPI per serviciu + snapshot al schemei GraphQL a jurnalului, comparate in CI; o schimbare REST incompatibila fara versiune noua de path, sau eliminarea/schimbarea unui camp GraphQL (in loc de `@deprecated`), esueaza build-ul. REQ: ARCH-03, MON-08.
+  - Teste: eliminarea unui camp din raspunsul REST sau din schema GraphQL face verificarea sa esueze.
 
 ### Faza 11 - Frontend Angular
 - [ ] **P11.1 Login**: selectia tenantului, cazul 0 tenanti cu "creeaza organizatie", un token per tenant pastrat de client. REQ: AUTH-01, AUTH-02, AUTH-03, AUTH-04.
 - [ ] **P11.2 Tema si logo**: aplicarea temei la incarcare; editor de tema pentru ADMIN cu selectie din paleta. REQ: PERS-01, PERS-06.
 - [ ] **P11.3 Notificari**: incarcare la deschidere, numar necitite prin polling la 60s. REQ: NOTIF-04.
-- [ ] **P11.4 UI pe roluri**: ADMIN/MANAGER/USER si flag doar-citire; billing vizibil doar-citire pentru MANAGER; pagina de jurnal pentru ADMIN/MANAGER. REQ: ROLE-05, MGR-02, MGR-04, ROLE-06.
+- [ ] **P11.4 UI pe roluri**: ADMIN/MANAGER/USER si flag doar-citire; billing vizibil doar-citire pentru MANAGER; pagina de jurnal pentru ADMIN/MANAGER (client GraphQL). REQ: ROLE-05, MGR-02, MGR-04, ROLE-06.
   - Teste (toata faza): teste unit pe servicii/guard-uri + Playwright pe fluxurile de login, tema si notificari.
 
 ### Faza 12 - E2E si finalizare
@@ -302,3 +305,5 @@ Valorile de mai jos nu sunt fixate in REQUIREMENTS.md; se folosesc ca implicite 
 | - | - | Plan creat; niciun pas inceput |
 | - | 2026-09-30 | Curatare workspace: eliminate documentele depasite, prototipurile `spring_base` si `svelte_base`, folderele goale din `api-gateway`, output-urile de build, cache-ul Angular si paginile Angular nefolosite |
 | P0.1 | 2026-09-30 | `pom.xml` parinte `msaas-parent` (Boot 3.2.5, Java 21, Spring Cloud 2023.0.1, versiuni jjwt/mapstruct/springdoc/pdfbox/archunit, surefire + failsafe) + Maven Wrapper 3.9.15; modul `test-support` schelet; toate modulele mostenesc parintele. Reparate erori preexistente de build: `flyway-database-postgresql` inexistent pentru Flyway 9, `CorrelationIdFilter` (gateway) si shadowing `log` in `NotificationService`. Sterse testele legacy necompilabile/stricate (auth, org, billing, notification). `mvnw verify` din radacina: BUILD SUCCESS (0 teste momentan) |
+| - | 2026-09-30 | Cerinta noua: citirea jurnalului prin GraphQL doar-citire (REQ-MON-08); actualizate P9.2, P10.3, P11.4 si REQ-ARCH-03 (corectat si maparea P10.4 -> P10.3). Secretele de dev mutate temporar in `.env`; build-ul Angular reparat |
+| P0.2 | 2026-09-30 | `test-support`: `SharedContainers` (Postgres 15-alpine, Kafka cp 7.6.1 KRaft, RabbitMQ 3.13, Redis 7; pornite lazy, o data per JVM) + interfete `*TestContainer` cu `@ServiceConnection`; `MutableClock`, `TenantFixtures` (in memorie), `JwtTestTokens`, `RlsAssertions` (JDBC, rol non-superuser), `EventAssertions` (Kafka/RabbitMQ cu Awaitility). Teste: 6 unit + 9 integrare (`SharedContainersIT` = testul de fum, `RlsAssertionsIT`). `mvnw verify` din radacina: BUILD SUCCESS |
