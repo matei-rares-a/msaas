@@ -191,8 +191,8 @@ Comenzi standard (`mvnw.cmd` pe Windows / `./mvnw` pe Linux; necesita JDK 21 in 
   - Teste: endpoint-ul raspunde 404; entitatea/tabela nu mai are body.
 - [x] **P1.2 Upload generic**: se elimina `POST /notifications/uploads` si directorul `uploads/`. REQ: UPL-01.
   - Teste: endpoint-ul raspunde 404.
-- [ ] **P1.3 Creare publica de notificari**: se elimina `POST /notifications/in-app`. REQ: NOTIF-02.
-  - Teste: endpoint-ul raspunde 404.
+- [x] **P1.3 Creare publica de notificari**: se elimina `POST /notifications/in-app` (si DTO-ul lui). REQ: NOTIF-02.
+  - Teste: `POST` pe ruta raspunde 405 (ruta `GET` de listare ramane) si nu creeaza nimic; niciun handler din notification-service nu creeaza notificari prin `POST`/`PUT`.
 - [ ] **P1.4 Feature flags globale neprotejate**: se elimina endpoint-urile globale din notification-service si `FeatureFlagService` (inclusiv flag-ul `FILE_UPLOADS`, ramas fara functionalitate dupa P1.2); vor fi inlocuite de flag-uri per tenant in P8.3.
   - Teste: endpoint-urile raspund 404.
 
@@ -343,3 +343,4 @@ Valorile de mai jos nu sunt fixate in REQUIREMENTS.md; se folosesc ca implicite 
 | P1.1 | 2026-10-02 | Eliminat `GET /notifications/emails-by/{email}` si `EmailLogRepository.findByToEmail`; `EmailLog` fara `body`, `NotificationService` nu mai construieste/salveaza body-ul (contine tokenuri); migrare `V3__email_logs_metadata_only.sql` (drop `body` + indexul pe `to_email`). notification-service depinde de `test-support`. `EmailLogPrivacyIT`: endpoint 404 + nicio ruta `emails`, tabela fara `body`, tokenurile de reset/invitatie nu apar in randurile salvate. `mvnw -pl notification-service -am verify`: BUILD SUCCESS |
 | P1.2 | 2026-10-02 | Eliminat `POST /notifications/uploads` (scria fisiere fara tenant/rol/limite in `uploads/`) si metoda nefolosita `BillingService.uploadAttachment` din Angular; directorul `uploads/` nu exista pe disc/in git. `GenericUploadRemovedIT` (`REQ-UPL-01`): multipart pe ruta veche -> 404 si nimic scris pe disc; niciun endpoint din notification-service nu accepta `MultipartFile`. Backend + build/teste Angular verzi. P1.4 extins cu eliminarea flag-ului `FILE_UPLOADS` |
 | - | 2026-10-02 | Proces: verificare fata de plan inainte de bifarea unui pas (descriere / teste / fara extra), in sectiunea 0 si in instructiunile agentului. Aplicata retroactiv pe P1.1 si P1.2: OK |
+| P1.3 | 2026-10-02 | Eliminat `POST /notifications/in-app` si `CreateInAppNotificationRequest`; textul testului din plan corectat (405, nu 404, pentru ca ruta `GET` de listare ramane). `PublicNotificationCreationRemovedIT` (`REQ-NOTIF-02`): `POST` -> 405 fara rand nou in `in_app_notifications`; niciun handler `POST`/`PUT` in notification-service. Verificare fata de plan: descriere OK / teste OK / fara extra OK |
