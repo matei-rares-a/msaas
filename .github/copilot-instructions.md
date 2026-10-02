@@ -35,6 +35,8 @@ Workspace-ul urmeaza un plan de implementare obligatoriu. Surse de adevar:
 - Foloseste `test-support`: containere singleton (`*TestContainer`), `MutableClock`, `TenantFixtures`, `JwtTestTokens`, `RlsAssertions`, `EventAssertions`.
 - Injecteaza `Clock`; nu apela direct `now()`.
 - Testele de integrare se numesc `*IT` (failsafe); restul ruleaza in surefire.
+- Teste de integrare in servicii: implementeaza doar interfetele `*TestContainer` necesare, opreste listenerii brokerilor nefolositi (`spring.rabbitmq.listener.simple.auto-startup=false`, `spring.kafka.listener.auto-startup=false`), pastreaza aceeasi configuratie `@SpringBootTest` in clasele unui serviciu (context refolosit).
+- Ruleaza un modul mereu cu `-am` (`test-support` nu e publicat intr-un repository).
 - Parametrii din sectiunea 4 a planului sunt valori implicite configurabile, nu cerinte.
 
 ## Commit-uri

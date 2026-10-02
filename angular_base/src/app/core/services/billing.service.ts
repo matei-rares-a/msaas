@@ -76,13 +76,4 @@ export class BillingService {
       responseType: 'blob'
     });
   }
-
-  uploadAttachment(file: File): Observable<{ fileName: string; path: string }> {
-    const formData = new FormData();
-    formData.append('file', file);
-    return this.http.post<{ fileName: string; path: string }>(
-      'http://localhost:8080/notifications/uploads',
-      formData
-    );
-  }
 }

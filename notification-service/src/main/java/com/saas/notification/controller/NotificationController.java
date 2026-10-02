@@ -20,13 +20,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -97,21 +91,5 @@ public class NotificationController {
         notification.setRead(true);
         inAppNotificationRepository.save(notification);
         return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/uploads")
-    @Operation(summary = "Upload file to local storage")
-    public ResponseEntity<Map<String, String>> uploadFile(@RequestPart("file") MultipartFile file) throws IOException {
-        Path uploadDir = Paths.get("uploads");
-        Files.createDirectories(uploadDir);
-
-        String fileName = UUID.randomUUID() + "-" + file.getOriginalFilename();
-        Path destination = uploadDir.resolve(fileName);
-        Files.copy(file.getInputStream(), destination);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
-                "fileName", fileName,
-                "path", destination.toString()
-        ));
     }
 }

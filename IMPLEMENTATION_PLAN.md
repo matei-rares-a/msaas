@@ -165,6 +165,7 @@ Comenzi standard (`mvnw.cmd` pe Windows / `./mvnw` pe Linux; necesita JDK 21 in 
 - Un REQ: `mvnw verify -Dgroups=REQ-XXX-NN`
 - Doar teste unit (fara Docker): `mvnw verify -DskipITs`
 - Conventie: testele de integrare se numesc `*IT` sau `*IntegrationTests` (ruleaza in failsafe), restul in surefire
+- Teste de integrare in servicii: clasa implementeaza doar interfetele `*TestContainer` de care are nevoie; listenerii pentru brokerii nefolositi se opresc cu `spring.rabbitmq.listener.simple.auto-startup=false` / `spring.kafka.listener.auto-startup=false`; aceeasi configuratie `@SpringBootTest` in toate clasele unui serviciu ca sa se refoloseasca contextul; pentru rute se injecteaza `@Qualifier("requestMappingHandlerMapping")` (actuator adauga un al doilea bean)
 - Trasabilitate: `pwsh scripts/check-traceability.ps1` (testul scriptului: `pwsh scripts/check-traceability.tests.ps1`)
 - Frontend (din `angular_base`): `npm run build`, `npm run test:ci` (Karma headless; local fara Chrome: `$env:CHROME_BIN` catre `msedge.exe`)
 - CI: `.github/workflows/ci.yml` (joburi backend, traceability, frontend); ruleaza la push pe `main` si la pull request
@@ -187,11 +188,11 @@ Comenzi standard (`mvnw.cmd` pe Windows / `./mvnw` pe Linux; necesita JDK 21 in 
 ### Faza 1 - Inchiderea gaurilor de securitate existente
 - [x] **P1.1 Jurnalul de email-uri**: se elimina `GET /notifications/emails-by/{email}`; se opreste salvarea body-ului email-urilor. REQ: NOTIF-06, NOTIF-07.
   - Teste: endpoint-ul raspunde 404; entitatea/tabela nu mai are body.
-- [ ] **P1.2 Upload generic**: se elimina `POST /notifications/uploads` si directorul `uploads/`. REQ: UPL-01.
+- [x] **P1.2 Upload generic**: se elimina `POST /notifications/uploads` si directorul `uploads/`. REQ: UPL-01.
   - Teste: endpoint-ul raspunde 404.
 - [ ] **P1.3 Creare publica de notificari**: se elimina `POST /notifications/in-app`. REQ: NOTIF-02.
   - Teste: endpoint-ul raspunde 404.
-- [ ] **P1.4 Feature flags globale neprotejate**: se elimina endpoint-urile globale din notification-service (vor fi inlocuite de flag-uri per tenant in P8.3).
+- [ ] **P1.4 Feature flags globale neprotejate**: se elimina endpoint-urile globale din notification-service si `FeatureFlagService` (inclusiv flag-ul `FILE_UPLOADS`, ramas fara functionalitate dupa P1.2); vor fi inlocuite de flag-uri per tenant in P8.3.
   - Teste: endpoint-urile raspund 404.
 
 ### Faza 2 - Fundatia de date multi-tenant
@@ -339,3 +340,4 @@ Valorile de mai jos nu sunt fixate in REQUIREMENTS.md; se folosesc ca implicite 
 | - | 2026-10-01 | Cerinte noi: module de business (REQ-MOD-01), cereri de concediu (REQ-LEAVE-01..08), lunch roulette (REQ-LUNCH-01..05). Decizii: auto-aprobare jurnalizata cand solicitantul e singurul aprobator; doar-citire blocheaza si actiunile proprii; offboarding sterge cererile; tipuri `ODIHNA` + `FARA_PLATA`; inscriere la lunch per runda. Pasi noi P9.6, P9.7, P11.5; actualizate REQ-MON-01, REQ-NOTIF-03, P12.1, sectiunea 4 |
 | - | 2026-10-01 | Verificare de conflicte: aprobatorii de concediu exclud membrii doar-citire (altfel cererile se puteau bloca); dezactivarea unui modul pastreaza datele; activarea modulelor e setare ADMIN, distincta de feature flag-urile de platforma; fusul orar il seteaza ADMIN; in gratie/suspendare runda de lunch se anuleaza; notificarea de decizie include anularea de catre aprobator. Plan: P11.5 adaugat in catalog la MOD-01/LEAVE-06/LUNCH-04, teste noi in P9.6/P9.7, P7.2 publica eveniment de offboarding pentru module. Instructiunile agentului restructurate (pasi la fiecare prompt, definitia "terminat", procedura pentru cerinte, mediu local); sectiunea 0 aliniata |
 | P1.1 | 2026-10-02 | Eliminat `GET /notifications/emails-by/{email}` si `EmailLogRepository.findByToEmail`; `EmailLog` fara `body`, `NotificationService` nu mai construieste/salveaza body-ul (contine tokenuri); migrare `V3__email_logs_metadata_only.sql` (drop `body` + indexul pe `to_email`). notification-service depinde de `test-support`. `EmailLogPrivacyIT`: endpoint 404 + nicio ruta `emails`, tabela fara `body`, tokenurile de reset/invitatie nu apar in randurile salvate. `mvnw -pl notification-service -am verify`: BUILD SUCCESS |
+| P1.2 | 2026-10-02 | Eliminat `POST /notifications/uploads` (scria fisiere fara tenant/rol/limite in `uploads/`) si metoda nefolosita `BillingService.uploadAttachment` din Angular; directorul `uploads/` nu exista pe disc/in git. `GenericUploadRemovedIT` (`REQ-UPL-01`): multipart pe ruta veche -> 404 si nimic scris pe disc; niciun endpoint din notification-service nu accepta `MultipartFile`. Backend + build/teste Angular verzi. P1.4 extins cu eliminarea flag-ului `FILE_UPLOADS` |
