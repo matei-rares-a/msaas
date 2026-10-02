@@ -4,9 +4,9 @@ spring:
   application:
     name: billing-service
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:5432/saas_billing
-    username: ${DB_USER}
-    password: ${DB_PASSWORD}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/saas_shard_1
+    username: ${BILLING_DB_USER:billing_svc}
+    password: ${BILLING_DB_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: validate

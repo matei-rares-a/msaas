@@ -4,9 +4,9 @@ spring:
   application:
     name: notification-service
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:5432/saas_notif
-    username: ${DB_USER}
-    password: ${DB_PASSWORD}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/saas_shard_1
+    username: ${NOTIF_DB_USER:notif_svc}
+    password: ${NOTIF_DB_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: validate

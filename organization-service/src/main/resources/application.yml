@@ -4,9 +4,9 @@ spring:
   application:
     name: organization-service
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:5432/saas_org
-    username: ${DB_USER}
-    password: ${DB_PASSWORD}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/saas_shard_1
+    username: ${ORG_DB_USER:org_svc}
+    password: ${ORG_DB_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: validate

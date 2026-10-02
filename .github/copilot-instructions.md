@@ -54,5 +54,6 @@ Workspace-ul urmeaza un plan de implementare obligatoriu. Surse de adevar:
 ## Mediu local
 - JDK 21 (`JAVA_HOME` setat la nivel de user; JDK-urile 25/26 din PATH nu sunt compatibile). Build-ul refuza alt JDK (maven-enforcer).
 - Testele de integrare au nevoie de Docker Desktop pornit.
+- Pe masina locala ruleaza un Postgres nativ pe portul 5432: `docker compose up` cu portul `5432` publicat intra in conflict; pentru verificari foloseste un proiect compose separat fara porturi publicate (`-p msaas-smoke` + override `ports: !reset []`) si curata-l cu `down -v`.
 - Testele Angular local: daca nu exista Chrome, seteaza `$env:CHROME_BIN` catre `msedge.exe`.
 - Raspunsurile catre utilizator sunt in romana.
