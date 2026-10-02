@@ -22,9 +22,6 @@ public class EmailLog {
 
     private String subject;
 
-    @Column(columnDefinition = "TEXT")
-    private String body;
-
     @Column(nullable = false)
     private String status = "SENT";
 

@@ -16,16 +16,13 @@ public class NotificationService {
 
     private final EmailLogRepository emailLogRepository;
 
+    // Only metadata is persisted: the body would contain invitation/reset tokens. Delivery itself comes in P9.4.
     @Transactional
     public void sendInvitationEmail(String toEmail, String organizationName, String inviteToken) {
-        String subject = "You're invited to join " + organizationName;
-        String body = buildInvitationBody(organizationName, inviteToken);
-
         EmailLog emailLog = new EmailLog();
         emailLog.setId(UUID.randomUUID());
         emailLog.setToEmail(toEmail);
-        emailLog.setSubject(subject);
-        emailLog.setBody(body);
+        emailLog.setSubject("You're invited to join " + organizationName);
         emailLog.setStatus("SENT");
         emailLog.setEventType("USER_INVITED");
 
@@ -35,27 +32,14 @@ public class NotificationService {
 
     @Transactional
     public void sendPasswordResetEmail(String toEmail, String resetToken) {
-        String subject = "Password Reset Request";
-        String body = buildPasswordResetBody(resetToken);
-
         EmailLog emailLog = new EmailLog();
         emailLog.setId(UUID.randomUUID());
         emailLog.setToEmail(toEmail);
-        emailLog.setSubject(subject);
-        emailLog.setBody(body);
+        emailLog.setSubject("Password Reset Request");
         emailLog.setStatus("SENT");
         emailLog.setEventType("PASSWORD_RESET");
 
         emailLogRepository.save(emailLog);
         log.info("Password reset email sent to: {}", toEmail);
-    }
-
-    private String buildInvitationBody(String orgName, String token) {
-        return "You're invited to join organization: " + orgName + "\n" +
-                "Accept invitation: /auth/invite?token=" + token;
-    }
-
-    private String buildPasswordResetBody(String token) {
-        return "Reset your password: /auth/reset?token=" + token;
     }
 }

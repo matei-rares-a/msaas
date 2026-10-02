@@ -2,7 +2,6 @@ package com.saas.notification.controller;
 
 import com.saas.notification.dto.CreateInAppNotificationRequest;
 import com.saas.notification.entity.InAppNotification;
-import com.saas.notification.repository.EmailLogRepository;
 import com.saas.notification.repository.InAppNotificationRepository;
 import com.saas.notification.service.FeatureFlagService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -38,15 +37,8 @@ import java.util.UUID;
 @Tag(name = "Notifications")
 public class NotificationController {
 
-    private final EmailLogRepository emailLogRepository;
     private final InAppNotificationRepository inAppNotificationRepository;
     private final FeatureFlagService featureFlagService;
-
-    @GetMapping("/emails-by/{email}")
-    @Operation(summary = "Get email logs by email address (admin only)")
-    public ResponseEntity<?> getEmailsByAddress(@PathVariable String email) {
-        return ResponseEntity.ok(emailLogRepository.findByToEmail(email));
-    }
 
     @GetMapping("/health")
     @Operation(summary = "Health check")
