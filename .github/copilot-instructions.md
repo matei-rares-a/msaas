@@ -17,6 +17,7 @@ Workspace-ul urmeaza un plan de implementare obligatoriu. Surse de adevar:
 - Codul acopera toate REQ-urile pasului; fiecare REQ are cel putin un test marcat `@Tag("REQ-...")` (frontend: `describe('REQ-...')`).
 - `mvnw -pl <modul> -am verify` trece pentru modulele atinse (fara teste sarite sau `@Disabled`); pentru frontend `npm run build` + `npm run test:ci`.
 - `pwsh scripts/check-traceability.ps1` trece.
+- Verificarea fata de plan (mai jos) e completa.
 - Pasul e bifat, are o linie in Jurnalul de progres si exista un commit local `P<faza>.<pas>: <rezumat>`.
 
 ## Schimbari de cerinte (doar la cerere explicita)
@@ -30,6 +31,12 @@ Workspace-ul urmeaza un plan de implementare obligatoriu. Surse de adevar:
 - La fiecare prompt care modifica cod sau cerinte: compara ce ai modificat cu textul din REQUIREMENTS.md pentru REQ-urile pasului curent si pentru orice alt REQ afectat (vezi catalogul).
 - Orice nepotrivire (cod existent sau nou care contrazice o cerinta, cerinte care se contrazic) se raporteaza explicit; nu se ignora si nu se repara in afara pasului fara confirmare.
 - In raspunsul final: REQ-urile verificate si nepotrivirile gasite (sau "nicio nepotrivire").
+
+## Verificare fata de plan (inainte de a bifa un pas)
+- Descriere: fiecare element din textul pasului e facut (ex. "se elimina endpoint-ul **si** directorul"); ce nu se poate face se raporteaza, nu se sare.
+- Teste: fiecare punct din lista `Teste:` a pasului are un test automat corespunzator.
+- Fara extra: nu s-a modificat nimic din afara pasului; daca a fost nevoie, e raportat ca deviere si confirmat.
+- In raspunsul final: `Pn.m: descriere OK / teste OK / fara extra OK` sau ce lipseste.
 
 ## Reguli de cod si teste
 - Foloseste `test-support`: containere singleton (`*TestContainer`), `MutableClock`, `TenantFixtures`, `JwtTestTokens`, `RlsAssertions`, `EventAssertions`.
