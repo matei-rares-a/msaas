@@ -2,7 +2,6 @@ package com.saas.notification.controller;
 
 import com.saas.notification.entity.InAppNotification;
 import com.saas.notification.repository.InAppNotificationRepository;
-import com.saas.notification.service.FeatureFlagService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -14,10 +13,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -27,26 +24,11 @@ import java.util.UUID;
 public class NotificationController {
 
     private final InAppNotificationRepository inAppNotificationRepository;
-    private final FeatureFlagService featureFlagService;
 
     @GetMapping("/health")
     @Operation(summary = "Health check")
     public ResponseEntity<String> health() {
         return ResponseEntity.ok("Notification service is running");
-    }
-
-    @GetMapping("/feature-flags")
-    @Operation(summary = "Get feature flags")
-    public ResponseEntity<Map<String, Boolean>> getFeatureFlags() {
-        return ResponseEntity.ok(featureFlagService.getAll());
-    }
-
-    @PatchMapping("/feature-flags/{key}")
-    @Operation(summary = "Update feature flag")
-    public ResponseEntity<Map<String, Boolean>> updateFeatureFlag(
-            @PathVariable String key,
-            @RequestParam boolean enabled) {
-        return ResponseEntity.ok(featureFlagService.update(key, enabled));
     }
 
     @GetMapping("/in-app")

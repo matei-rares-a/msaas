@@ -21,17 +21,6 @@ export class AdminService {
 
   constructor(private http: HttpClient) {}
 
-  getFeatureFlags(): Observable<Record<string, boolean>> {
-    return this.http.get<Record<string, boolean>>(`${this.apiUrl}/feature-flags`);
-  }
-
-  setFeatureFlag(flagKey: string, enabled: boolean): Observable<Record<string, boolean>> {
-    return this.http.patch<Record<string, boolean>>(
-      `${this.apiUrl}/feature-flags/${flagKey}?enabled=${enabled}`,
-      {}
-    );
-  }
-
   getInAppNotifications(): Observable<InAppNotification[]> {
     return this.http.get<InAppNotification[]>(`${this.apiUrl}/in-app`);
   }

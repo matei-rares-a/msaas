@@ -9,27 +9,13 @@ import { AdminService, InAppNotification } from '../../core/services/admin.servi
   templateUrl: './admin.component.html'
 })
 export class AdminComponent implements OnInit {
-  featureFlags: Record<string, boolean> = {};
   notifications: InAppNotification[] = [];
   errorMessage: string | null = null;
 
   constructor(private adminService: AdminService) {}
 
   ngOnInit(): void {
-    this.loadFeatureFlags();
     this.loadNotifications();
-  }
-
-  toggleFlag(key: string): void {
-    const nextValue = !this.featureFlags[key];
-    this.adminService.setFeatureFlag(key, nextValue).subscribe({
-      next: (flags) => {
-        this.featureFlags = flags;
-      },
-      error: () => {
-        this.errorMessage = `Failed to update feature flag: ${key}`;
-      }
-    });
   }
 
   markAsRead(id: string): void {
@@ -37,17 +23,6 @@ export class AdminComponent implements OnInit {
       next: () => this.loadNotifications(),
       error: () => {
         this.errorMessage = 'Failed to update notification state';
-      }
-    });
-  }
-
-  private loadFeatureFlags(): void {
-    this.adminService.getFeatureFlags().subscribe({
-      next: (flags) => {
-        this.featureFlags = flags;
-      },
-      error: () => {
-        this.errorMessage = 'Failed to load feature flags';
       }
     });
   }
