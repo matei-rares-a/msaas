@@ -1,5 +1,6 @@
 package com.saas.org.service;
 
+import com.saas.org.dto.MemberRoleResponse;
 import com.saas.org.dto.OrganizationResponse;
 import com.saas.org.entity.Membership;
 import com.saas.org.entity.Tenant;
@@ -13,9 +14,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.util.UUID;
 
 /**
- * Organization = tenant creation/management (REQ-AUTH-03, REQ-ROLE-06). Uses a programmatic
- * {@link TransactionTemplate}, not {@code @Transactional}: the AOP proxy would start the transaction
- * (and {@link com.saas.shared.tenancy.TenantAwareJpaTransactionManager} would read the tenant context)
+ * Organization = tenant creation/management (REQ-AUTH-03, REQ-ROLE-06, REQ-ROLE-01, REQ-ROLE-05,
+ * REQ-MGR-03, REQ-MGR-05). Uses a programmatic {@link TransactionTemplate}, not {@code @Transactional}:
+ * the AOP proxy would start the transaction (and
+ * {@link com.saas.shared.tenancy.TenantAwareJpaTransactionManager} would read the tenant context)
  * before this method body gets a chance to set it via {@link TenantContext#callWith}.
  */
 @Service
@@ -65,6 +67,25 @@ public class OrganizationService {
             tenant.setName(newName);
             tenantRepository.save(tenant);
             return new OrganizationResponse(tenant.getId(), tenant.getName());
+        }));
+    }
+
+    /**
+     * Role management is ADMIN-only, regardless of how many ADMIN/MANAGER a tenant has (REQ-MGR-03,
+     * REQ-ROLE-01, REQ-ROLE-05); any number of MANAGER, including zero, is allowed (REQ-MGR-05).
+     */
+    public MemberRoleResponse updateMemberRole(UUID tenantId, UUID callerUserId, UUID targetUserId, Membership.Role newRole) {
+        return TenantContext.callWith(tenantId, () -> transactionTemplate.execute(status -> {
+            Membership caller = membershipRepository.findByUserId(callerUserId)
+                    .orElseThrow(() -> new SecurityException("not a member of this organization"));
+            if (caller.isReadOnly() || caller.getRole() != Membership.Role.ADMIN) {
+                throw new SecurityException("only an ADMIN with write access can manage roles");
+            }
+            Membership target = membershipRepository.findByUserId(targetUserId)
+                    .orElseThrow(() -> new IllegalArgumentException("member not found"));
+            target.setRole(newRole);
+            membershipRepository.save(target);
+            return new MemberRoleResponse(target.getUserId(), target.getRole().name());
         }));
     }
 }

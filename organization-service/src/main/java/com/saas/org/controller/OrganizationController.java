@@ -1,8 +1,10 @@
 package com.saas.org.controller;
 
 import com.saas.org.dto.CreateOrganizationRequest;
+import com.saas.org.dto.MemberRoleResponse;
 import com.saas.org.dto.OrganizationResponse;
 import com.saas.org.dto.RenameOrganizationRequest;
+import com.saas.org.dto.UpdateMemberRoleRequest;
 import com.saas.org.service.OrganizationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,4 +33,12 @@ public class OrganizationController {
             @Valid @RequestBody RenameOrganizationRequest request) {
         return ResponseEntity.ok(organizationService.renameOrganization(tenantId, callerUserId, request.getName()));
     }
+
+    @PatchMapping("/{tenantId}/members/{userId}/role")
+    public ResponseEntity<MemberRoleResponse> updateMemberRole(@PathVariable UUID tenantId, @PathVariable UUID userId,
+            @RequestHeader("X-User-Id") UUID callerUserId,
+            @Valid @RequestBody UpdateMemberRoleRequest request) {
+        return ResponseEntity.ok(organizationService.updateMemberRole(tenantId, callerUserId, userId, request.getRole()));
+    }
 }
+

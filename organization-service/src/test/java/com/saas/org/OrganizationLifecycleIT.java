@@ -32,7 +32,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @SpringBootTest(properties = {
         "spring.kafka.listener.auto-startup=false",
-        "spring.rabbitmq.listener.simple.auto-startup=false"
+        "spring.rabbitmq.listener.simple.auto-startup=false",
+        // distinct from OrganizationPermissionMatrixIT's marker: both classes set the same system
+        // properties in their own static initializer, so Spring's context cache must not conflate them
+        "test.marker=OrganizationLifecycleIT"
 })
 @AutoConfigureMockMvc
 class OrganizationLifecycleIT {
