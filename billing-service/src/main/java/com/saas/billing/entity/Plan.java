@@ -1,5 +1,6 @@
 package com.saas.billing.entity;
 
+import com.saas.shared.tenancy.GlobalEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -14,6 +15,7 @@ import java.util.UUID;
 
 /** Platform catalog, not tenant data: it moves to the global database in P6.1 (REQ-DATA-05). */
 @Entity
+@GlobalEntity
 @Table(schema = "billing", name = "plans")
 @Getter
 @Setter
