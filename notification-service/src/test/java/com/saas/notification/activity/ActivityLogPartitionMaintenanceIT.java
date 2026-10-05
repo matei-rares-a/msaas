@@ -118,6 +118,7 @@ class ActivityLogPartitionMaintenanceIT implements PostgresTestContainer {
     @TestConfiguration
     static class ClockOverride {
         @Bean
+        @org.springframework.context.annotation.Primary
         Clock clock() {
             return MutableClock.startingNow();
         }

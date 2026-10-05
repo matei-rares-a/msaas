@@ -19,6 +19,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(403).body(errorBody(ex.getMessage()));
     }
 
+    /** A business rule would be violated (e.g. demoting the last ADMIN, responding twice). */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalState(IllegalStateException ex) {
+        return ResponseEntity.status(409).body(errorBody(ex.getMessage()));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
         return ResponseEntity.badRequest().body(errorBody(ex.getMessage()));

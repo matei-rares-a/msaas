@@ -12,4 +12,6 @@ public interface MembershipRepository extends TenantScopedRepository<Membership,
     Optional<Membership> findByUserId(UUID userId);
 
     List<Membership> findAllByRole(Membership.Role role);
+
+    long countByRole(Membership.Role role);
 }

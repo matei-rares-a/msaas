@@ -76,3 +76,6 @@ saas:
         url: ${spring.datasource.url}
         username: ${ORG_AUTH_READER_DB_USER:org_auth_reader}
         password: ${ORG_AUTH_READER_DB_PASSWORD}
+  # Response deadline before an admin-demotion request escalates to support (P4.3, REQ-ROLE-04)
+  admin-demotion:
+    response-deadline: ${ADMIN_DEMOTION_RESPONSE_DEADLINE:7d}

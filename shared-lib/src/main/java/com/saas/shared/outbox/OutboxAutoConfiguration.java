@@ -5,9 +5,11 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.jdbc.DataSourceBuilder;
@@ -24,6 +26,7 @@ import javax.sql.DataSource;
  * datasource is configured, {@link OutboxRelay} plus the scheduler that drives it.
  */
 @AutoConfiguration
+@AutoConfigureAfter(DataSourceAutoConfiguration.class)
 @EnableScheduling
 @ConditionalOnProperty(prefix = "saas.outbox", name = "enabled", havingValue = "true")
 public class OutboxAutoConfiguration {
