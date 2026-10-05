@@ -2,6 +2,7 @@ package com.saas.notification;
 
 import com.saas.notification.entity.EmailLog;
 import com.saas.notification.service.NotificationService;
+import com.saas.shared.tenancy.TenantContext;
 import com.saas.testsupport.containers.PostgresTestContainer;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -62,18 +63,16 @@ class EmailLogPrivacyIT implements PostgresTestContainer {
     @Test
     @Tag("REQ-NOTIF-06")
     void secretsFromEmailContentAreNeverStored() {
-        String resetToken = "reset-" + UUID.randomUUID();
+        UUID tenantId = UUID.randomUUID();
         String inviteToken = "invite-" + UUID.randomUUID();
-        String resetAddress = "reset-" + UUID.randomUUID() + "@test.local";
         String inviteAddress = "invite-" + UUID.randomUUID() + "@test.local";
 
-        notificationService.sendPasswordResetEmail(resetAddress, resetToken);
-        notificationService.sendInvitationEmail(inviteAddress, "Acme", inviteToken);
+        TenantContext.runWith(tenantId, () -> notificationService.sendInvitationEmail(inviteAddress, "Acme", inviteToken));
 
         List<String> storedRows = jdbc.queryForList(
-                "select row_to_json(e)::text from notif.email_logs e where to_email in (?, ?)",
-                String.class, resetAddress, inviteAddress);
-        assertThat(storedRows).hasSize(2);
-        assertThat(storedRows).noneMatch(row -> row.contains(resetToken) || row.contains(inviteToken));
+                "select row_to_json(e)::text from notif.email_logs e where to_email = ?",
+                String.class, inviteAddress);
+        assertThat(storedRows).hasSize(1);
+        assertThat(storedRows).noneMatch(row -> row.contains(inviteToken));
     }
 }

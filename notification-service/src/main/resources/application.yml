@@ -41,3 +41,8 @@ management:
     web:
       exposure:
         include: health,info,metrics
+
+# Tenant-scoped service: tenant_id filter + SET LOCAL app.tenant_id per transaction (P2.2)
+saas:
+  tenancy:
+    enabled: true

@@ -94,5 +94,11 @@
             <artifactId>spring-boot-starter-data-redis</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- the schema meta-test runs the real migrations of every shard service -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>

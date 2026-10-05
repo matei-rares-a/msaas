@@ -1,18 +1,24 @@
 package com.saas.org.entity;
 
-import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.saas.shared.tenancy.TenantScopedEntity;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
 @Table(schema = "org", name = "invitations")
-@Data
-@NoArgsConstructor
-public class Invitation {
+@Getter
+@Setter
+public class Invitation extends TenantScopedEntity {
 
     @Id
     private UUID id;
@@ -20,22 +26,19 @@ public class Invitation {
     @Column(nullable = false)
     private String email;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "organization_id", nullable = false)
-    private Organization organization;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Membership.Role role = Membership.Role.MEMBER;
+    private Membership.Role role;
 
-    @Column(nullable = false, length = 512)
+    @Column(nullable = false)
     private String token;
 
     @Column(nullable = false)
-    private LocalDateTime expiresAt;
+    private Instant expiresAt;
 
-    private boolean accepted = false;
+    @Column(nullable = false)
+    private boolean accepted;
 
     @CreationTimestamp
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 }

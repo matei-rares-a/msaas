@@ -1,13 +1,12 @@
 package com.saas.billing.repository;
 
 import com.saas.billing.entity.Invoice;
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.saas.shared.tenancy.TenantScopedRepository;
 
 import java.util.List;
 import java.util.UUID;
 
-public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
-    List<Invoice> findAllByOrganizationId(UUID orgId);
+public interface InvoiceRepository extends TenantScopedRepository<Invoice, UUID> {
 
-    java.util.Optional<Invoice> findByIdAndOrganizationId(UUID id, UUID orgId);
+    List<Invoice> findAllBySubscriptionId(UUID subscriptionId);
 }

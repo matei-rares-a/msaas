@@ -137,7 +137,7 @@ public class AuthService {
     private AuthResponse buildAuthResponse(User user, String orgId) {
         String accessToken = jwtService.generateAccessToken(
                 user.getId().toString(),
-                "MEMBER",
+                "USER",
                 orgId != null ? orgId : ""
         );
 

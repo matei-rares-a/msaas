@@ -1,34 +1,37 @@
 package com.saas.billing.entity;
 
-import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.saas.shared.tenancy.TenantScopedEntity;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
 @Table(schema = "billing", name = "payments")
-@Data
-@NoArgsConstructor
-public class Payment {
+@Getter
+@Setter
+public class Payment extends TenantScopedEntity {
+
+    public enum Status {SUCCEEDED, FAILED}
 
     @Id
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "invoice_id", nullable = false)
-    private Invoice invoice;
+    @Column(nullable = false)
+    private UUID invoiceId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Status status = Status.SUCCESS;
+    private Status status;
 
     @CreationTimestamp
-    private LocalDateTime processedAt;
-
-    public enum Status {
-        SUCCESS, FAILED
-    }
+    private Instant processedAt;
 }

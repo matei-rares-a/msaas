@@ -38,7 +38,6 @@ class PublicNotificationCreationRemovedIT implements PostgresTestContainer {
 
     @Test
     void postingANotificationIsRejectedAndCreatesNothing() throws Exception {
-        Integer before = jdbc.queryForObject("select count(*) from notif.in_app_notifications", Integer.class);
         String body = """
                 {"userId": "%s", "title": "Phishing", "message": "Click here", "level": "INFO"}
                 """.formatted(UUID.randomUUID());
@@ -47,9 +46,10 @@ class PublicNotificationCreationRemovedIT implements PostgresTestContainer {
                         .header("X-Org-Id", UUID.randomUUID().toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isMethodNotAllowed());
+                .andExpect(status().isNotFound());
 
-        assertThat(jdbc.queryForObject("select count(*) from notif.in_app_notifications", Integer.class)).isEqualTo(before);
+        Integer rows = jdbc.queryForObject("select count(*) from notif.in_app_notifications", Integer.class);
+        assertThat(rows).isZero();
     }
 
     @Test

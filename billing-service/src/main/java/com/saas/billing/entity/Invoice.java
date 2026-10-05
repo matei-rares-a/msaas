@@ -1,43 +1,43 @@
 package com.saas.billing.entity;
 
-import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.saas.shared.tenancy.TenantScopedEntity;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
 @Table(schema = "billing", name = "invoices")
-@Data
-@NoArgsConstructor
-public class Invoice {
+@Getter
+@Setter
+public class Invoice extends TenantScopedEntity {
+
+    public enum Status {UNPAID, PAID, FAILED}
 
     @Id
     private UUID id;
 
     @Column(nullable = false)
-    private UUID organizationId;
+    private UUID subscriptionId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "subscription_id", nullable = false)
-    private Subscription subscription;
-
-    @Column(nullable = false)
-    private BigDecimal amount;
+    @Column(name = "amount_eur", nullable = false)
+    private BigDecimal amountEur;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Status status = Status.UNPAID;
+    private Status status;
 
     @CreationTimestamp
-    private LocalDateTime issuedAt;
+    private Instant issuedAt;
 
-    private LocalDateTime paidAt;
-
-    public enum Status {
-        PAID, UNPAID
-    }
+    private Instant paidAt;
 }

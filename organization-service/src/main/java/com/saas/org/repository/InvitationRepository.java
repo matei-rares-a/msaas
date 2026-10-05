@@ -1,11 +1,12 @@
 package com.saas.org.repository;
 
 import com.saas.org.entity.Invitation;
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.saas.shared.tenancy.TenantScopedRepository;
 
 import java.util.Optional;
 import java.util.UUID;
 
-public interface InvitationRepository extends JpaRepository<Invitation, UUID> {
+public interface InvitationRepository extends TenantScopedRepository<Invitation, UUID> {
+
     Optional<Invitation> findByToken(String token);
 }
