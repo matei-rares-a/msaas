@@ -4,10 +4,15 @@ import com.saas.auth.dto.*;
 import com.saas.auth.entity.PasswordResetToken;
 import com.saas.auth.entity.RefreshToken;
 import com.saas.auth.entity.User;
+import com.saas.auth.event.UserRegisteredPayload;
 import com.saas.auth.repository.PasswordResetTokenRepository;
 import com.saas.auth.repository.RefreshTokenRepository;
 import com.saas.auth.repository.UserRepository;
 import com.saas.auth.security.JwtService;
+import com.saas.auth.security.PasswordPolicy;
+import com.saas.shared.events.EventEnvelope;
+import com.saas.shared.outbox.OutboxDestination;
+import com.saas.shared.outbox.OutboxWriter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,16 +35,20 @@ public class AuthService {
     private final PasswordResetTokenRepository resetTokenRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
+    private final PasswordPolicy passwordPolicy;
+    private final OutboxWriter outboxWriter;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Value("${jwt.refresh-token-expiry-ms}")
     private long refreshTokenExpiryMs;
 
+    /** Global identity, no tenant (REQ-EVT-08); password policy applies at registration (REQ-PWD-06). */
     @Transactional
     public void register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new IllegalArgumentException("Email already registered");
         }
+        passwordPolicy.validate(request.getPassword());
 
         User user = new User();
         user.setId(UUID.randomUUID());
@@ -48,14 +57,12 @@ public class AuthService {
         user.setActive(true);
         userRepository.save(user);
 
-        // Publish USER_CREATED event to Kafka
-        kafkaTemplate.send("user-events", Map.of(
-                "eventType", "USER_CREATED",
-                "userId", user.getId().toString(),
-                "email", user.getEmail()
-        ));
+        // Identity event, no tenantId, no PII (REQ-EVT-02, REQ-EVT-06, REQ-EVT-08)
+        EventEnvelope<UserRegisteredPayload> envelope = EventEnvelope.forIdentity(
+                "USER_REGISTERED", 1, new UserRegisteredPayload(user.getId()));
+        outboxWriter.writeEvent(envelope, OutboxDestination.KAFKA, "auth.events");
 
-        log.info("User registered: {}", user.getEmail());
+        log.info("User registered: {}", user.getId());
     }
 
     @Transactional

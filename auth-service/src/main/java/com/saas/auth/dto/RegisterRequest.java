@@ -2,7 +2,6 @@ package com.saas.auth.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
@@ -11,7 +10,7 @@ public class RegisterRequest {
     @Email
     private String email;
 
+    /** Length and the compromised-password check are enforced by PasswordPolicy (REQ-PWD-06), not here. */
     @NotBlank
-    @Size(min = 8, message = "Password must be at least 8 characters")
     private String password;
 }
