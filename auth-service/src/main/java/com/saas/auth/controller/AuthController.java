@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
@@ -24,10 +26,24 @@ public class AuthController {
         return ResponseEntity.status(201).build();
     }
 
+    /** 0 tenants -> empty list; 1 -> a direct token; &gt;1 -> tenant list + loginSessionId (REQ-AUTH-01/02/03). */
     @PostMapping("/login")
-    @Operation(summary = "Login and receive tokens")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        return ResponseEntity.ok(authService.login(request));
+    @Operation(summary = "Login; returns a token directly, or a tenant choice for multi-tenant users")
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
+        LoginOutcome outcome = authService.login(request);
+        if (outcome.token() != null) {
+            return ResponseEntity.ok(outcome.token());
+        }
+        if (outcome.loginSessionId() != null) {
+            return ResponseEntity.ok(Map.of("tenants", outcome.tenants(), "loginSessionId", outcome.loginSessionId()));
+        }
+        return ResponseEntity.ok(Map.of("tenants", outcome.tenants()));
+    }
+
+    @PostMapping("/login/tenant")
+    @Operation(summary = "Exchange a loginSessionId + chosen tenantId for the real token")
+    public ResponseEntity<AuthResponse> selectTenant(@Valid @RequestBody SelectTenantRequest request) {
+        return ResponseEntity.ok(authService.selectTenant(request.getLoginSessionId(), request.getTenantId()));
     }
 
     @PostMapping("/refresh")

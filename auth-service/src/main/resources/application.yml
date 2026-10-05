@@ -57,6 +57,13 @@ saas:
         url: ${spring.datasource.url}
         username: ${OUTBOX_RELAY_DB_USER:outbox_relay}
         password: ${OUTBOX_RELAY_DB_PASSWORD}
+  # Multi-tenant login (P5.2): opaque, single-use loginSessionId lifetime (REQ-AUTH-02)
+  login-session:
+    ttl: ${LOGIN_SESSION_TTL:5m}
+
+# Synchronous, uncached call for a user's tenants/roles at login (REQ-EVT-09, REQ-SCALE-01)
+org-service:
+  base-url: ${ORG_SERVICE_BASE_URL:http://localhost:8082}
 
 logging:
   pattern:

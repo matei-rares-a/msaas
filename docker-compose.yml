@@ -140,6 +140,7 @@ services:
       SPRING_FLYWAY_URL: jdbc:postgresql://postgres:5432/saas_global
       JWT_SECRET: ${JWT_SECRET}
       KAFKA_BROKERS: kafka:29092
+      ORG_SERVICE_BASE_URL: http://organization-service:8082
     depends_on:
       pgbouncer:
         condition: service_healthy
