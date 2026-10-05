@@ -1,2 +1,3 @@
 com.saas.shared.tenancy.TenantPersistenceAutoConfiguration
 com.saas.shared.outbox.OutboxAutoConfiguration
+com.saas.shared.events.EventTopicAutoConfiguration

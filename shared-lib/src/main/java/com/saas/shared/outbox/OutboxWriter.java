@@ -1,5 +1,9 @@
 package com.saas.shared.outbox;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.saas.shared.events.EventEnvelope;
+import com.saas.shared.events.EventPayload;
+import com.saas.shared.events.EventRoutingKey;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import javax.sql.DataSource;
@@ -14,9 +18,25 @@ import java.util.UUID;
 public class OutboxWriter {
 
     private final JdbcTemplate jdbcTemplate;
+    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
     public OutboxWriter(DataSource dataSource) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
+    }
+
+    /**
+     * Serializes the whole envelope and derives the routing key from it (tenantId, or the subject user
+     * for identity events - REQ-EVT-10), so callers cannot pass a wrong/inconsistent key.
+     */
+    public <T extends EventPayload> UUID writeEvent(EventEnvelope<T> envelope, OutboxDestination destination, String channel) {
+        String routingKey = EventRoutingKey.resolve(envelope);
+        String payloadJson;
+        try {
+            payloadJson = objectMapper.writeValueAsString(envelope);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new IllegalStateException("failed to serialize event envelope " + envelope.getEventId(), e);
+        }
+        return write(envelope.getTenantId(), envelope.getEventType(), destination, channel, routingKey, payloadJson);
     }
 
     /**

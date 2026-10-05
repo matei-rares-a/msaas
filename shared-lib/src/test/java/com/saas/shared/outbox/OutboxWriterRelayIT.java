@@ -154,6 +154,31 @@ class OutboxWriterRelayIT implements KafkaTestContainer, RabbitMqTestContainer {
         assertThat(EventAssertions.awaitRabbitMessage(queue, payload::equals)).isEqualTo(payload);
     }
 
+    private record SamplePayload(UUID subjectId) implements com.saas.shared.events.EventPayload {
+    }
+
+    @Test
+    @Tag("REQ-EVT-10")
+    void writeEventDerivesTheKafkaKeyFromTheEnvelopeTenantId() {
+        UUID tenantId = UUID.randomUUID();
+        String topic = "outbox-it-" + UUID.randomUUID();
+        com.saas.shared.events.EventEnvelope<SamplePayload> envelope = com.saas.shared.events.EventEnvelope.forTenant(
+                "TEST_EVENT", 1, tenantId, new SamplePayload(UUID.randomUUID()));
+
+        TransactionTemplate tx = new TransactionTemplate(new DataSourceTransactionManager(appDataSource));
+        tx.executeWithoutResult(status -> {
+            new JdbcTemplate(appDataSource).execute("SELECT set_config('app.tenant_id', '" + tenantId + "', true)");
+            new OutboxWriter(appDataSource).writeEvent(envelope, OutboxDestination.KAFKA, topic);
+        });
+
+        OutboxRelay relay = new OutboxRelay(relayDataSource, "app", kafkaTemplate, null);
+        assertThat(relay.pollAndPublishOnce(10)).isEqualTo(1);
+
+        ConsumerRecord<String, String> record = EventAssertions.awaitKafkaRecord(
+                topic, r -> r.key() != null && r.key().equals(tenantId.toString()));
+        assertThat(record.key()).isEqualTo(tenantId.toString());
+    }
+
     @SpringBootConfiguration
     @EnableAutoConfiguration(exclude = org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration.class)
     static class BrokerApp {
