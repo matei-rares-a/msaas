@@ -52,3 +52,16 @@ management:
 saas:
   tenancy:
     enabled: true
+  # Outbox writer (this service's role) + relay (dedicated outbox_relay role, bypasses RLS) - P3.2
+  outbox:
+    enabled: true
+    # dormant by default (its datasource.url below only resolves for a real deployment, not
+    # @ServiceConnection-based tests); enabled per-environment once this service publishes events
+    relay:
+      enabled: false
+      schema: org
+      poll-interval-ms: ${OUTBOX_RELAY_POLL_INTERVAL_MS:500}
+      datasource:
+        url: ${spring.datasource.url}
+        username: ${OUTBOX_RELAY_DB_USER:outbox_relay}
+        password: ${OUTBOX_RELAY_DB_PASSWORD}

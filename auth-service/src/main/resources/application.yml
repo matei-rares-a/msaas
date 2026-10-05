@@ -45,6 +45,19 @@ management:
       exposure:
         include: health,info,metrics
 
+# Global, no tenancy block: outbox writer (auth_svc role) + relay (dedicated outbox_relay role) - P3.2
+saas:
+  outbox:
+    enabled: true
+    relay:
+      enabled: false
+      schema: auth
+      poll-interval-ms: ${OUTBOX_RELAY_POLL_INTERVAL_MS:500}
+      datasource:
+        url: ${spring.datasource.url}
+        username: ${OUTBOX_RELAY_DB_USER:outbox_relay}
+        password: ${OUTBOX_RELAY_DB_PASSWORD}
+
 logging:
   pattern:
     console: '{"timestamp":"%d","level":"%p","service":"auth-service","correlationId":"%X{correlationId}","message":"%m"}%n'

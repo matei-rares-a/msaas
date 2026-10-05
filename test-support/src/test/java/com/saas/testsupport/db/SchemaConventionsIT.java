@@ -171,12 +171,18 @@ class SchemaConventionsIT {
                 files = paths.sorted().toList();
             }
 
-            assertThat(files).as("%s has a single baseline migration", service.getValue()).hasSize(1);
+            assertThat(files).as("%s starts from a baseline migration", service.getValue()).isNotEmpty();
             assertThat(files.get(0).getFileName().toString()).startsWith("V1__baseline");
 
-            String sql = java.nio.file.Files.readString(files.get(0)).toUpperCase();
-            assertThat(sql).as("a baseline creates structure, it does not move data")
-                    .doesNotContain("INSERT INTO", "UPDATE ", "RENAME TO", "RENAME COLUMN");
+            // every migration (baseline and later additions, e.g. the P3.2 outbox table) creates structure,
+            // it never moves data; GRANT ... UPDATE ... (outbox_relay's table grant) is not a data migration,
+            // so the check looks for an actual UPDATE ... SET statement, not just the word "UPDATE"
+            for (Path file : files) {
+                String sql = java.nio.file.Files.readString(file).toUpperCase();
+                assertThat(sql).as("%s does not move data", file.getFileName())
+                        .doesNotContain("INSERT INTO", "RENAME TO", "RENAME COLUMN")
+                        .doesNotContainPattern("UPDATE\\s+[\\w.\"]+\\s+SET");
+            }
         }
 
         assertThat(query("select count(*) from org.\"flyway_schema_history\" where success = false")).isEqualTo("0");

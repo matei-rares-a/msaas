@@ -52,3 +52,13 @@ management:
 saas:
   tenancy:
     enabled: true
+  outbox:
+    enabled: true
+    relay:
+      enabled: false
+      schema: billing
+      poll-interval-ms: ${OUTBOX_RELAY_POLL_INTERVAL_MS:500}
+      datasource:
+        url: ${spring.datasource.url}
+        username: ${OUTBOX_RELAY_DB_USER:outbox_relay}
+        password: ${OUTBOX_RELAY_DB_PASSWORD}
