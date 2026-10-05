@@ -39,6 +39,13 @@ class SchemaConventionsIT {
     /** Platform catalog, not tenant data; moves to the global database in P6.1 (REQ-DATA-05). */
     private static final List<String> NOT_TENANT_SCOPED = List.of("billing.plans");
 
+    /**
+     * Partitioned by month on created_at (REQ-MON-07): the key must include the partition column, so
+     * (tenant_id, id) alone cannot be a constraint here; (id, created_at) is enough since nothing
+     * references this table by foreign key.
+     */
+    private static final List<String> NO_COMPOSITE_TENANT_ID_UNIQUE = List.of("notif.activity_log");
+
     private static PostgreSQLContainer<?> postgres;
 
     @BeforeAll
@@ -99,6 +106,9 @@ class SchemaConventionsIT {
     void everyTenantTableIsUniqueOnTenantAndId() throws SQLException {
         List<String> offenders = new ArrayList<>();
         for (String table : tenantScopedTables()) {
+            if (NO_COMPOSITE_TENANT_ID_UNIQUE.contains(table)) {
+                continue;
+            }
             String[] parts = table.split("\\.");
             String unique = query("select count(*) from pg_constraint c"
                     + " join pg_class t on t.oid = c.conrelid"
@@ -201,9 +211,13 @@ class SchemaConventionsIT {
 
     private static List<String> allTables() throws SQLException {
         List<String> tables = new ArrayList<>();
+        // relispartition excludes monthly activity_log partitions: RLS/policies are checked on the
+        // partitioned parent only, partitions inherit them automatically (REQ-MON-07)
         try (Connection c = connect("admin", "admin"); Statement st = c.createStatement();
-             ResultSet rs = st.executeQuery("select table_schema || '.' || table_name from information_schema.tables"
-                     + " where table_schema in ('org', 'billing', 'notif') and table_name not like 'flyway%'")) {
+             ResultSet rs = st.executeQuery("select n.nspname || '.' || c.relname from pg_class c"
+                     + " join pg_namespace n on n.oid = c.relnamespace"
+                     + " where n.nspname in ('org', 'billing', 'notif') and c.relkind in ('r', 'p')"
+                     + " and not c.relispartition and c.relname not like 'flyway%'")) {
             while (rs.next()) {
                 tables.add(rs.getString(1));
             }
