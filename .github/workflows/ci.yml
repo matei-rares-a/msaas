@@ -42,12 +42,13 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Script self-test
-        shell: pwsh
-        run: ./scripts/check-traceability.tests.ps1
+        run: node --test scripts/verify/check-traceability.test.mjs
       - name: Check every due REQ has a test
-        shell: pwsh
-        run: ./scripts/check-traceability.ps1
+        run: node scripts/verify/check-traceability.mjs
 
   frontend:
     name: Frontend (build + unit tests)

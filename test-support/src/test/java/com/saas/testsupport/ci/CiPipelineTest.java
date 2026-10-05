@@ -49,8 +49,9 @@ class CiPipelineTest {
     void traceabilityCheckAndItsSelfTestRun() throws IOException {
         String ci = read(".github/workflows/ci.yml");
 
-        assertThat(ci).contains("./scripts/check-traceability.tests.ps1").contains("./scripts/check-traceability.ps1");
-        assertThat(Files.exists(REPO_ROOT.resolve("scripts/check-traceability.ps1"))).isTrue();
+        assertThat(ci).contains("node --test scripts/verify/check-traceability.test.mjs")
+                .contains("node scripts/verify/check-traceability.mjs");
+        assertThat(Files.exists(REPO_ROOT.resolve("scripts/verify/check-traceability.mjs"))).isTrue();
     }
 
     @Test

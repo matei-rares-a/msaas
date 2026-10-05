@@ -16,7 +16,7 @@ Workspace-ul urmeaza un plan de implementare obligatoriu. Surse de adevar:
 ## Definitia lui "terminat" pentru un pas
 - Codul acopera toate REQ-urile pasului; fiecare REQ are cel putin un test marcat `@Tag("REQ-...")` (frontend: `describe('REQ-...')`).
 - `mvnw -pl <modul> -am verify` trece pentru modulele atinse (fara teste sarite sau `@Disabled`); pentru frontend `npm run build` + `npm run test:ci`.
-- `pwsh scripts/check-traceability.ps1` trece.
+- `node scripts/verify/check-traceability.mjs` trece.
 - Verificarea fata de plan (mai jos) e completa.
 - Pasul e bifat, are o linie in Jurnalul de progres si exista un commit local `P<faza>.<pas>: <rezumat>`.
 
@@ -52,8 +52,14 @@ Workspace-ul urmeaza un plan de implementare obligatoriu. Surse de adevar:
 - Fara push, force, reset sau stergeri ireversibile fara confirmare.
 
 ## Mediu local
-- JDK 21 (`JAVA_HOME` setat la nivel de user; JDK-urile 25/26 din PATH nu sunt compatibile). Build-ul refuza alt JDK (maven-enforcer).
-- Testele de integrare au nevoie de Docker Desktop pornit.
-- Pe masina locala ruleaza un Postgres nativ pe portul 5432: `docker compose up` cu portul `5432` publicat intra in conflict; pentru verificari foloseste un proiect compose separat fara porturi publicate (`-p msaas-smoke` + override `ports: !reset []`) si curata-l cu `down -v`.
-- Testele Angular local: daca nu exista Chrome, seteaza `$env:CHROME_BIN` catre `msedge.exe`.
+- Pregatirea mediului se face cu scripturi, nu cu pasi manuali. `scripts/` e grupat dupa scop si scris in Node (`.mjs`), ca sa ruleze pe orice masina; secretele se citesc din `.env`, nu se scriu in scripturi.
+  - `scripts/env/install-prerequisites.ps1` (Windows) / `.sh` (Linux, macOS) - o singura data, pe o masina noua (Docker, JDK 21, Maven, Node). Singurele scripturi dependente de platforma, pentru ca instaleaza chiar Node.
+  - `node scripts/env/ensure-dev-env.mjs` - **inainte de orice test de integrare**: `JAVA_HOME` (JDK 21), porneste Docker si asteapta, descarca imaginile cu reincercari, `CHROME_BIN`, `npm ci`, verifica cheile din `.env`. `--check` doar raporteaza.
+  - `node scripts/infra/local-stack.mjs --up|--down` - stiva din docker-compose pentru verificari manuale, in proiect separat si fara porturi publicate.
+  - `node scripts/verify/check-traceability.mjs` (+ `--test ...test.mjs`) - verificari care esueaza build-ul/CI.
+- **Comenzile manuale repetate devin scripturi**: a doua rulare a aceleiasi comenzi, sau orice comanda care a avut nevoie de reincercare/corectura, se muta in scriptul potrivit (`env` / `infra` / `verify`), se documenteaza in sectiunea 2 a planului si, daca poate devia fata de cod, primeste un test (model: `DevEnvironmentScriptTest`).
+- Daca lipseste ceva din mediu, se repara `ensure-dev-env.mjs` si se ruleaza, nu se fac comenzi manuale ad-hoc.
+- Build-ul cere JDK 21 (maven-enforcer il refuza pe altul); JDK-urile 25/26 din PATH nu sunt compatibile cu Lombok/Boot 3.2.
+- Testele de integrare au nevoie de Docker Desktop pornit; `mvnw verify -DskipITs`, build-ul Angular si trasabilitatea nu.
+- Pe masina locala ruleaza un Postgres nativ pe portul 5432: `docker compose up` cu portul `5432` publicat intra in conflict; foloseste `scripts/infra/local-stack.mjs`, care nu publica porturi.
 - Raspunsurile catre utilizator sunt in romana.

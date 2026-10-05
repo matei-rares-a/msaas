@@ -16,6 +16,8 @@ public final class SharedContainers {
     public static final String KAFKA_IMAGE = "confluentinc/cp-kafka:7.6.1";
     public static final String RABBITMQ_IMAGE = "rabbitmq:3.13-management-alpine";
     public static final String REDIS_IMAGE = "redis:7-alpine";
+    /** Not a singleton: the topology test builds its own network around it. */
+    public static final String PGBOUNCER_IMAGE = "edoburu/pgbouncer:v1.24.1-p1";
 
     private SharedContainers() {
     }

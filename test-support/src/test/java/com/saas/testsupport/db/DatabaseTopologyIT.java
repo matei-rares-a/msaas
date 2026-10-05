@@ -34,7 +34,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /** Runs the real db/init script and pgbouncer.ini (as docker-compose does) and checks the resulting topology. */
 class DatabaseTopologyIT {
 
-    static final String PGBOUNCER_IMAGE = "edoburu/pgbouncer:v1.24.1-p1";
+    static final String PGBOUNCER_IMAGE = SharedContainers.PGBOUNCER_IMAGE;
     private static final Path ROOT = Path.of("..").toAbsolutePath().normalize();
     private static final Map<String, String> ENV = readDotEnv(ROOT.resolve(".env"));
     private static final Map<String, String> SHARD_ROLES = Map.of("org_svc", "org", "billing_svc", "billing", "notif_svc", "notif");

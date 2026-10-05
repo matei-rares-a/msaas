@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL: saas_global (identities) + saas_shard_1 (schema per service), one role per service
   postgres:
