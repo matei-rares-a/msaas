@@ -63,3 +63,4 @@ Workspace-ul urmeaza un plan de implementare obligatoriu. Surse de adevar:
 - Testele de integrare au nevoie de Docker Desktop pornit; `mvnw verify -DskipITs`, build-ul Angular si trasabilitatea nu.
 - Pe masina locala ruleaza un Postgres nativ pe portul 5432: `docker compose up` cu portul `5432` publicat intra in conflict; foloseste `scripts/infra/local-stack.mjs`, care nu publica porturi.
 - Raspunsurile catre utilizator sunt in romana.
+- Foloseste skill-ul `/caveman` (intensitate `full`) in timpul implementarii unui pas; proza normala pentru decizii de cerinte, securitate si operatii ireversibile. Codul, testele si documentele nu se comprima.
