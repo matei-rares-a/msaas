@@ -27,12 +27,16 @@ CREATE DATABASE saas_shard_1;
 
 REVOKE ALL ON DATABASE saas_global FROM PUBLIC;
 REVOKE ALL ON DATABASE saas_shard_1 FROM PUBLIC;
-GRANT CONNECT ON DATABASE saas_global TO auth_svc, outbox_relay;
+GRANT CONNECT ON DATABASE saas_global TO auth_svc, org_svc, billing_svc, notif_svc, outbox_relay;
 GRANT CONNECT ON DATABASE saas_shard_1 TO org_svc, billing_svc, notif_svc, outbox_relay;
 
 \connect saas_global
 REVOKE ALL ON SCHEMA public FROM PUBLIC;
 CREATE SCHEMA auth AUTHORIZATION auth_svc;
+-- Global catalogs read by every shard service: tenant -> shard map (P2.4), plans (P6.1), palettes (P8.1).
+CREATE SCHEMA global AUTHORIZATION auth_svc;
+GRANT USAGE ON SCHEMA global TO org_svc, billing_svc, notif_svc;
+ALTER DEFAULT PRIVILEGES FOR ROLE auth_svc IN SCHEMA global GRANT SELECT ON TABLES TO org_svc, billing_svc, notif_svc;
 
 \connect saas_shard_1
 REVOKE ALL ON SCHEMA public FROM PUBLIC;

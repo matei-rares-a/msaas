@@ -123,9 +123,30 @@ class DatabaseTopologyIT {
         }
         assertThatThrownBy(() -> direct("saas_shard_1", "auth_svc").close())
                 .hasMessageContaining("permission denied for database \"saas_shard_1\"");
+        // Shard roles may connect to saas_global (read-only access to global.tenant_shards etc., P2.4)
+        // but still cannot touch the auth schema or any other service's shard schema.
         for (String role : SHARD_ROLES.keySet()) {
-            assertThatThrownBy(() -> direct("saas_global", role).close())
-                    .hasMessageContaining("permission denied for database \"saas_global\"");
+            try (Connection c = direct("saas_global", role); Statement st = c.createStatement()) {
+                assertThatThrownBy(() -> st.execute("create table auth.intruder (id int)"))
+                        .hasMessageContaining("permission denied for schema auth");
+            }
+        }
+    }
+
+    @Test
+    @Tag("REQ-DATA-06")
+    void shardRolesCanReadButNotWriteTheGlobalShardMap() throws SQLException {
+        // owned by auth_svc, like the real Flyway-managed table, so the default-privilege grant applies
+        try (Connection owner = direct("saas_global", "auth_svc"); Statement st = owner.createStatement()) {
+            st.execute("create table if not exists global.tenant_shards (tenant_id uuid primary key, shard_id varchar(50) not null)");
+            st.execute("insert into global.tenant_shards values ('00000000-0000-0000-0000-000000000001', 'shard_1') on conflict do nothing");
+        }
+
+        try (Connection c = direct("saas_global", "org_svc"); Statement st = c.createStatement()) {
+            assertThat(scalar(c, "select shard_id from global.tenant_shards where tenant_id = '00000000-0000-0000-0000-000000000001'"))
+                    .isEqualTo("shard_1");
+            assertThatThrownBy(() -> st.execute("insert into global.tenant_shards values ('00000000-0000-0000-0000-000000000002', 'shard_1')"))
+                    .hasMessageContaining("permission denied for table tenant_shards");
         }
     }
 
