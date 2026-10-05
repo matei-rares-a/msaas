@@ -60,7 +60,8 @@ class SchemaConventionsIT {
                 .withEnv("ORG_DB_PASSWORD", "pw")
                 .withEnv("BILLING_DB_PASSWORD", "pw")
                 .withEnv("NOTIF_DB_PASSWORD", "pw")
-                .withEnv("OUTBOX_RELAY_DB_PASSWORD", "pw");
+                .withEnv("OUTBOX_RELAY_DB_PASSWORD", "pw")
+                .withEnv("ORG_AUTH_READER_DB_PASSWORD", "pw");
         postgres.start();
 
         String shardUrl = postgres.getJdbcUrl().replace("/" + postgres.getDatabaseName(), "/saas_shard_1");

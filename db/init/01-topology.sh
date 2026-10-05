@@ -7,13 +7,17 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres \
   -v org_pw="$ORG_DB_PASSWORD" \
   -v billing_pw="$BILLING_DB_PASSWORD" \
   -v notif_pw="$NOTIF_DB_PASSWORD" \
-  -v relay_pw="$OUTBOX_RELAY_DB_PASSWORD" <<'SQL'
+  -v relay_pw="$OUTBOX_RELAY_DB_PASSWORD" \
+  -v org_reader_pw="$ORG_AUTH_READER_DB_PASSWORD" <<'SQL'
 -- One login role per service; the outbox relay is exempt from RLS and gets table grants in P3.2.
 CREATE ROLE auth_svc LOGIN PASSWORD :'auth_pw';
 CREATE ROLE org_svc LOGIN PASSWORD :'org_pw';
 CREATE ROLE billing_svc LOGIN PASSWORD :'billing_pw';
 CREATE ROLE notif_svc LOGIN PASSWORD :'notif_pw';
 CREATE ROLE outbox_relay LOGIN BYPASSRLS PASSWORD :'relay_pw';
+-- Narrow, BYPASSRLS reader used only by org-service's internal "memberships for a user" lookup
+-- (auth calls it synchronously, across every tenant - REQ-EVT-09); table grants in P4.1.
+CREATE ROLE org_auth_reader LOGIN BYPASSRLS PASSWORD :'org_reader_pw';
 
 ALTER ROLE auth_svc SET search_path = auth;
 ALTER ROLE org_svc SET search_path = org;
@@ -28,7 +32,7 @@ CREATE DATABASE saas_shard_1;
 REVOKE ALL ON DATABASE saas_global FROM PUBLIC;
 REVOKE ALL ON DATABASE saas_shard_1 FROM PUBLIC;
 GRANT CONNECT ON DATABASE saas_global TO auth_svc, org_svc, billing_svc, notif_svc, outbox_relay;
-GRANT CONNECT ON DATABASE saas_shard_1 TO org_svc, billing_svc, notif_svc, outbox_relay;
+GRANT CONNECT ON DATABASE saas_shard_1 TO org_svc, billing_svc, notif_svc, outbox_relay, org_auth_reader;
 
 \connect saas_global
 REVOKE ALL ON SCHEMA public FROM PUBLIC;

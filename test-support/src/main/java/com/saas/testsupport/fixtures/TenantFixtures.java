@@ -1,10 +1,15 @@
 package com.saas.testsupport.fixtures;
 
+import org.springframework.jdbc.core.JdbcTemplate;
+
+import javax.sql.DataSource;
 import java.util.UUID;
 
 /**
- * In-memory tenant/user/membership identities for tests. Persisting them is added by the steps
- * that introduce the tenant and membership tables (P4.1).
+ * In-memory tenant/user/membership identities for tests, with JDBC helpers to persist them into the
+ * real {@code org.tenants}/{@code org.memberships} tables (P4.1). Both tables have RLS forced, so the
+ * given connection must either be a superuser or already have {@code app.tenant_id} set to the
+ * tenant's id.
  */
 public final class TenantFixtures {
 
@@ -41,5 +46,17 @@ public final class TenantFixtures {
 
     public static TestMember member(TestTenant tenant, TestUser user, Role role) {
         return new TestMember(tenant, user, role, false);
+    }
+
+    public static void persist(DataSource dataSource, TestTenant tenant) {
+        new JdbcTemplate(dataSource).update(
+                "INSERT INTO org.tenants (id, tenant_id, name) VALUES (?, ?, ?)",
+                tenant.id(), tenant.id(), tenant.name());
+    }
+
+    public static void persist(DataSource dataSource, TestMember member) {
+        new JdbcTemplate(dataSource).update(
+                "INSERT INTO org.memberships (id, tenant_id, user_id, role, read_only) VALUES (?, ?, ?, ?, ?)",
+                UUID.randomUUID(), member.tenant().id(), member.user().id(), member.role().name(), member.readOnly());
     }
 }

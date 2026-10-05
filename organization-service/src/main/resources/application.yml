@@ -11,6 +11,9 @@ spring:
     hibernate:
       ddl-auto: validate
     show-sql: false
+    # with OSIV (Boot's default), Hibernate opens the session - and resolves the current tenant -
+    # before TenantContext is set for the request, pinning every write to the NO_TENANT sentinel (P4.1)
+    open-in-view: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
@@ -65,3 +68,11 @@ saas:
         url: ${spring.datasource.url}
         username: ${OUTBOX_RELAY_DB_USER:outbox_relay}
         password: ${OUTBOX_RELAY_DB_PASSWORD}
+  # Internal "memberships for a user, across every tenant" lookup used synchronously by auth (P4.1,
+  # REQ-EVT-09); dedicated BYPASSRLS reader, SELECT-only on org.memberships.
+  org:
+    auth-reader:
+      datasource:
+        url: ${spring.datasource.url}
+        username: ${ORG_AUTH_READER_DB_USER:org_auth_reader}
+        password: ${ORG_AUTH_READER_DB_PASSWORD}

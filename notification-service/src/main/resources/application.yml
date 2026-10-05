@@ -11,6 +11,8 @@ spring:
     hibernate:
       ddl-auto: validate
     show-sql: false
+    # see organization-service's application.yml for why this must be false in tenant-scoped services
+    open-in-view: false
   flyway:
     enabled: true
     locations: classpath:db/migration
