@@ -1,4 +1,4 @@
-package com.saas.billing.entity;
+package com.saas.auth.entity;
 
 import com.saas.shared.tenancy.GlobalEntity;
 import jakarta.persistence.Column;
@@ -13,10 +13,11 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
-/** Platform catalog, not tenant data: it moves to the global database in P6.1 (REQ-DATA-05). */
+/** Platform catalog in the global DB (REQ-DATA-05); never deleted, only deactivated (REQ-DATA-12,
+ * enforced by a DB trigger). Price is always EUR (REQ-BILL-07): there is no currency field. */
 @Entity
 @GlobalEntity
-@Table(schema = "billing", name = "plans")
+@Table(schema = "global", name = "plans")
 @Getter
 @Setter
 public class Plan {

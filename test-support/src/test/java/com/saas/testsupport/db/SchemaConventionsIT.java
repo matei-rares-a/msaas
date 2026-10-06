@@ -36,8 +36,8 @@ class SchemaConventionsIT {
             "billing", "billing-service",
             "notif", "notification-service");
 
-    /** Platform catalog, not tenant data; moves to the global database in P6.1 (REQ-DATA-05). */
-    private static final List<String> NOT_TENANT_SCOPED = List.of("billing.plans");
+    /** No more platform catalogs live on the shard: plans moved to the global database (P6.1, REQ-DATA-05). */
+    private static final List<String> NOT_TENANT_SCOPED = List.of();
 
     /**
      * Partitioned by month on created_at (REQ-MON-07): the key must include the partition column, so
