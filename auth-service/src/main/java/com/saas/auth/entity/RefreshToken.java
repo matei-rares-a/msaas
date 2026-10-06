@@ -27,6 +27,19 @@ public class RefreshToken {
     @Column(nullable = false)
     private LocalDateTime expiresAt;
 
+    /** The tenant/role/UI-info the access token was issued with, so rotation (P5.3) reissues the same. */
+    @Column(nullable = false)
+    private UUID tenantId;
+
+    @Column(nullable = false)
+    private String role;
+
+    @Column(nullable = false)
+    private boolean readOnly;
+
+    @Column(nullable = false)
+    private String tenantName;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 }

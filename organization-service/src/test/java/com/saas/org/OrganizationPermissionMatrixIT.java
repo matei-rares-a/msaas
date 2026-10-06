@@ -111,6 +111,34 @@ class OrganizationPermissionMatrixIT {
         membersByRole.put(Membership.Role.USER, userId);
     }
 
+    /** A token is per-tenant (REQ-AUTH-04): X-Tenant-Id (from the caller's token) must match the
+     * path's tenantId, even though this ADMIN happens to also be a member of the other tenant. */
+    @Test
+    @Tag("REQ-AUTH-04")
+    void aTokenForAnotherTenantIsRejected() throws Exception {
+        UUID otherTenantAdmin = UUID.randomUUID();
+        UUID otherTenantId = createOrganizationOwnedBy("Other Co", otherTenantAdmin);
+        insertMembership(otherTenantAdmin, Membership.Role.ADMIN);
+
+        mockMvc.perform(patch("/organizations/{tenantId}", tenantId)
+                        .header("X-User-Id", otherTenantAdmin.toString())
+                        .header("X-Tenant-Id", otherTenantId.toString())
+                        .contentType("application/json")
+                        .content("{\"name\":\"Hijacked\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    private UUID createOrganizationOwnedBy(String name, UUID creatorUserId) throws Exception {
+        var result = mockMvc.perform(post("/organizations")
+                        .contentType("application/json")
+                        .content("{\"name\":\"" + name + "\",\"creatorUserId\":\"" + creatorUserId + "\"}"))
+                .andExpect(status().isCreated())
+                .andReturn();
+        var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        Map body = mapper.readValue(result.getResponse().getContentAsString(), Map.class);
+        return UUID.fromString((String) body.get("id"));
+    }
+
     @ParameterizedTest(name = "{0} can rename the organization (basic write access, no management)")
     @EnumSource(Membership.Role.class)
     @Tag("REQ-ROLE-01")
@@ -118,6 +146,7 @@ class OrganizationPermissionMatrixIT {
     void anyNonReadOnlyRoleCanRename(Membership.Role role) throws Exception {
         mockMvc.perform(patch("/organizations/{tenantId}", tenantId)
                         .header("X-User-Id", membersByRole.get(role).toString())
+                        .header("X-Tenant-Id", tenantId.toString())
                         .contentType("application/json")
                         .content("{\"name\":\"Renamed\"}"))
                 .andExpect(status().isOk());
@@ -131,6 +160,7 @@ class OrganizationPermissionMatrixIT {
 
         mockMvc.perform(patch("/organizations/{tenantId}/members/{userId}/role", tenantId, target)
                         .header("X-User-Id", membersByRole.get(caller).toString())
+                        .header("X-Tenant-Id", tenantId.toString())
                         .contentType("application/json")
                         .content("{\"role\":\"MANAGER\"}"))
                 .andExpect(status().is(expected.value()));
@@ -153,6 +183,7 @@ class OrganizationPermissionMatrixIT {
         // promote a second member to MANAGER -> two MANAGER in the same tenant, no error
         mockMvc.perform(patch("/organizations/{tenantId}/members/{userId}/role", tenantId, secondUser)
                         .header("X-User-Id", admin.toString())
+                        .header("X-Tenant-Id", tenantId.toString())
                         .contentType("application/json")
                         .content("{\"role\":\"MANAGER\"}"))
                 .andExpect(status().isOk());
@@ -160,6 +191,7 @@ class OrganizationPermissionMatrixIT {
         // demote the original MANAGER back to USER -> zero MANAGER, still no error
         mockMvc.perform(patch("/organizations/{tenantId}/members/{userId}/role", tenantId, membersByRole.get(Membership.Role.MANAGER))
                         .header("X-User-Id", admin.toString())
+                        .header("X-Tenant-Id", tenantId.toString())
                         .contentType("application/json")
                         .content("{\"role\":\"USER\"}"))
                 .andExpect(status().isOk());

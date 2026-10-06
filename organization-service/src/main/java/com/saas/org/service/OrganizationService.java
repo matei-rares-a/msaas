@@ -70,6 +70,14 @@ public class OrganizationService {
         }));
     }
 
+    /** RLS-scoped (unlike {@link MembershipLookupService}'s cross-tenant reader); used by auth to get
+     * the UI-facing tenant name for a token it already knows which single tenant it's for (REQ-AUTH-05). */
+    public String tenantName(UUID tenantId) {
+        return TenantContext.callWith(tenantId, () -> tenantRepository.findById(tenantId)
+                .map(Tenant::getName)
+                .orElseThrow(() -> new IllegalArgumentException("organization not found")));
+    }
+
     /** Minimal write path to exercise the read-only flag (REQ-ROLE-06); the full permission matrix is P4.2. */
     public OrganizationResponse renameOrganization(UUID tenantId, UUID callerUserId, String newName) {
         return TenantContext.callWith(tenantId, () -> transactionTemplate.execute(status -> {
@@ -155,6 +163,7 @@ public class OrganizationService {
         }));
     }
 
+    /** Only the targeted admin can respond to this request. */
     private AdminDemotionRequest requirePendingRequest(UUID requestId, UUID callerUserId) {
         AdminDemotionRequest request = demotionRequestRepository.findById(requestId)
                 .orElseThrow(() -> new IllegalArgumentException("demotion request not found"));

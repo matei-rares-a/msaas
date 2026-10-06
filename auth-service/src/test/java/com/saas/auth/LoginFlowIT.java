@@ -82,6 +82,13 @@ class LoginFlowIT {
                 exchange.getResponseBody().write(body);
                 exchange.close();
             });
+            server.createContext("/internal/tenants/", exchange -> {
+                byte[] body = "{\"name\":\"Test Tenant\"}".getBytes(StandardCharsets.UTF_8);
+                exchange.getResponseHeaders().add("Content-Type", "application/json");
+                exchange.sendResponseHeaders(200, body.length);
+                exchange.getResponseBody().write(body);
+                exchange.close();
+            });
             server.start();
             System.setProperty("org-service.base-url", "http://localhost:" + server.getAddress().getPort());
             return server;

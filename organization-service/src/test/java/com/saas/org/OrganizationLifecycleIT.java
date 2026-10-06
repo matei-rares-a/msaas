@@ -113,6 +113,7 @@ class OrganizationLifecycleIT {
 
         mockMvc.perform(patch("/organizations/{tenantId}", tenantId)
                         .header("X-User-Id", readOnlyUserId.toString())
+                        .header("X-Tenant-Id", tenantId.toString())
                         .contentType("application/json")
                         .content("{\"name\":\"New Name\"}"))
                 .andExpect(status().isForbidden());

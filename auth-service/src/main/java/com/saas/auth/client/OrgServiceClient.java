@@ -27,4 +27,13 @@ public class OrgServiceClient {
                 .body(MembershipSummary[].class);
         return result == null ? List.of() : List.of(result);
     }
+
+    /** RLS-scoped lookup of one tenant's display name, for the token's UI claims (REQ-AUTH-05). */
+    public String findTenantName(UUID tenantId) {
+        TenantNameResponse result = restClient.get()
+                .uri("/internal/tenants/{tenantId}", tenantId)
+                .retrieve()
+                .body(TenantNameResponse.class);
+        return result == null ? null : result.name();
+    }
 }

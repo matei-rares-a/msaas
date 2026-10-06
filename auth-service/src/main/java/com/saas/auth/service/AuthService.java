@@ -12,11 +12,12 @@ import com.saas.auth.repository.LoginSessionRepository;
 import com.saas.auth.repository.PasswordResetTokenRepository;
 import com.saas.auth.repository.RefreshTokenRepository;
 import com.saas.auth.repository.UserRepository;
-import com.saas.auth.security.JwtService;
 import com.saas.auth.security.PasswordPolicy;
 import com.saas.shared.events.EventEnvelope;
 import com.saas.shared.outbox.OutboxDestination;
 import com.saas.shared.outbox.OutboxWriter;
+import com.saas.shared.security.AccessTokenClaims;
+import com.saas.shared.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -99,7 +100,7 @@ public class AuthService {
         }
         if (memberships.size() == 1) {
             MembershipSummary only = memberships.get(0);
-            return LoginOutcome.direct(buildAuthResponse(user, only.tenantId(), only.role()));
+            return LoginOutcome.direct(buildAuthResponse(user, only));
         }
 
         LoginSession session = new LoginSession();
@@ -140,7 +141,7 @@ public class AuthService {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("no longer a member of this organization"));
 
-        return buildAuthResponse(user, selected.tenantId(), selected.role());
+        return buildAuthResponse(user, selected);
     }
 
     @Transactional
@@ -153,10 +154,10 @@ public class AuthService {
             throw new IllegalArgumentException("Refresh token expired");
         }
 
-        // Rotate: delete old, issue new
+        // Rotate: delete old, issue new, same tenant context (REQ-AUTH-04, REQ-PWD-04)
         refreshTokenRepository.delete(existing);
-        // TODO(P5.3): refresh tokens don't carry tenant/role yet; token-per-tenant rework happens there.
-        return buildAuthResponse(existing.getUser(), null, "USER");
+        return buildAuthResponse(existing.getUser(), existing.getTenantId(), existing.getRole(),
+                existing.isReadOnly(), existing.getTenantName());
     }
 
     @Transactional
@@ -204,19 +205,27 @@ public class AuthService {
         log.info("Password reset for user: {}", user.getEmail());
     }
 
-    private AuthResponse buildAuthResponse(User user, UUID tenantId, String role) {
-        String accessToken = jwtService.generateAccessToken(
-                user.getId().toString(),
-                role,
-                tenantId != null ? tenantId.toString() : ""
-        );
+    private AuthResponse buildAuthResponse(User user, MembershipSummary membership) {
+        String tenantName = orgServiceClient.findTenantName(membership.tenantId());
+        return buildAuthResponse(user, membership.tenantId(), membership.role(), membership.readOnly(), tenantName);
+    }
 
-        String rawRefreshToken = jwtService.generateRefreshToken();
+    /** Builds the per-tenant access token (REQ-AUTH-04, REQ-AUTH-05) and a rotatable refresh token that
+     * carries the same tenant context (REQ-PWD-04). */
+    private AuthResponse buildAuthResponse(User user, UUID tenantId, String role, boolean readOnly, String tenantName) {
+        String accessToken = jwtService.generateAccessToken(new AccessTokenClaims(
+                user.getId(), tenantId, role, readOnly, tenantName, user.getEmail()));
+
+        String rawRefreshToken = generateRawRefreshToken();
 
         RefreshToken refreshToken = new RefreshToken();
         refreshToken.setId(UUID.randomUUID());
         refreshToken.setUser(user);
         refreshToken.setToken(rawRefreshToken);
+        refreshToken.setTenantId(tenantId);
+        refreshToken.setRole(role);
+        refreshToken.setReadOnly(readOnly);
+        refreshToken.setTenantName(tenantName);
         refreshToken.setExpiresAt(
                 LocalDateTime.now().plusSeconds(refreshTokenExpiryMs / 1000));
         refreshTokenRepository.save(refreshToken);
@@ -227,5 +236,9 @@ public class AuthService {
                 .tokenType("Bearer")
                 .expiresIn(refreshTokenExpiryMs / 1000)
                 .build();
+    }
+
+    private String generateRawRefreshToken() {
+        return UUID.randomUUID().toString().replace("-", "") + UUID.randomUUID().toString().replace("-", "");
     }
 }

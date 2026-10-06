@@ -92,6 +92,7 @@ class AdminDemotionRequestIT {
 
         mockMvc.perform(patch("/organizations/{tenantId}/members/{userId}/role", tenantId, admin)
                         .header("X-User-Id", admin.toString())
+                        .header("X-Tenant-Id", tenantId.toString())
                         .contentType("application/json")
                         .content("{\"role\":\"USER\"}"))
                 .andExpect(status().isConflict());
@@ -107,6 +108,7 @@ class AdminDemotionRequestIT {
 
         var result = mockMvc.perform(patch("/organizations/{tenantId}/members/{userId}/role", tenantId, admin2)
                         .header("X-User-Id", admin1.toString())
+                        .header("X-Tenant-Id", tenantId.toString())
                         .contentType("application/json")
                         .content("{\"role\":\"USER\"}"))
                 .andExpect(status().isAccepted())
@@ -117,7 +119,8 @@ class AdminDemotionRequestIT {
         assertThat(roleOf(tenantId, admin2)).isEqualTo("ADMIN");
 
         mockMvc.perform(post("/organizations/{tenantId}/admin-demotion-requests/{requestId}/accept", tenantId, requestId)
-                        .header("X-User-Id", admin2.toString()))
+                        .header("X-User-Id", admin2.toString())
+                        .header("X-Tenant-Id", tenantId.toString()))
                 .andExpect(status().isOk());
 
         assertThat(roleOf(tenantId, admin2)).isEqualTo("USER");
@@ -133,6 +136,7 @@ class AdminDemotionRequestIT {
 
         var result = mockMvc.perform(patch("/organizations/{tenantId}/members/{userId}/role", tenantId, admin2)
                         .header("X-User-Id", admin1.toString())
+                        .header("X-Tenant-Id", tenantId.toString())
                         .contentType("application/json")
                         .content("{\"role\":\"USER\"}"))
                 .andExpect(status().isAccepted())
@@ -140,7 +144,8 @@ class AdminDemotionRequestIT {
         UUID requestId = requestIdFrom(result);
 
         mockMvc.perform(post("/organizations/{tenantId}/admin-demotion-requests/{requestId}/reject", tenantId, requestId)
-                        .header("X-User-Id", admin2.toString()))
+                        .header("X-User-Id", admin2.toString())
+                        .header("X-Tenant-Id", tenantId.toString()))
                 .andExpect(status().isNoContent());
 
         assertThat(roleOf(tenantId, admin2)).isEqualTo("ADMIN");
@@ -156,6 +161,7 @@ class AdminDemotionRequestIT {
 
         var result = mockMvc.perform(patch("/organizations/{tenantId}/members/{userId}/role", tenantId, admin2)
                         .header("X-User-Id", admin1.toString())
+                        .header("X-Tenant-Id", tenantId.toString())
                         .contentType("application/json")
                         .content("{\"role\":\"USER\"}"))
                 .andExpect(status().isAccepted())

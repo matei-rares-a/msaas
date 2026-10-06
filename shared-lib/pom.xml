@@ -17,9 +17,11 @@
     <description>Shared utilities for SaaS platform services</description>
 
     <dependencies>
+        <!-- optional: the reactive api-gateway must not inherit the servlet stack this pulls in -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>

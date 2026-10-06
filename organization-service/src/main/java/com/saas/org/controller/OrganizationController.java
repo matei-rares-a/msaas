@@ -7,6 +7,7 @@ import com.saas.org.dto.RenameOrganizationRequest;
 import com.saas.org.dto.RoleChangeOutcome;
 import com.saas.org.dto.UpdateMemberRoleRequest;
 import com.saas.org.service.OrganizationService;
+import com.saas.shared.security.TenantRequestGuard;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -31,7 +32,9 @@ public class OrganizationController {
     @PatchMapping("/{tenantId}")
     public ResponseEntity<OrganizationResponse> rename(@PathVariable UUID tenantId,
             @RequestHeader("X-User-Id") UUID callerUserId,
+            @RequestHeader("X-Tenant-Id") UUID callerTenantId,
             @Valid @RequestBody RenameOrganizationRequest request) {
+        TenantRequestGuard.requireMatch(tenantId, callerTenantId);
         return ResponseEntity.ok(organizationService.renameOrganization(tenantId, callerUserId, request.getName()));
     }
 
@@ -39,7 +42,9 @@ public class OrganizationController {
     @PatchMapping("/{tenantId}/members/{userId}/role")
     public ResponseEntity<?> updateMemberRole(@PathVariable UUID tenantId, @PathVariable UUID userId,
             @RequestHeader("X-User-Id") UUID callerUserId,
+            @RequestHeader("X-Tenant-Id") UUID callerTenantId,
             @Valid @RequestBody UpdateMemberRoleRequest request) {
+        TenantRequestGuard.requireMatch(tenantId, callerTenantId);
         RoleChangeOutcome outcome = organizationService.updateMemberRole(tenantId, callerUserId, userId, request.getRole());
         if (outcome.isPending()) {
             return ResponseEntity.status(HttpStatus.ACCEPTED).body(outcome.pendingRequest());
@@ -49,13 +54,17 @@ public class OrganizationController {
 
     @PostMapping("/{tenantId}/admin-demotion-requests/{requestId}/accept")
     public ResponseEntity<MemberRoleResponse> acceptAdminDemotion(@PathVariable UUID tenantId, @PathVariable UUID requestId,
-            @RequestHeader("X-User-Id") UUID callerUserId) {
+            @RequestHeader("X-User-Id") UUID callerUserId,
+            @RequestHeader("X-Tenant-Id") UUID callerTenantId) {
+        TenantRequestGuard.requireMatch(tenantId, callerTenantId);
         return ResponseEntity.ok(organizationService.acceptAdminDemotion(tenantId, requestId, callerUserId));
     }
 
     @PostMapping("/{tenantId}/admin-demotion-requests/{requestId}/reject")
     public ResponseEntity<Void> rejectAdminDemotion(@PathVariable UUID tenantId, @PathVariable UUID requestId,
-            @RequestHeader("X-User-Id") UUID callerUserId) {
+            @RequestHeader("X-User-Id") UUID callerUserId,
+            @RequestHeader("X-Tenant-Id") UUID callerTenantId) {
+        TenantRequestGuard.requireMatch(tenantId, callerTenantId);
         organizationService.rejectAdminDemotion(tenantId, requestId, callerUserId);
         return ResponseEntity.noContent().build();
     }

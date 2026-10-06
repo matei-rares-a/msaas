@@ -49,15 +49,15 @@ A production-style SaaS platform demonstrating real-world enterprise architectur
 
 ### Authentication Flow
 1. **Register**: Email + password → stored with bcrypt hash
-2. **Login**: Returns `accessToken` + `refreshToken`
-3. **Gateway**: Validates JWT, extracts `userId`, `orgId`, `role`
-4. **Services**: Receive headers: `X-User-Id`, `X-Org-Id`, `X-Role`
-5. **Isolation**: All queries filtered by `organization_id`
+2. **Login**: 1 tenant → `accessToken` + `refreshToken` directly; &gt;1 tenant → tenant list + `loginSessionId`; 0 tenants → empty list
+3. **Gateway**: Validates the per-tenant JWT, extracts `userId`, `tenantId`, `role`
+4. **Services**: Receive headers: `X-User-Id`, `X-Tenant-Id`, `X-Role`
+5. **Isolation**: All queries filtered by `tenant_id` (+ RLS)
 
 ### Token Management
-- **Access Token**: 24h expiry, short-lived
-- **Refresh Token**: 7d expiry, rotated on each use
-- **Security**: JWT signed with HS256, BASE64 encoded
+- **Access Token**: 15 min expiry, per-tenant (a token for tenant A is rejected on tenant B's resources)
+- **Refresh Token**: 7d expiry, rotated on each use, carries the same tenant context
+- **Security**: JWT signed with HS256
 
 ### Role-Based Access Control
 ```

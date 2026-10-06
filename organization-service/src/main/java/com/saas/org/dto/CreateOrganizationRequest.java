@@ -14,7 +14,8 @@ public class CreateOrganizationRequest {
     @NotBlank
     private String name;
 
-    /** Interim, until P5.3 wires the real JWT principal through the gateway. */
+    /** No tenant/token exists yet at this point (0-tenant user creating their first organization), so
+     * the gateway cannot forward a tenant-scoped principal here; the caller is identified by this field. */
     @NotNull
     private UUID creatorUserId;
 }
