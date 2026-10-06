@@ -7,12 +7,16 @@ import com.saas.auth.entity.LoginSession;
 import com.saas.auth.entity.PasswordResetToken;
 import com.saas.auth.entity.RefreshToken;
 import com.saas.auth.entity.User;
+import com.saas.auth.event.SendPasswordChangedConfirmationCommand;
+import com.saas.auth.event.SendPasswordResetEmailCommand;
 import com.saas.auth.event.UserRegisteredPayload;
+import com.saas.auth.exception.RateLimitExceededException;
 import com.saas.auth.repository.LoginSessionRepository;
 import com.saas.auth.repository.PasswordResetTokenRepository;
 import com.saas.auth.repository.RefreshTokenRepository;
 import com.saas.auth.repository.UserRepository;
 import com.saas.auth.security.PasswordPolicy;
+import com.saas.auth.security.PasswordResetRateLimiter;
 import com.saas.shared.events.EventEnvelope;
 import com.saas.shared.outbox.OutboxDestination;
 import com.saas.shared.outbox.OutboxWriter;
@@ -21,7 +25,6 @@ import com.saas.shared.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,13 +33,14 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+
+    private static final String ANTI_ENUMERATION_DUMMY_SECRET = "anti-enumeration-dummy-secret-REQ-PWD-03";
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -46,9 +50,9 @@ public class AuthService {
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final PasswordPolicy passwordPolicy;
+    private final PasswordResetRateLimiter rateLimiter;
     private final OutboxWriter outboxWriter;
     private final Clock clock;
-    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Value("${jwt.refresh-token-expiry-ms}")
     private long refreshTokenExpiryMs;
@@ -160,9 +164,20 @@ public class AuthService {
                 existing.isReadOnly(), existing.getTenantName());
     }
 
+    /** Same response and same hashing work whether the email exists or not (REQ-PWD-03); the attempt
+     * always counts toward the hourly rate limit, before we even know if the email is real (REQ-PWD-05). */
     @Transactional
-    public void forgotPassword(ForgotPasswordRequest request) {
+    public void forgotPassword(ForgotPasswordRequest request, String ipAddress) {
+        if (!rateLimiter.tryAcquire(request.getEmail(), ipAddress)) {
+            throw new RateLimitExceededException("too many password reset requests");
+        }
+
+        // Unconditional dummy hash so both branches below do the same expensive bcrypt work.
+        passwordEncoder.encode(ANTI_ENUMERATION_DUMMY_SECRET);
+
         userRepository.findByEmail(request.getEmail()).ifPresent(user -> {
+            resetTokenRepository.deleteAllByUser(user); // a new request invalidates old ones (REQ-PWD-02)
+
             PasswordResetToken resetToken = new PasswordResetToken();
             resetToken.setId(UUID.randomUUID());
             resetToken.setUser(user);
@@ -170,19 +185,20 @@ public class AuthService {
             resetToken.setExpiresAt(LocalDateTime.now().plusHours(1));
             resetTokenRepository.save(resetToken);
 
-            // Publish PASSWORD_RESET event to RabbitMQ via Kafka bridge or direct
-            kafkaTemplate.send("notification-events", Map.of(
-                    "eventType", "PASSWORD_RESET",
-                    "email", user.getEmail(),
-                    "token", resetToken.getToken(),
-                    "userId", user.getId().toString()
-            ));
+            // Command, not event: carries PII (email, token), so it goes through RabbitMQ, not Kafka (REQ-EVT-02)
+            EventEnvelope<SendPasswordResetEmailCommand> envelope = EventEnvelope.forIdentity(
+                    "SEND_PASSWORD_RESET_EMAIL", 1,
+                    new SendPasswordResetEmailCommand(user.getId(), user.getEmail(), resetToken.getToken()));
+            outboxWriter.writeEvent(envelope, OutboxDestination.RABBITMQ, "auth.commands");
 
-            log.info("Password reset token generated for: {}", user.getEmail());
+            log.info("Password reset token generated for: {}", user.getId());
         });
-        // Always return 200 to avoid user enumeration
+        // Always the same 200 response regardless of whether the email exists (REQ-PWD-03)
     }
 
+    /** Applies the same password policy as registration (REQ-PWD-06), then revokes every refresh
+     * token (REQ-PWD-04) and sends a confirmation email (REQ-PWD-07) - never logged against a tenant
+     * (REQ-PWD-08: this is identity-global, not tenant activity). */
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
         PasswordResetToken resetToken = resetTokenRepository.findByToken(request.getToken())
@@ -191,6 +207,7 @@ public class AuthService {
         if (resetToken.isUsed() || resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {
             throw new IllegalArgumentException("Token has expired or already used");
         }
+        passwordPolicy.validate(request.getNewPassword());
 
         User user = resetToken.getUser();
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
@@ -199,10 +216,15 @@ public class AuthService {
         resetToken.setUsed(true);
         resetTokenRepository.save(resetToken);
 
-        // Invalidate all refresh tokens
+        // Invalidate all refresh tokens (REQ-PWD-04): any active session is lost within 15 minutes
         refreshTokenRepository.deleteAllByUser(user);
 
-        log.info("Password reset for user: {}", user.getEmail());
+        EventEnvelope<SendPasswordChangedConfirmationCommand> envelope = EventEnvelope.forIdentity(
+                "SEND_PASSWORD_CHANGED_CONFIRMATION", 1,
+                new SendPasswordChangedConfirmationCommand(user.getId(), user.getEmail()));
+        outboxWriter.writeEvent(envelope, OutboxDestination.RABBITMQ, "auth.commands");
+
+        log.info("Password reset for user: {}", user.getId());
     }
 
     private AuthResponse buildAuthResponse(User user, MembershipSummary membership) {
