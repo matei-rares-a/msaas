@@ -54,7 +54,7 @@ class DatabaseTopologyIT {
                 .withCopyFileToContainer(MountableFile.forHostPath(ROOT.resolve("db/init/01-topology.sh")),
                         "/docker-entrypoint-initdb.d/01-topology.sh");
         for (String key : List.of("AUTH_DB_PASSWORD", "ORG_DB_PASSWORD", "BILLING_DB_PASSWORD", "NOTIF_DB_PASSWORD",
-                "OUTBOX_RELAY_DB_PASSWORD", "ORG_AUTH_READER_DB_PASSWORD")) {
+                "OUTBOX_RELAY_DB_PASSWORD", "ORG_AUTH_READER_DB_PASSWORD", "BILLING_JOB_READER_DB_PASSWORD")) {
             postgres.withEnv(key, ENV.get(key));
         }
         postgres.start();

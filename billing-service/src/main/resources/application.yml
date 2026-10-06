@@ -64,3 +64,18 @@ saas:
         url: ${spring.datasource.url}
         username: ${OUTBOX_RELAY_DB_USER:outbox_relay}
         password: ${OUTBOX_RELAY_DB_PASSWORD}
+  billing:
+    # Default trial length (P6.3); a configurable default, not a requirement (section 4 of the plan).
+    trial-days: 14
+    # Plan lookup in the global DB (P6.1): same role/password as the primary datasource, different database.
+    global-catalog:
+      datasource:
+        url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/saas_global
+        username: ${BILLING_DB_USER:billing_svc}
+        password: ${BILLING_DB_PASSWORD}
+    # Cross-tenant "trial subscriptions past their deadline" lookup (P6.3); dedicated BYPASSRLS reader.
+    job-reader:
+      datasource:
+        url: ${spring.datasource.url}
+        username: ${BILLING_JOB_READER_DB_USER:billing_job_reader}
+        password: ${BILLING_JOB_READER_DB_PASSWORD}

@@ -12,6 +12,7 @@ services:
       NOTIF_DB_PASSWORD: ${NOTIF_DB_PASSWORD}
       OUTBOX_RELAY_DB_PASSWORD: ${OUTBOX_RELAY_DB_PASSWORD}
       ORG_AUTH_READER_DB_PASSWORD: ${ORG_AUTH_READER_DB_PASSWORD}
+      BILLING_JOB_READER_DB_PASSWORD: ${BILLING_JOB_READER_DB_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -33,7 +34,7 @@ services:
       # own "database" segment is redundant with the generic [databases] entries in pgbouncer.ini
       # (userlist.txt is generated from this list regardless of dbname) - outbox_relay (P3.2) and
       # org_auth_reader (P4.1) were both missing until now, so neither could ever authenticate
-      DATABASE_URLS: "postgres://auth_svc:${AUTH_DB_PASSWORD}@postgres/saas_global,postgres://org_svc:${ORG_DB_PASSWORD}@postgres/saas_shard_1,postgres://billing_svc:${BILLING_DB_PASSWORD}@postgres/saas_shard_1,postgres://notif_svc:${NOTIF_DB_PASSWORD}@postgres/saas_shard_1,postgres://outbox_relay:${OUTBOX_RELAY_DB_PASSWORD}@postgres/saas_shard_1,postgres://org_auth_reader:${ORG_AUTH_READER_DB_PASSWORD}@postgres/saas_shard_1"
+      DATABASE_URLS: "postgres://auth_svc:${AUTH_DB_PASSWORD}@postgres/saas_global,postgres://org_svc:${ORG_DB_PASSWORD}@postgres/saas_shard_1,postgres://billing_svc:${BILLING_DB_PASSWORD}@postgres/saas_shard_1,postgres://notif_svc:${NOTIF_DB_PASSWORD}@postgres/saas_shard_1,postgres://outbox_relay:${OUTBOX_RELAY_DB_PASSWORD}@postgres/saas_shard_1,postgres://org_auth_reader:${ORG_AUTH_READER_DB_PASSWORD}@postgres/saas_shard_1,postgres://billing_job_reader:${BILLING_JOB_READER_DB_PASSWORD}@postgres/saas_shard_1"
     ports:
       - "6432:6432"
     volumes:
@@ -196,6 +197,7 @@ services:
       DB_HOST: pgbouncer
       DB_PORT: 6432
       BILLING_DB_PASSWORD: ${BILLING_DB_PASSWORD}
+      BILLING_JOB_READER_DB_PASSWORD: ${BILLING_JOB_READER_DB_PASSWORD}
       SPRING_FLYWAY_URL: jdbc:postgresql://postgres:5432/saas_shard_1
       JWT_SECRET: ${JWT_SECRET}
       KAFKA_BROKERS: kafka:29092

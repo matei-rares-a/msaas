@@ -9,4 +9,6 @@ import java.util.UUID;
 public interface SubscriptionRepository extends TenantScopedRepository<Subscription, UUID> {
 
     Optional<Subscription> findByStatus(Subscription.Status status);
+
+    Optional<Subscription> findByStatusNot(Subscription.Status status);
 }
