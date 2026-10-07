@@ -39,6 +39,10 @@ public class Subscription extends TenantScopedEntity {
 
     private Instant endDate;
 
+    /** Set when the subscription first goes PAST_DUE, cleared on recovery (REQ-BILL-04): the grace
+     * period (7 days by default) is measured from here, not from each individual failed retry. */
+    private Instant pastDueSince;
+
     @CreationTimestamp
     private Instant createdAt;
 

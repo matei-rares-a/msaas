@@ -3,6 +3,7 @@ package com.saas.billing.config;
 import com.saas.billing.plan.PlanCatalogReader;
 import com.saas.billing.repository.InvoiceRepository;
 import com.saas.billing.service.ExpiredTrialFinder;
+import com.saas.billing.service.GracePeriodEscalationJob;
 import com.saas.billing.service.PaymentService;
 import com.saas.billing.service.SubscriptionService;
 import com.saas.billing.service.TrialConversionJob;
@@ -18,9 +19,10 @@ import javax.sql.DataSource;
 import java.time.Clock;
 import java.time.Duration;
 
+/** Billing's scheduled jobs (REQ-BILL-06 trial conversion, REQ-BILL-04 grace-period escalation). */
 @Configuration
 @EnableScheduling
-public class TrialConversionConfig {
+public class BillingSchedulingConfig {
 
     @Bean
     public ExpiredTrialFinder expiredTrialFinder(
@@ -47,6 +49,18 @@ public class TrialConversionConfig {
         return new TrialConversionScheduler(job, Duration.ofDays(trialDays));
     }
 
+    @Bean
+    public GracePeriodEscalationJob gracePeriodEscalationJob(ExpiredTrialFinder finder,
+            SubscriptionService subscriptionService, Clock clock) {
+        return new GracePeriodEscalationJob(finder, subscriptionService, clock);
+    }
+
+    @Bean
+    public GracePeriodEscalationScheduler gracePeriodEscalationScheduler(GracePeriodEscalationJob job,
+            @Value("${saas.billing.grace-period-days:7}") long gracePeriodDays) {
+        return new GracePeriodEscalationScheduler(job, Duration.ofDays(gracePeriodDays));
+    }
+
     public static class TrialConversionScheduler {
         private final TrialConversionJob job;
         private final Duration trialDuration;
@@ -59,6 +73,21 @@ public class TrialConversionConfig {
         @Scheduled(cron = "${saas.billing.trial-conversion-cron:0 0 4 * * *}")
         public void convertExpiredTrials() {
             job.convertExpiredTrials(trialDuration);
+        }
+    }
+
+    public static class GracePeriodEscalationScheduler {
+        private final GracePeriodEscalationJob job;
+        private final Duration gracePeriod;
+
+        GracePeriodEscalationScheduler(GracePeriodEscalationJob job, Duration gracePeriod) {
+            this.job = job;
+            this.gracePeriod = gracePeriod;
+        }
+
+        @Scheduled(cron = "${saas.billing.grace-period-cron:0 30 4 * * *}")
+        public void suspendOverdueGracePeriods() {
+            job.suspendOverdueGracePeriods(gracePeriod);
         }
     }
 }

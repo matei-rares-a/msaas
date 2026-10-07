@@ -172,6 +172,7 @@ services:
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_USER: ${RABBITMQ_USER}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      BILLING_SERVICE_BASE_URL: http://billing-service:8083
     depends_on:
       pgbouncer:
         condition: service_healthy

@@ -79,3 +79,8 @@ saas:
   # Response deadline before an admin-demotion request escalates to support (P4.3, REQ-ROLE-04)
   admin-demotion:
     response-deadline: ${ADMIN_DEMOTION_RESPONSE_DEADLINE:7d}
+
+# Synchronous write-access check (P6.4, REQ-BILL-04): if unreachable, fails open to ACTIVE so a
+# billing-service outage does not lock out the rest of the platform.
+billing-service:
+  base-url: ${BILLING_SERVICE_BASE_URL:http://localhost:8083}

@@ -1,5 +1,6 @@
 package com.saas.org.controller;
 
+import com.saas.org.client.TenantAccessStatusClient;
 import com.saas.org.dto.CreateOrganizationRequest;
 import com.saas.org.dto.MemberRoleResponse;
 import com.saas.org.dto.OrganizationResponse;
@@ -22,6 +23,7 @@ import java.util.UUID;
 public class OrganizationController {
 
     private final OrganizationService organizationService;
+    private final TenantAccessStatusClient tenantAccessStatusClient;
 
     @PostMapping
     public ResponseEntity<OrganizationResponse> create(@Valid @RequestBody CreateOrganizationRequest request) {
@@ -35,6 +37,7 @@ public class OrganizationController {
             @RequestHeader("X-Tenant-Id") UUID callerTenantId,
             @Valid @RequestBody RenameOrganizationRequest request) {
         TenantRequestGuard.requireMatch(tenantId, callerTenantId);
+        requireWritableTenant(tenantId);
         return ResponseEntity.ok(organizationService.renameOrganization(tenantId, callerUserId, request.getName()));
     }
 
@@ -45,6 +48,7 @@ public class OrganizationController {
             @RequestHeader("X-Tenant-Id") UUID callerTenantId,
             @Valid @RequestBody UpdateMemberRoleRequest request) {
         TenantRequestGuard.requireMatch(tenantId, callerTenantId);
+        requireWritableTenant(tenantId);
         RoleChangeOutcome outcome = organizationService.updateMemberRole(tenantId, callerUserId, userId, request.getRole());
         if (outcome.isPending()) {
             return ResponseEntity.status(HttpStatus.ACCEPTED).body(outcome.pendingRequest());
@@ -57,6 +61,7 @@ public class OrganizationController {
             @RequestHeader("X-User-Id") UUID callerUserId,
             @RequestHeader("X-Tenant-Id") UUID callerTenantId) {
         TenantRequestGuard.requireMatch(tenantId, callerTenantId);
+        requireWritableTenant(tenantId);
         return ResponseEntity.ok(organizationService.acceptAdminDemotion(tenantId, requestId, callerUserId));
     }
 
@@ -65,8 +70,17 @@ public class OrganizationController {
             @RequestHeader("X-User-Id") UUID callerUserId,
             @RequestHeader("X-Tenant-Id") UUID callerTenantId) {
         TenantRequestGuard.requireMatch(tenantId, callerTenantId);
+        requireWritableTenant(tenantId);
         organizationService.rejectAdminDemotion(tenantId, requestId, callerUserId);
         return ResponseEntity.noContent().build();
+    }
+
+    /** PAST_DUE (read-only) and SUSPENDED both block writes (REQ-BILL-04). */
+    private void requireWritableTenant(UUID tenantId) {
+        String status = tenantAccessStatusClient.accessStatus(tenantId);
+        if (!"ACTIVE".equals(status)) {
+            throw new SecurityException("tenant is " + status + "; writes are blocked");
+        }
     }
 }
 

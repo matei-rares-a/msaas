@@ -67,6 +67,8 @@ saas:
   billing:
     # Default trial length (P6.3); a configurable default, not a requirement (section 4 of the plan).
     trial-days: 14
+    # Default grace period after PAST_DUE before SUSPENDED (P6.4, REQ-BILL-04); section 4 of the plan.
+    grace-period-days: 7
     # Plan lookup in the global DB (P6.1): same role/password as the primary datasource, different database.
     global-catalog:
       datasource:

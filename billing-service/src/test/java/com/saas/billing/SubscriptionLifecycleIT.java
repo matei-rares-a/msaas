@@ -1,11 +1,14 @@
 package com.saas.billing;
 
 import com.saas.billing.entity.Subscription;
+import com.saas.billing.payment.SimulatedPaymentGateway;
+import com.saas.billing.service.GracePeriodEscalationJob;
 import com.saas.billing.service.SubscriptionService;
 import com.saas.billing.service.TrialConversionJob;
 import com.saas.testsupport.containers.SharedContainers;
 import com.saas.testsupport.time.MutableClock;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,12 +44,17 @@ class SubscriptionLifecycleIT {
     private static final Path ROOT = Path.of("..").toAbsolutePath().normalize();
     private static final PostgreSQLContainer<?> postgres = startTopology();
     private static final Duration TRIAL = Duration.ofDays(14);
+    private static final Duration GRACE_PERIOD = Duration.ofDays(7);
     private static String globalUrl;
 
     @Autowired
     private SubscriptionService subscriptionService;
     @Autowired
     private TrialConversionJob trialConversionJob;
+    @Autowired
+    private GracePeriodEscalationJob gracePeriodEscalationJob;
+    @Autowired
+    private SimulatedPaymentGateway simulatedPaymentGateway;
     @Autowired
     private MutableClock clock;
 
@@ -98,6 +106,12 @@ class SubscriptionLifecycleIT {
         if (postgres != null) {
             postgres.stop();
         }
+    }
+
+    @BeforeEach
+    void resetGateway() {
+        // Shared singleton across every test in this class; never leave it failing for the next test.
+        simulatedPaymentGateway.setFailureMode(SimulatedPaymentGateway.FailureMode.ALWAYS_SUCCEED);
     }
 
     @Test
@@ -164,6 +178,52 @@ class SubscriptionLifecycleIT {
         trialConversionJob.convertExpiredTrials(TRIAL);
 
         assertThat(statusOf(subscription.getId())).isEqualTo("CANCELED");
+    }
+
+    @Test
+    @Tag("REQ-BILL-04")
+    void aFailedChargeGoesPastDueAndASuccessfulRetryRecovers() {
+        UUID tenantId = UUID.randomUUID();
+        UUID planId = createActivePlan("Starter", "9.99", 5);
+        Subscription subscription = subscriptionService.subscribe(tenantId, planId);
+        subscriptionService.markStatus(tenantId, subscription.getId(), Subscription.Status.ACTIVE);
+
+        simulatedPaymentGateway.setFailureMode(SimulatedPaymentGateway.FailureMode.ALWAYS_FAIL);
+        subscriptionService.chargeCurrentPeriod(tenantId);
+        assertThat(statusOf(subscription.getId())).isEqualTo("PAST_DUE");
+        assertThat(subscriptionService.accessStatus(tenantId)).isEqualTo("READ_ONLY");
+
+        simulatedPaymentGateway.setFailureMode(SimulatedPaymentGateway.FailureMode.ALWAYS_SUCCEED);
+        subscriptionService.chargeCurrentPeriod(tenantId);
+        assertThat(statusOf(subscription.getId())).isEqualTo("ACTIVE");
+        assertThat(subscriptionService.accessStatus(tenantId)).isEqualTo("ACTIVE");
+    }
+
+    @Test
+    @Tag("REQ-BILL-04")
+    void aGracePeriodOverSevenDaysSuspendsTheSubscription() {
+        UUID tenantId = UUID.randomUUID();
+        UUID planId = createActivePlan("Starter", "9.99", 5);
+        Subscription subscription = subscriptionService.subscribe(tenantId, planId);
+        subscriptionService.markStatus(tenantId, subscription.getId(), Subscription.Status.ACTIVE);
+
+        simulatedPaymentGateway.setFailureMode(SimulatedPaymentGateway.FailureMode.ALWAYS_FAIL);
+        subscriptionService.chargeCurrentPeriod(tenantId);
+        assertThat(statusOf(subscription.getId())).isEqualTo("PAST_DUE");
+
+        clock.advance(GRACE_PERIOD.plusDays(1));
+        gracePeriodEscalationJob.suspendOverdueGracePeriods(GRACE_PERIOD);
+
+        assertThat(statusOf(subscription.getId())).isEqualTo("SUSPENDED");
+        assertThat(subscriptionService.accessStatus(tenantId)).isEqualTo("SUSPENDED");
+
+        simulatedPaymentGateway.setFailureMode(SimulatedPaymentGateway.FailureMode.ALWAYS_SUCCEED);
+    }
+
+    @Test
+    @Tag("REQ-BILL-04")
+    void accessStatusDefaultsToActiveWithNoCurrentSubscription() {
+        assertThat(subscriptionService.accessStatus(UUID.randomUUID())).isEqualTo("ACTIVE");
     }
 
     private UUID createActivePlan(String name, String priceEur, int maxUsers) {
