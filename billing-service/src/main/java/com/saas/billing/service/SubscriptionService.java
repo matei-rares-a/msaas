@@ -19,6 +19,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -158,6 +159,17 @@ public class SubscriptionService {
                     default -> "ACTIVE";
                 })
                 .orElse("ACTIVE");
+    }
+
+    /** The current (non-CANCELED) subscription, for viewing (REQ-ROLE-01, REQ-MGR-02). */
+    public Optional<Subscription> currentSubscription(UUID tenantId) {
+        return TenantContext.callWith(tenantId, () -> transactionTemplate.execute(status ->
+                subscriptionRepository.findByStatusNot(Subscription.Status.CANCELED)));
+    }
+
+    /** Every invoice of the tenant, for viewing (REQ-ROLE-01, REQ-MGR-02). */
+    public List<Invoice> listInvoices(UUID tenantId) {
+        return TenantContext.callWith(tenantId, () -> transactionTemplate.execute(status -> invoiceRepository.findAll()));
     }
 
     private void publishChanged(UUID tenantId, UUID planId, int maxUsers, Subscription.Status status) {
