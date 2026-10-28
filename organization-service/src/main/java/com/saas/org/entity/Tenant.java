@@ -26,6 +26,13 @@ public class Tenant extends TenantScopedEntity {
     @Column(nullable = false)
     private String name;
 
+    // Local, eventually-consistent projection of the current plan's maxUsers (REQ-BILL-03), written
+    // only by SubscriptionChangedListener; NULL = no SUBSCRIPTION_CHANGED event processed yet (fail-closed).
+    private Integer maxUsers;
+
+    // Per-tenant override of the invitation expiry (REQ-INV-01); NULL = use the platform default.
+    private Integer invitationExpiryDays;
+
     @CreationTimestamp
     private Instant createdAt;
 

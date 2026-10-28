@@ -20,6 +20,8 @@ import java.util.UUID;
 @Setter
 public class Invitation extends TenantScopedEntity {
 
+    public enum Status {PENDING, ACCEPTED, REVOKED}
+
     @Id
     private UUID id;
 
@@ -36,8 +38,9 @@ public class Invitation extends TenantScopedEntity {
     @Column(nullable = false)
     private Instant expiresAt;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private boolean accepted;
+    private Status status = Status.PENDING;
 
     @CreationTimestamp
     private Instant createdAt;

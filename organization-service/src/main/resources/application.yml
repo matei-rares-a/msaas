@@ -25,10 +25,12 @@ spring:
     bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
     consumer:
       group-id: org-service
+      # The outbox relay always publishes with a KafkaTemplate<String,String> forced onto
+      # StringSerializer (OutboxAutoConfiguration/OutboxRelay), regardless of what a producer config
+      # here might say - so the wire format is always raw JSON text, never typed with headers.
+      # SubscriptionChangedListener deserializes it manually with an ObjectMapper.
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: "*"
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
     port: 5672
