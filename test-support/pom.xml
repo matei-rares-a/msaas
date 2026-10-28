@@ -46,6 +46,13 @@
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
         </dependency>
+        <!-- TenantFixtures.persist(DataSource, ...) uses JdbcTemplate directly; this module is
+             consumed with test scope, so this needs to be compile scope here (pre-existing gap: it
+             only compiled before because of stale target/ output, not because it was actually wired). -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-jdbc</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
