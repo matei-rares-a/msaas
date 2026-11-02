@@ -1,5 +1,6 @@
 package com.saas.notification.graphql;
 
+import com.saas.notification.security.AuthenticationRequiredException;
 import graphql.GraphQLError;
 import graphql.GraphqlErrorBuilder;
 import graphql.schema.DataFetchingEnvironment;

@@ -55,6 +55,15 @@ saas:
     max-depth: ${GRAPHQL_MAX_DEPTH:6}
     max-complexity: ${GRAPHQL_MAX_COMPLEXITY:1000}
     max-page-size: ${GRAPHQL_MAX_PAGE_SIZE:100}
+  # Journal export (P9.3, REQ-MON-05, REQ-SCALE-03): an export whose estimated time (rows x measured cost per row)
+  # is over async-threshold runs as a background job; the estimate starts from default-millis-per-row until
+  # exports have been measured, then uses the average of the last timing-window runs.
+  export:
+    async-threshold: ${EXPORT_ASYNC_THRESHOLD:PT5S}
+    default-millis-per-row: ${EXPORT_DEFAULT_MILLIS_PER_ROW:0.05}
+    timing-window: ${EXPORT_TIMING_WINDOW:20}
+    max-rows: ${EXPORT_MAX_ROWS:500000}
+    retention: ${EXPORT_RETENTION:PT24H}
   outbox:
     enabled: true
     relay:

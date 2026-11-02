@@ -131,11 +131,22 @@ La fiecare prompt:
 ## 5. Status la data acestui fisier (2026-11-02)
 
 Fazele 0-7 sunt complete si commise (`P7.1` a fost implementat de alt agent, Kiro, si corectat in
-`P7.1 (deviere)`). Faza 8 (Personalizare) e completa si `P9.1 Scrierea in jurnal` e facut. P9.2 (citirea jurnalului prin GraphQL) e facut. Pasul curent (primul nebifat din plan) este
-**P9.3 Export CSV**: doar ADMIN; decizie sync/async pe baza timpului mediu masurat al operatiei; async ruleaza ca job si genereaza notificarea "export gata". REQ: MON-05, SCALE-03. Se poate refolosi `ActivityLogReader` (filtre izolare pe tenant deja acolo).
+`P7.1 (deviere)`). Faza 8 (Personalizare) e completa si `P9.1 Scrierea in jurnal` e facut. P9.2 (citirea jurnalului prin GraphQL) si P9.3 (export CSV) sunt facute. Pasul curent (primul nebifat din plan) este
+**P9.4 Trimiterea email-urilor**: consumator de comenzi RabbitMQ; 3 reincercari cu backoff -> `FAILED`; doar metadate; la scrierea
+unui log pentru un destinatar care e membru se completeaza `email_logs.recipient_user_id` (altfel offboarding-ul din P7.2 nu poate
+anonimiza adresa); `EMAIL_SENT`/`EMAIL_FAILED` in jurnalul tenantului, email-urile de identitate nelogate; fara setari de
+dezactivare. REQ: MON-01, NOTIF-06, NOTIF-07, NOTIF-08, NOTIF-09. Primul consumator RabbitMQ real e cel de export (P9.3): modelul
+pentru coada, DLX si fabrica de listenere e `ExportConfig`.
 
 Ce exista deja si e relevant mai departe:
-- **Citirea jurnalului (P9.2)**: GraphQL pe `/notifications/graphql` (`graphql/` + `activity-log.graphqls`), doar `Query`; identitatea vine
+- **Export CSV (P9.3)**: `POST /notifications/activity-log/exports` (doar ADMIN) + `GET .../{id}` si `/{id}/download`, in pachetul `export/`.
+  `ExportTimings` decide inline/fundal din media masurata ms/intrare x numarul de intrari fata de `saas.export.async-threshold`; un IT
+  isi fixeaza decizia inregistrand 20 de masuratori (`measuredCost` in `ActivityLogExportIT`), altfel rularile inline anterioare o schimba.
+  Jobul de fundal = rand in `notif.export_jobs` + comanda in outbox spre exchange-ul fanout `notif.export-commands`; fisierul sta in
+  `content` (BYTEA) pana la `expires_at` si se sterge la urmatorul export al aceluiasi tenant (o curatare intre tenanti nu se poate sub RLS;
+  un job de platforma ar cere un rol BYPASSRLS ca `outbox_relay`). Un job care esueaza de 5 ori ajunge in `notif.export-jobs.dlq` si ramane
+  PENDING (nu exista stare FAILED). Releul outbox e oprit in teste: `ActivityLogExportIT.drainOutbox()` il inlocuieste. `ActivityLogFilterParser`
+  si `security/Caller` sunt comune cu GraphQL; un IT care foloseste `OutboxWriter` trebuie sa seteze `spring.datasource.hikari.connection-init-sql=SET search_path TO notif,public`.- **Citirea jurnalului (P9.2)**: GraphQL pe `/notifications/graphql` (`graphql/` + `activity-log.graphqls`), doar `Query`; identitatea vine
   din antetele gateway-ului prin `CallerContextInterceptor`, niciodata din argumente. `QueryOnlyInterceptor` refuza mutatii/subscriptii
   inainte de executie. Limite in `ActivityLogGraphQlConfig` (`saas.graphql.*`). Un IT GraphQL cu MockMvc cere `asyncDispatch`;
   cel de productie foloseste `@ActiveProfiles("prod")`. Testele cu Postgres de test nu probeaza RLS (superuser), doar filtrul explicit.

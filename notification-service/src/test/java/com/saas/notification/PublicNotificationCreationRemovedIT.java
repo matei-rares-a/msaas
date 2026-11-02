@@ -55,10 +55,14 @@ class PublicNotificationCreationRemovedIT implements PostgresTestContainer {
         assertThat(rows).isEqualTo(before);
     }
 
+    /** The one write endpoint that exists besides internal ones: a journal export request, which stores a file, not a notification (P9.3). */
+    private static final Set<String> EXPORT_REQUEST_PATHS = Set.of("/notifications/activity-log/exports");
+
     @Test
-    void noEndpointCreatesResources() {
+    void noEndpointCreatesResourcesExceptTheJournalExportRequest() {
         assertThat(handlerMapping.getHandlerMethods().keySet())
                 .noneMatch(info -> info.getMethodsCondition().getMethods().stream()
-                        .anyMatch(Set.of(RequestMethod.POST, RequestMethod.PUT)::contains));
+                        .anyMatch(Set.of(RequestMethod.POST, RequestMethod.PUT)::contains)
+                        && !EXPORT_REQUEST_PATHS.containsAll(info.getPathPatternsCondition().getPatternValues()));
     }
 }

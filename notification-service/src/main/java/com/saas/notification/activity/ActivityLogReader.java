@@ -6,10 +6,13 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.sql.DataSource;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 /**
  * Reads one tenant's activity journal, newest first, with optional filters and offset pagination
@@ -19,6 +22,8 @@ import java.util.UUID;
  * from caller input. Read-only: nothing here inserts, updates or deletes.
  */
 public class ActivityLogReader {
+
+    private static final int STREAM_FETCH_SIZE = 1000;
 
     private final JdbcTemplate jdbcTemplate;
     private final TransactionTemplate transactionTemplate;
@@ -46,13 +51,45 @@ public class ActivityLogReader {
             List<ActivityLogRecord> items = jdbcTemplate.query(
                     "SELECT id, event_type, actor_user_id, metadata::text AS metadata, created_at FROM notif.activity_log"
                             + where + " ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?",
-                    (rs, n) -> new ActivityLogRecord(
-                            rs.getObject("id", UUID.class), rs.getString("event_type"),
-                            rs.getObject("actor_user_id", UUID.class), rs.getTimestamp("created_at").toInstant(),
-                            rs.getString("metadata") == null ? "{}" : rs.getString("metadata")),
+                    (rs, n) -> record(rs),
                     pageArgs.toArray());
             return new ActivityLogPage(items, page, size, total == null ? 0 : total);
         }));
+    }
+
+    /** How many entries match, for deciding how an export will run (REQ-SCALE-03). */
+    public long count(UUID tenantId, ActivityLogQuery query) {
+        return TenantContext.callWith(tenantId, () -> transactionTemplate.execute(status -> {
+            List<Object> args = new ArrayList<>();
+            Long total = jdbcTemplate.queryForObject("SELECT count(*) FROM notif.activity_log" + where(tenantId, query, args),
+                    Long.class, args.toArray());
+            return total == null ? 0L : total;
+        }));
+    }
+
+    /**
+     * Streams every matching entry, newest first, through a database cursor so the full result is never
+     * held here (REQ-MON-05). Same tenant filter and RLS as {@link #read}.
+     */
+    public void forEach(UUID tenantId, ActivityLogQuery query, Consumer<ActivityLogRecord> consumer) {
+        TenantContext.runWith(tenantId, () -> transactionTemplate.executeWithoutResult(status -> {
+            List<Object> args = new ArrayList<>();
+            String where = where(tenantId, query, args);
+            JdbcTemplate streaming = new JdbcTemplate(jdbcTemplate.getDataSource());
+            streaming.setFetchSize(STREAM_FETCH_SIZE);
+            streaming.query("SELECT id, event_type, actor_user_id, metadata::text AS metadata, created_at FROM notif.activity_log"
+                            + where + " ORDER BY created_at DESC, id DESC",
+                    rs -> {
+                        consumer.accept(record(rs));
+                    }, args.toArray());
+        }));
+    }
+
+    private static ActivityLogRecord record(ResultSet rs) throws SQLException {
+        return new ActivityLogRecord(
+                rs.getObject("id", UUID.class), rs.getString("event_type"),
+                rs.getObject("actor_user_id", UUID.class), rs.getTimestamp("created_at").toInstant(),
+                rs.getString("metadata") == null ? "{}" : rs.getString("metadata"));
     }
 
     private static String where(UUID tenantId, ActivityLogQuery query, List<Object> args) {
