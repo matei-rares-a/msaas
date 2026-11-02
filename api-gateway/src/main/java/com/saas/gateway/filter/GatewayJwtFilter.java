@@ -7,6 +7,7 @@ import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
@@ -15,6 +16,8 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
 /** Validates the per-tenant access token and forwards its claims as headers (REQ-AUTH-04, REQ-AUTH-05). */
 @Component
@@ -31,6 +34,10 @@ public class GatewayJwtFilter implements GlobalFilter, Ordered {
             "/auth/reset-password",
             "/auth/refresh"
     );
+
+    // POST routes a user without any tenant may call with an identity token (create an organization,
+    // accept an invitation).
+    private static final Set<String> IDENTITY_ROUTES = Set.of("/organizations", "/invitations/accept");
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
@@ -52,8 +59,7 @@ public class GatewayJwtFilter implements GlobalFilter, Ordered {
         Optional<AccessTokenClaims> claims = jwtService.parse(token);
 
         if (claims.isEmpty()) {
-            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-            return exchange.getResponse().setComplete();
+            return forwardIdentityOrReject(exchange, chain, token);
         }
 
         // Mutate request to forward the token's claims as context headers
@@ -65,6 +71,29 @@ public class GatewayJwtFilter implements GlobalFilter, Ordered {
                 .build();
 
         return chain.filter(exchange.mutate().request(mutated).build());
+    }
+
+    /** A tenant-less user (REQ-AUTH-03) holds only an identity token, valid solely on the routes it
+     * needs; every client-supplied context header is dropped so none can be spoofed. */
+    private Mono<Void> forwardIdentityOrReject(ServerWebExchange exchange, GatewayFilterChain chain, String token) {
+        ServerHttpRequest request = exchange.getRequest();
+        Optional<UUID> userId = isIdentityRoute(request) ? jwtService.parseIdentity(token) : Optional.empty();
+        if (userId.isEmpty()) {
+            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+            return exchange.getResponse().setComplete();
+        }
+        ServerHttpRequest mutated = request.mutate()
+                .headers(h -> {
+                    h.remove("X-Tenant-Id");
+                    h.remove("X-Role");
+                })
+                .header("X-User-Id", userId.get().toString())
+                .build();
+        return chain.filter(exchange.mutate().request(mutated).build());
+    }
+
+    private static boolean isIdentityRoute(ServerHttpRequest request) {
+        return HttpMethod.POST.equals(request.getMethod()) && IDENTITY_ROUTES.contains(request.getURI().getPath());
     }
 
     @Override

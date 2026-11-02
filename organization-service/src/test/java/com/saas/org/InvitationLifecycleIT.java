@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -104,7 +105,8 @@ class InvitationLifecycleIT {
 
         mockMvc.perform(post("/invitations/accept")
                         .contentType("application/json")
-                        .content("{\"token\":\"" + token + "\",\"acceptingUserId\":\"" + UUID.randomUUID() + "\"}"))
+                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .content("{\"token\":\"" + token + "\"}"))
                 .andExpect(status().isConflict());
     }
 
@@ -133,13 +135,15 @@ class InvitationLifecycleIT {
         // overridden tenant: 1-day expiry, 2 days elapsed -> expired
         mockMvc.perform(post("/invitations/accept")
                         .contentType("application/json")
-                        .content("{\"token\":\"" + overriddenToken + "\",\"acceptingUserId\":\"" + UUID.randomUUID() + "\"}"))
+                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .content("{\"token\":\"" + overriddenToken + "\"}"))
                 .andExpect(status().isConflict());
 
         // default tenant: 7-day platform default, 2 days elapsed -> still valid
         mockMvc.perform(post("/invitations/accept")
                         .contentType("application/json")
-                        .content("{\"token\":\"" + defaultToken + "\",\"acceptingUserId\":\"" + UUID.randomUUID() + "\"}"))
+                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .content("{\"token\":\"" + defaultToken + "\"}"))
                 .andExpect(status().isOk());
     }
 
@@ -190,8 +194,59 @@ class InvitationLifecycleIT {
 
         mockMvc.perform(post("/invitations/accept")
                         .contentType("application/json")
-                        .content("{\"token\":\"" + token + "\",\"acceptingUserId\":\"" + UUID.randomUUID() + "\"}"))
+                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .content("{\"token\":\"" + token + "\"}"))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    @Tag("REQ-DATA-03")
+    void orgAuthReaderCanOnlyResolveATokenToItsTenantAndNeverReadInviteeEmails() throws Exception {
+        UUID admin = UUID.randomUUID();
+        UUID tenantId = createOrganization("Column Grant Co", admin);
+        allowUpTo(tenantId, 1000);
+        String token = createInvitationAndReturnToken(tenantId, admin, "secret-invitee@example.com", "USER");
+
+        String shardUrl = postgres.getJdbcUrl().replace("/" + postgres.getDatabaseName(), "/saas_shard_1");
+        try (var connection = java.sql.DriverManager.getConnection(shardUrl, "org_auth_reader", "pw");
+                var statement = connection.createStatement()) {
+            var resolved = statement.executeQuery("SELECT tenant_id FROM org.invitations WHERE token = '" + token + "'");
+            assertThat(resolved.next()).isTrue();
+            assertThat(resolved.getString(1)).isEqualTo(tenantId.toString());
+
+            assertThatThrownBy(() -> statement.executeQuery("SELECT email FROM org.invitations"))
+                    .hasMessageContaining("permission denied");
+            assertThatThrownBy(() -> statement.executeQuery("SELECT * FROM org.invitations"))
+                    .hasMessageContaining("permission denied");
+        }
+    }
+
+    @Test
+    @Tag("REQ-AUTH-05")
+    void theAcceptingUserComesFromTheCallerContextNotFromTheBody() throws Exception {
+        UUID admin = UUID.randomUUID();
+        UUID tenantId = createOrganization("Spoof Co", admin);
+        allowUpTo(tenantId, 1000);
+        String token = createInvitationAndReturnToken(tenantId, admin, "spoof@example.com", "USER");
+        UUID victim = UUID.randomUUID();
+        UUID realCaller = UUID.randomUUID();
+
+        // A body field naming another user is ignored; with no X-User-Id (no authenticated caller) it is a 400.
+        mockMvc.perform(post("/invitations/accept")
+                        .contentType("application/json")
+                        .content("{\"token\":\"" + token + "\",\"acceptingUserId\":\"" + victim + "\"}"))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(post("/invitations/accept")
+                        .contentType("application/json")
+                        .header("X-User-Id", realCaller.toString())
+                        .content("{\"token\":\"" + token + "\",\"acceptingUserId\":\"" + victim + "\"}"))
+                .andExpect(status().isOk());
+
+        assertThat(queryListAsTenant(tenantId, "SELECT user_id FROM org.memberships WHERE tenant_id = ? AND user_id = ?",
+                tenantId, victim)).isEmpty();
+        assertThat(queryListAsTenant(tenantId, "SELECT user_id FROM org.memberships WHERE tenant_id = ? AND user_id = ?",
+                tenantId, realCaller)).hasSize(1);
     }
 
     @Test
@@ -237,7 +292,8 @@ class InvitationLifecycleIT {
 
         mockMvc.perform(post("/invitations/accept")
                         .contentType("application/json")
-                        .content("{\"token\":\"" + token + "\",\"acceptingUserId\":\"" + acceptingUserId + "\"}"))
+                        .header("X-User-Id", acceptingUserId.toString())
+                        .content("{\"token\":\"" + token + "\"}"))
                 .andExpect(status().isOk());
 
         Map<String, Object> membership = queryAsTenant(tenantId,
@@ -258,12 +314,14 @@ class InvitationLifecycleIT {
 
         mockMvc.perform(post("/invitations/accept")
                         .contentType("application/json")
-                        .content("{\"token\":\"" + firstToken + "\",\"acceptingUserId\":\"" + acceptingUserId + "\"}"))
+                        .header("X-User-Id", acceptingUserId.toString())
+                        .content("{\"token\":\"" + firstToken + "\"}"))
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/invitations/accept")
                         .contentType("application/json")
-                        .content("{\"token\":\"" + secondToken + "\",\"acceptingUserId\":\"" + acceptingUserId + "\"}"))
+                        .header("X-User-Id", acceptingUserId.toString())
+                        .content("{\"token\":\"" + secondToken + "\"}"))
                 .andExpect(status().isConflict());
     }
 
@@ -290,7 +348,7 @@ class InvitationLifecycleIT {
     private UUID createOrganization(String name, UUID creatorUserId) throws Exception {
         var result = mockMvc.perform(post("/organizations")
                         .contentType("application/json")
-                        .content("{\"name\":\"" + name + "\",\"creatorUserId\":\"" + creatorUserId + "\"}"))
+                        .header("X-User-Id", creatorUserId.toString()).content("{\"name\":\"" + name + "\"}"))
                 .andExpect(status().isCreated())
                 .andReturn();
         Map body = new com.fasterxml.jackson.databind.ObjectMapper().readValue(result.getResponse().getContentAsString(), Map.class);

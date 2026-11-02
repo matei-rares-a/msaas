@@ -1,11 +1,13 @@
 package com.saas.org.arch;
 
 import com.saas.org.entity.Tenant;
+import com.saas.org.service.OrganizationService;
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaConstructorCall;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
+import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
@@ -16,6 +18,7 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.kafka.annotation.KafkaListener;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 /**
  * No tenant exists until an ADMIN explicitly creates an organization (REQ-EVT-08). Narrowed in P7.1
@@ -47,6 +50,38 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 class NoAutomaticTenantCreationArchTest {
 
     private static final JavaClasses CLASSES = new ClassFileImporter().importPackages("com.saas.org");
+    private static final JavaClasses MAIN_CLASSES = new ClassFileImporter()
+            .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS).importPackages("com.saas.org");
+
+    @Test
+    @Tag("REQ-EVT-08")
+    void onlyOrganizationServiceConstructsATenant() {
+        ArchRule rule = classes()
+                .that(areNotOrganizationServiceOrTenant())
+                .should(constructATenant())
+                .allowEmptyShould(true)
+                .because("REQ-EVT-08: a tenant is only created by an explicit organization-creation call, never by any other component");
+
+        rule.check(MAIN_CLASSES);
+    }
+
+    @Test
+    @Tag("REQ-EVT-08")
+    void noEventListenerClassDependsOnOrganizationCreation() {
+        ArchRule rule = noClasses()
+                .that(haveAnyMethodAnnotatedWithKafkaOrRabbitListener())
+                .should().dependOnClassesThat().areAssignableTo(OrganizationService.class)
+                .allowEmptyShould(true)
+                .because("REQ-EVT-08: no event consumer may reach the organization-creation path");
+
+        rule.check(MAIN_CLASSES);
+    }
+
+    private static DescribedPredicate<JavaClass> areNotOrganizationServiceOrTenant() {
+        return DescribedPredicate.describe("are neither OrganizationService nor Tenant",
+                javaClass -> !javaClass.getFullName().startsWith(OrganizationService.class.getName())
+                        && !javaClass.isEquivalentTo(Tenant.class));
+    }
 
     @Test
     @Tag("REQ-EVT-08")

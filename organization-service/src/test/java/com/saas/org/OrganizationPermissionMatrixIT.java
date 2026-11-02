@@ -94,7 +94,7 @@ class OrganizationPermissionMatrixIT {
         UUID adminId = UUID.randomUUID();
         var result = mockMvc.perform(post("/organizations")
                         .contentType("application/json")
-                        .content("{\"name\":\"Matrix Co\",\"creatorUserId\":\"" + adminId + "\"}"))
+                        .header("X-User-Id", adminId.toString()).content("{\"name\":\"Matrix Co\"}"))
                 .andExpect(status().isCreated())
                 .andReturn();
         var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
@@ -131,7 +131,7 @@ class OrganizationPermissionMatrixIT {
     private UUID createOrganizationOwnedBy(String name, UUID creatorUserId) throws Exception {
         var result = mockMvc.perform(post("/organizations")
                         .contentType("application/json")
-                        .content("{\"name\":\"" + name + "\",\"creatorUserId\":\"" + creatorUserId + "\"}"))
+                        .header("X-User-Id", creatorUserId.toString()).content("{\"name\":\"" + name + "\"}"))
                 .andExpect(status().isCreated())
                 .andReturn();
         var mapper = new com.fasterxml.jackson.databind.ObjectMapper();

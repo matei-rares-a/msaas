@@ -49,6 +49,8 @@ class LoginFlowIT {
     private MockMvc mockMvc;
     @Autowired
     private MutableClock clock;
+    @Autowired
+    private com.saas.shared.security.JwtService jwtService;
 
     private static PostgreSQLContainer<?> startTopology() {
         PostgreSQLContainer<?> container = new PostgreSQLContainer<>(
@@ -117,6 +119,11 @@ class LoginFlowIT {
         Map body = readBody(result);
         assertThat((Iterable<?>) body.get("tenants")).isEmpty();
         assertThat(body).doesNotContainKey("accessToken");
+        // The identity token authenticates the tenant-less user, but is no per-tenant access token.
+        String identityToken = (String) body.get("identityToken");
+        assertThat(identityToken).isNotBlank();
+        assertThat(jwtService.parseIdentity(identityToken)).isPresent();
+        assertThat(jwtService.parse(identityToken)).isEmpty();
     }
 
     @Test

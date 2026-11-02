@@ -38,7 +38,7 @@ public class AuthController {
         if (outcome.loginSessionId() != null) {
             return ResponseEntity.ok(Map.of("tenants", outcome.tenants(), "loginSessionId", outcome.loginSessionId()));
         }
-        return ResponseEntity.ok(Map.of("tenants", outcome.tenants()));
+        return ResponseEntity.ok(Map.of("tenants", outcome.tenants(), "identityToken", outcome.identityToken()));
     }
 
     @PostMapping("/login/tenant")

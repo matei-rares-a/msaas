@@ -135,7 +135,7 @@ class OrganizationLifecycleIT {
     private ResponseEntity<Map> createOrganization(String name, UUID creatorUserId) throws Exception {
         var result = mockMvc.perform(post("/organizations")
                         .contentType("application/json")
-                        .content("{\"name\":\"" + name + "\",\"creatorUserId\":\"" + creatorUserId + "\"}"))
+                        .header("X-User-Id", creatorUserId.toString()).content("{\"name\":\"" + name + "\"}"))
                 .andExpect(status().isCreated())
                 .andReturn();
         var mapper = new com.fasterxml.jackson.databind.ObjectMapper();

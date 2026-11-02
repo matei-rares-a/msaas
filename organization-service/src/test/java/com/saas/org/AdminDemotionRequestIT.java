@@ -183,7 +183,7 @@ class AdminDemotionRequestIT {
     private UUID createOrganization(String name, UUID creatorUserId) throws Exception {
         var result = mockMvc.perform(post("/organizations")
                         .contentType("application/json")
-                        .content("{\"name\":\"" + name + "\",\"creatorUserId\":\"" + creatorUserId + "\"}"))
+                        .header("X-User-Id", creatorUserId.toString()).content("{\"name\":\"" + name + "\"}"))
                 .andExpect(status().isCreated())
                 .andReturn();
         Map body = new com.fasterxml.jackson.databind.ObjectMapper().readValue(result.getResponse().getContentAsString(), Map.class);

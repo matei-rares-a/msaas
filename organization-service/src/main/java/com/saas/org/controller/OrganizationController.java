@@ -25,9 +25,13 @@ public class OrganizationController {
     private final OrganizationService organizationService;
     private final TenantAccessStatusClient tenantAccessStatusClient;
 
+    /** The caller is identified by the gateway's X-User-Id, whether the token is an identity token
+     * (0-tenant user, REQ-AUTH-03) or a per-tenant one; X-Tenant-Id is irrelevant here (the new
+     * organization does not exist yet). */
     @PostMapping
-    public ResponseEntity<OrganizationResponse> create(@Valid @RequestBody CreateOrganizationRequest request) {
-        OrganizationResponse response = organizationService.createOrganization(request.getName(), request.getCreatorUserId());
+    public ResponseEntity<OrganizationResponse> create(@RequestHeader("X-User-Id") UUID callerUserId,
+            @Valid @RequestBody CreateOrganizationRequest request) {
+        OrganizationResponse response = organizationService.createOrganization(request.getName(), callerUserId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

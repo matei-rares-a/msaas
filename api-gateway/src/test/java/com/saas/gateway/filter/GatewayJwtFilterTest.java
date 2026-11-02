@@ -86,4 +86,71 @@ class GatewayJwtFilterTest {
         assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(chainCalled.get()).isFalse();
     }
+
+    @Test
+    @Tag("REQ-AUTH-03")
+    void anIdentityTokenIsForwardedOnlyOnTheTenantlessRoutesWithSpoofedContextHeadersDropped() {
+        UUID userId = UUID.randomUUID();
+        String identityToken = jwtService.generateIdentityToken(userId);
+
+        for (String path : new String[] {"/organizations", "/invitations/accept"}) {
+            ServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.post(path)
+                    .header("Authorization", "Bearer " + identityToken)
+                    .header("X-User-Id", UUID.randomUUID().toString())
+                    .header("X-Tenant-Id", UUID.randomUUID().toString())
+                    .header("X-Role", "ADMIN"));
+            AtomicReference<ServerWebExchange> forwarded = new AtomicReference<>();
+
+            filter.filter(exchange, ex -> {
+                forwarded.set(ex);
+                return Mono.empty();
+            }).block();
+
+            assertThat(forwarded.get()).as(path).isNotNull();
+            assertThat(forwarded.get().getRequest().getHeaders().getFirst("X-User-Id")).isEqualTo(userId.toString());
+            assertThat(forwarded.get().getRequest().getHeaders().containsKey("X-Tenant-Id")).isFalse();
+            assertThat(forwarded.get().getRequest().getHeaders().containsKey("X-Role")).isFalse();
+        }
+    }
+
+    @Test
+    @Tag("REQ-AUTH-04")
+    void anIdentityTokenIsRejectedEverywhereElse() {
+        String identityToken = jwtService.generateIdentityToken(UUID.randomUUID());
+        String[][] requests = {
+                {"GET", "/organizations"},
+                {"PATCH", "/organizations/" + UUID.randomUUID()},
+                {"POST", "/organizations/" + UUID.randomUUID() + "/invitations"},
+                {"POST", "/billing/subscribe"},
+                {"GET", "/notifications/in-app"}
+        };
+        for (String[] r : requests) {
+            ServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest
+                    .method(org.springframework.http.HttpMethod.valueOf(r[0]), r[1])
+                    .header("Authorization", "Bearer " + identityToken));
+            AtomicReference<Boolean> chainCalled = new AtomicReference<>(false);
+
+            filter.filter(exchange, ex -> {
+                chainCalled.set(true);
+                return Mono.empty();
+            }).block();
+
+            assertThat(exchange.getResponse().getStatusCode()).as(r[0] + " " + r[1]).isEqualTo(HttpStatus.UNAUTHORIZED);
+            assertThat(chainCalled.get()).isFalse();
+        }
+    }
+
+    @Test
+    @Tag("REQ-AUTH-04")
+    void anExpiredIdentityTokenIsRejectedAndAnAccessTokenIsNotAnIdentityToken() {
+        String identityToken = jwtService.generateIdentityToken(UUID.randomUUID());
+        String accessToken = jwtService.generateAccessToken(new AccessTokenClaims(
+                UUID.randomUUID(), UUID.randomUUID(), "ADMIN", false, "Acme", "a@test.local"));
+
+        assertThat(jwtService.parse(identityToken)).isEmpty();
+        assertThat(jwtService.parseIdentity(accessToken)).isEmpty();
+
+        clock.advance(Duration.ofMinutes(16));
+        assertThat(jwtService.parseIdentity(identityToken)).isEmpty();
+    }
 }

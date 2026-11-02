@@ -150,10 +150,55 @@ class TenantAccessGuardIT {
                 .andExpect(status().isOk());
     }
 
+    @Test
+    @Tag("REQ-BILL-04")
+    void acceptingAnInvitationIsBlockedWhileTheTenantIsReadOnlyOrSuspended() throws Exception {
+        UUID adminId = UUID.randomUUID();
+        UUID tenantId = createOrganization("Accept Grace Co", adminId);
+        String token = insertInvitation(tenantId);
+        UUID newcomer = UUID.randomUUID();
+
+        for (String blocked : new String[] {"READ_ONLY", "SUSPENDED"}) {
+            accessStatusResponse = "{\"status\":\"" + blocked + "\"}";
+            try {
+                mockMvc.perform(post("/invitations/accept")
+                                .header("X-User-Id", newcomer.toString())
+                                .contentType("application/json")
+                                .content("{\"token\":\"" + token + "\"}"))
+                        .andExpect(status().isForbidden());
+            } finally {
+                accessStatusResponse = "{\"status\":\"ACTIVE\"}";
+            }
+        }
+
+        mockMvc.perform(post("/invitations/accept")
+                        .header("X-User-Id", newcomer.toString())
+                        .contentType("application/json")
+                        .content("{\"token\":\"" + token + "\"}"))
+                .andExpect(status().isOk());
+    }
+
+    private String insertInvitation(UUID tenantId) throws Exception {
+        String token = UUID.randomUUID().toString();
+        String shardUrl = postgres.getJdbcUrl().replace("/" + postgres.getDatabaseName(), "/saas_shard_1");
+        // Superuser connection: seeds the row directly, bypassing RLS, so the test needs no maxUsers setup.
+        try (var connection = java.sql.DriverManager.getConnection(shardUrl, "admin", "admin");
+                var statement = connection.prepareStatement(
+                        "INSERT INTO org.invitations (id, tenant_id, email, role, token, expires_at, status) "
+                                + "VALUES (?, ?, 'newcomer@example.com', 'USER', ?, now() + interval '1 day', 'PENDING')")) {
+            statement.setObject(1, UUID.randomUUID());
+            statement.setObject(2, tenantId);
+            statement.setString(3, token);
+            statement.executeUpdate();
+        }
+        return token;
+    }
+
     private UUID createOrganization(String name, UUID creatorUserId) throws Exception {
         var result = mockMvc.perform(post("/organizations")
+                        .header("X-User-Id", creatorUserId.toString())
                         .contentType("application/json")
-                        .content("{\"name\":\"" + name + "\",\"creatorUserId\":\"" + creatorUserId + "\"}"))
+                        .content("{\"name\":\"" + name + "\"}"))
                 .andExpect(status().isCreated())
                 .andReturn();
         var mapper = new com.fasterxml.jackson.databind.ObjectMapper();

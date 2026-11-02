@@ -100,7 +100,7 @@ public class AuthService {
         List<MembershipSummary> memberships = orgServiceClient.findMemberships(user.getId());
 
         if (memberships.isEmpty()) {
-            return LoginOutcome.none();
+            return LoginOutcome.none(jwtService.generateIdentityToken(user.getId()));
         }
         if (memberships.size() == 1) {
             MembershipSummary only = memberships.get(0);

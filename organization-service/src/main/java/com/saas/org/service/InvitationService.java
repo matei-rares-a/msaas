@@ -129,12 +129,17 @@ public class InvitationService {
         }));
     }
 
+    /** The tenant an invitation token belongs to, so the caller can check it is writable before accepting. */
+    public UUID tenantIdForToken(String token) {
+        return invitationTokenLookup.findTenantIdByToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("invalid invitation token"));
+    }
+
     /** No {@code TenantContext} exists yet for the accepting user - {@link InvitationTokenLookup}
      * (cross-tenant, RLS-bypassing) resolves the tenant from the token first, then every subsequent
      * read/write runs inside {@code TenantContext}, RLS-protected. */
     public AcceptInvitationResponse acceptInvitation(String token, UUID acceptingUserId) {
-        UUID tenantId = invitationTokenLookup.findTenantIdByToken(token)
-                .orElseThrow(() -> new IllegalArgumentException("invalid invitation token"));
+        UUID tenantId = tenantIdForToken(token);
         return TenantContext.callWith(tenantId, () -> transactionTemplate.execute(status -> {
             Invitation invitation = invitationRepository.findByToken(token)
                     .orElseThrow(() -> new IllegalArgumentException("invalid invitation token"));

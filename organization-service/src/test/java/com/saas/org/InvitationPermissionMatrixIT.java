@@ -95,7 +95,7 @@ class InvitationPermissionMatrixIT {
         UUID adminId = UUID.randomUUID();
         var result = mockMvc.perform(post("/organizations")
                         .contentType("application/json")
-                        .content("{\"name\":\"Invite Matrix Co\",\"creatorUserId\":\"" + adminId + "\"}"))
+                        .header("X-User-Id", adminId.toString()).content("{\"name\":\"Invite Matrix Co\"}"))
                 .andExpect(status().isCreated())
                 .andReturn();
         var mapper = new com.fasterxml.jackson.databind.ObjectMapper();

@@ -67,11 +67,14 @@ public class InvitationController {
         return ResponseEntity.noContent().build();
     }
 
-    /** No tenant/token yet for the accepting user on THIS tenant (same situation as
-     * {@code POST /organizations} for a 0-tenant user) - no X-Tenant-Id to guard against here. */
+    /** The accepting user comes from X-User-Id (identity token or per-tenant token, REQ-AUTH-03/05), no
+     * X-Tenant-Id to guard: the tenant is resolved from the invitation token. The target tenant must be
+     * writable like for any other membership change (REQ-BILL-04). */
     @PostMapping("/invitations/accept")
-    public ResponseEntity<AcceptInvitationResponse> accept(@Valid @RequestBody AcceptInvitationRequest request) {
-        return ResponseEntity.ok(invitationService.acceptInvitation(request.getToken(), request.getAcceptingUserId()));
+    public ResponseEntity<AcceptInvitationResponse> accept(@RequestHeader("X-User-Id") UUID callerUserId,
+            @Valid @RequestBody AcceptInvitationRequest request) {
+        requireWritableTenant(invitationService.tenantIdForToken(request.getToken()));
+        return ResponseEntity.ok(invitationService.acceptInvitation(request.getToken(), callerUserId));
     }
 
     /** PAST_DUE (read-only) and SUSPENDED both block writes (REQ-BILL-04). */
