@@ -53,6 +53,11 @@ public class SubscriptionService {
 
     /** Starts a new trial subscription (REQ-BILL-06); a tenant may have only one current (non-CANCELED) subscription. */
     public Subscription subscribe(UUID tenantId, UUID planId) {
+        return subscribe(tenantId, planId, null);
+    }
+
+    /** @param actorUserId the ADMIN who did it, for the tenant journal (REQ-MON-01); null for the system */
+    public Subscription subscribe(UUID tenantId, UUID planId, UUID actorUserId) {
         return TenantContext.callWith(tenantId, () -> transactionTemplate.execute(status -> {
             PlanSummary plan = planCatalogReader.findById(planId)
                     .filter(PlanSummary::active)
@@ -68,21 +73,29 @@ public class SubscriptionService {
             subscription.setStartDate(clock.instant());
             subscriptionRepository.save(subscription);
 
-            publishChanged(tenantId, plan.id(), plan.maxUsers(), subscription.getStatus());
+            publishChanged(tenantId, plan.id(), plan.maxUsers(), subscription.getStatus(), actorUserId);
             return subscription;
         }));
     }
 
     /** Plan change = cancel the current subscription + start a new trial, no proration (REQ-BILL-02). */
     public Subscription changePlan(UUID tenantId, UUID newPlanId) {
+        return changePlan(tenantId, newPlanId, null);
+    }
+
+    public Subscription changePlan(UUID tenantId, UUID newPlanId, UUID actorUserId) {
         Subscription current = TenantContext.callWith(tenantId, () -> transactionTemplate.execute(status ->
                         subscriptionRepository.findByStatusNot(Subscription.Status.CANCELED)))
                 .orElseThrow(() -> new IllegalArgumentException("no current subscription to change"));
-        cancelSubscription(tenantId, current.getId());
-        return subscribe(tenantId, newPlanId);
+        cancelSubscription(tenantId, current.getId(), actorUserId);
+        return subscribe(tenantId, newPlanId, actorUserId);
     }
 
     public Subscription cancelSubscription(UUID tenantId, UUID subscriptionId) {
+        return cancelSubscription(tenantId, subscriptionId, null);
+    }
+
+    public Subscription cancelSubscription(UUID tenantId, UUID subscriptionId, UUID actorUserId) {
         return TenantContext.callWith(tenantId, () -> transactionTemplate.execute(status -> {
             Subscription subscription = subscriptionRepository.findById(subscriptionId)
                     .orElseThrow(() -> new IllegalArgumentException("subscription not found"));
@@ -93,12 +106,17 @@ public class SubscriptionService {
             subscription.setEndDate(clock.instant());
             subscriptionRepository.save(subscription);
 
-            publishChanged(tenantId, null, 0, subscription.getStatus());
+            publishChanged(tenantId, null, 0, subscription.getStatus(), actorUserId);
             return subscription;
         }));
     }
 
+    /** A status change made by the system (trial conversion, grace-period expiry): no acting user. */
     public void markStatus(UUID tenantId, UUID subscriptionId, Subscription.Status newStatus) {
+        markStatus(tenantId, subscriptionId, newStatus, null);
+    }
+
+    public void markStatus(UUID tenantId, UUID subscriptionId, Subscription.Status newStatus, UUID actorUserId) {
         TenantContext.callWith(tenantId, () -> transactionTemplate.execute(status -> {
             Subscription subscription = subscriptionRepository.findById(subscriptionId)
                     .orElseThrow(() -> new IllegalArgumentException("subscription not found"));
@@ -111,7 +129,7 @@ public class SubscriptionService {
             subscriptionRepository.save(subscription);
 
             PlanSummary plan = planCatalogReader.findById(subscription.getPlanId()).orElse(null);
-            publishChanged(tenantId, subscription.getPlanId(), plan == null ? 0 : plan.maxUsers(), newStatus);
+            publishChanged(tenantId, subscription.getPlanId(), plan == null ? 0 : plan.maxUsers(), newStatus, actorUserId);
             return null;
         }));
     }
@@ -120,6 +138,10 @@ public class SubscriptionService {
      * is simply switching {@code SimulatedPaymentGateway} to {@code ALWAYS_FAIL} and calling this -
      * success clears PAST_DUE back to ACTIVE, failure starts (or continues) the grace period. */
     public Subscription chargeCurrentPeriod(UUID tenantId) {
+        return chargeCurrentPeriod(tenantId, null);
+    }
+
+    public Subscription chargeCurrentPeriod(UUID tenantId, UUID actorUserId) {
         Subscription subscription = TenantContext.callWith(tenantId, () -> transactionTemplate.execute(status ->
                         subscriptionRepository.findByStatusIn(
                                 List.of(Subscription.Status.ACTIVE, Subscription.Status.PAST_DUE))))
@@ -142,7 +164,7 @@ public class SubscriptionService {
         Subscription.Status newStatus = payment.getStatus() == Payment.Status.SUCCEEDED
                 ? Subscription.Status.ACTIVE
                 : Subscription.Status.PAST_DUE;
-        markStatus(tenantId, subscription.getId(), newStatus);
+        markStatus(tenantId, subscription.getId(), newStatus, actorUserId);
 
         return TenantContext.callWith(tenantId, () -> transactionTemplate.execute(status ->
                 subscriptionRepository.findById(subscription.getId()).orElseThrow()));
@@ -172,10 +194,10 @@ public class SubscriptionService {
         return TenantContext.callWith(tenantId, () -> transactionTemplate.execute(status -> invoiceRepository.findAll()));
     }
 
-    private void publishChanged(UUID tenantId, UUID planId, int maxUsers, Subscription.Status status) {
+    private void publishChanged(UUID tenantId, UUID planId, int maxUsers, Subscription.Status status, UUID actorUserId) {
         EventEnvelope<SubscriptionChangedPayload> envelope = EventEnvelope.forTenant(
                 "SUBSCRIPTION_CHANGED", 1, tenantId,
-                new SubscriptionChangedPayload(tenantId, planId, maxUsers, status.name()));
+                new SubscriptionChangedPayload(tenantId, planId, maxUsers, status.name(), actorUserId));
         outboxWriter.writeEvent(envelope, OutboxDestination.KAFKA, "billing.events");
     }
 }

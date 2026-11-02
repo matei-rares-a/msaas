@@ -51,6 +51,8 @@ class LoginFlowIT {
     private MutableClock clock;
     @Autowired
     private com.saas.shared.security.JwtService jwtService;
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     private static PostgreSQLContainer<?> startTopology() {
         PostgreSQLContainer<?> container = new PostgreSQLContainer<>(
@@ -196,6 +198,95 @@ class LoginFlowIT {
         orgStubResponse = membershipsJson(new UUID[] {tenantB}, new String[] {"USER"});
 
         selectTenant(loginSessionId, tenantA).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @Tag("REQ-MON-01")
+    void aLoginThatIssuesATenantTokenIsPublishedForThatTenantsJournal() throws Exception {
+        String email = register();
+        UUID tenantId = UUID.randomUUID();
+        orgStubResponse = membershipsJson(new UUID[] {tenantId}, new String[] {"MANAGER"});
+
+        login(email).andExpect(status().isOk());
+
+        var payload = loginPayloads(tenantId);
+        assertThat(payload).hasSize(1);
+        assertThat(payload.get(0).get("role").asText()).isEqualTo("MANAGER");
+        var entry = com.saas.shared.events.ActivityEventCatalog.find("LOGIN").orElseThrow();
+        assertThat(payload.get(0).get(entry.actorField()).asText()).isEqualTo(userIdOf(email).toString());
+        assertThat(payload.get(0).toString()).doesNotContain("@").doesNotContain(email);
+    }
+
+    @Test
+    @Tag("REQ-MON-01")
+    void choosingATenantAfterLoginIsPublishedOnceForTheChosenTenantOnly() throws Exception {
+        String email = register();
+        UUID tenantA = UUID.randomUUID();
+        UUID tenantB = UUID.randomUUID();
+        orgStubResponse = membershipsJson(new UUID[] {tenantA, tenantB}, new String[] {"ADMIN", "USER"});
+
+        String loginSessionId = (String) readBody(login(email).andReturn()).get("loginSessionId");
+        assertThat(loginPayloads(tenantA)).as("the first call only offers a choice, no tenant was entered").isEmpty();
+        assertThat(loginPayloads(tenantB)).isEmpty();
+
+        selectTenant(loginSessionId, tenantA).andExpect(status().isOk());
+
+        assertThat(loginPayloads(tenantA)).hasSize(1);
+        assertThat(loginPayloads(tenantB)).isEmpty();
+    }
+
+    @Test
+    @Tag("REQ-MON-01")
+    void aUserWithNoTenantAndARefreshProduceNoTenantJournalEntry() throws Exception {
+        String noTenantEmail = register();
+        orgStubResponse = "[]";
+        long before = loginEventCount();
+        login(noTenantEmail).andExpect(status().isOk());
+        assertThat(loginEventCount()).isEqualTo(before);
+
+        String email = register();
+        UUID tenantId = UUID.randomUUID();
+        orgStubResponse = membershipsJson(new UUID[] {tenantId}, new String[] {"USER"});
+        String refreshToken = (String) readBody(login(email).andReturn()).get("refreshToken");
+        assertThat(loginPayloads(tenantId)).hasSize(1);
+
+        mockMvc.perform(post("/auth/refresh").contentType("application/json")
+                        .content("{\"refreshToken\":\"" + refreshToken + "\"}"))
+                .andExpect(status().isOk());
+
+        assertThat(loginPayloads(tenantId)).as("a refresh is not a login").hasSize(1);
+    }
+
+    @Test
+    @Tag("REQ-PWD-08")
+    void noPasswordEventIsEverPublishedToKafkaWhereTheJournalReads() throws Exception {
+        String email = register();
+        orgStubResponse = "[]";
+        mockMvc.perform(post("/auth/forgot-password").contentType("application/json")
+                .content("{\"email\":\"" + email + "\"}")).andExpect(status().isOk());
+
+        var kafkaTypes = jdbc.queryForList("select event_type from auth.outbox where destination = 'KAFKA'", String.class);
+
+        assertThat(kafkaTypes).noneMatch(type -> type.contains("PASSWORD"));
+        assertThat(jdbc.queryForList("select event_type from auth.outbox where destination = 'RABBITMQ'", String.class))
+                .anyMatch(type -> type.contains("PASSWORD")); // the reset email command does exist, on the other broker
+    }
+
+    private java.util.List<com.fasterxml.jackson.databind.JsonNode> loginPayloads(UUID tenantId) throws Exception {
+        var result = new java.util.ArrayList<com.fasterxml.jackson.databind.JsonNode>();
+        for (String json : jdbc.queryForList("select payload from auth.outbox where tenant_id = ? and event_type = 'LOGIN'"
+                + " and destination = 'KAFKA' and channel = 'auth.events' order by created_at", String.class, tenantId)) {
+            result.add(new ObjectMapper().readTree(json).get("payload"));
+        }
+        return result;
+    }
+
+    private long loginEventCount() {
+        return jdbc.queryForObject("select count(*) from auth.outbox where event_type = 'LOGIN'", Long.class);
+    }
+
+    private UUID userIdOf(String email) {
+        return jdbc.queryForObject("select id from auth.users where email = ?", UUID.class, email);
     }
 
     private String register() throws Exception {

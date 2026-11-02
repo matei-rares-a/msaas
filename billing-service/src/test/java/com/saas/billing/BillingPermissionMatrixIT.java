@@ -103,6 +103,7 @@ class BillingPermissionMatrixIT {
         HttpStatus expected = role == Role.USER ? HttpStatus.FORBIDDEN : HttpStatus.OK;
         mockMvc.perform(get("/billing/subscription")
                         .header("X-Tenant-Id", tenantId.toString())
+                        .header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-Role", role.name()))
                 .andExpect(status().is(expected.value()));
     }
@@ -119,6 +120,7 @@ class BillingPermissionMatrixIT {
         HttpStatus expected = role == Role.USER ? HttpStatus.FORBIDDEN : HttpStatus.OK;
         mockMvc.perform(get("/billing/invoices")
                         .header("X-Tenant-Id", tenantId.toString())
+                        .header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-Role", role.name()))
                 .andExpect(status().is(expected.value()));
     }
@@ -134,6 +136,7 @@ class BillingPermissionMatrixIT {
         HttpStatus expected = role == Role.ADMIN ? HttpStatus.CREATED : HttpStatus.FORBIDDEN;
         mockMvc.perform(post("/billing/subscriptions")
                         .header("X-Tenant-Id", tenantId.toString())
+                        .header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-Role", role.name())
                         .contentType("application/json")
                         .content("{\"planId\":\"" + planId + "\"}"))
@@ -152,6 +155,7 @@ class BillingPermissionMatrixIT {
         HttpStatus expected = role == Role.ADMIN ? HttpStatus.OK : HttpStatus.FORBIDDEN;
         mockMvc.perform(post("/billing/subscriptions/cancel")
                         .header("X-Tenant-Id", tenantId.toString())
+                        .header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-Role", role.name()))
                 .andExpect(status().is(expected.value()));
     }
@@ -159,6 +163,7 @@ class BillingPermissionMatrixIT {
     private void subscribeAsAdmin(UUID tenantId, UUID planId) throws Exception {
         mockMvc.perform(post("/billing/subscriptions")
                         .header("X-Tenant-Id", tenantId.toString())
+                        .header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-Role", "ADMIN")
                         .contentType("application/json")
                         .content("{\"planId\":\"" + planId + "\"}"))

@@ -226,6 +226,80 @@ class SubscriptionLifecycleIT {
         assertThat(subscriptionService.accessStatus(UUID.randomUUID())).isEqualTo("ACTIVE");
     }
 
+    @Test
+    @Tag("REQ-MON-01")
+    void everySubscriptionChangeMadeByAnAdminCarriesWhoDidItAndWhatChanged() throws Exception {
+        UUID tenantId = UUID.randomUUID();
+        UUID admin = UUID.randomUUID();
+        UUID starter = createActivePlan("Starter", "9.99", 5);
+        UUID pro = createActivePlan("Pro", "29.99", 20);
+
+        subscriptionService.subscribe(tenantId, starter, admin);
+        subscriptionService.changePlan(tenantId, pro, admin); // cancels the old one, then starts the new trial
+
+        var payloads = subscriptionChangedPayloads(tenantId);
+        assertThat(payloads).hasSize(3); // subscribed, canceled, subscribed again
+        for (var payload : payloads) {
+            assertThat(payload.get("actorUserId").asText()).isEqualTo(admin.toString());
+            assertThat(payload.get("status").asText()).isNotBlank();
+            assertThat(payload.has("planId") && payload.has("maxUsers")).isTrue();
+            assertThat(payload.toString()).doesNotContain("@");
+        }
+        assertThat(payloads.stream().map(p -> p.get("status").asText())).containsExactly("TRIALING", "CANCELED", "TRIALING");
+    }
+
+    @Test
+    @Tag("REQ-MON-01")
+    void aChangeTheSystemMakesHasNoActor() throws Exception {
+        UUID tenantId = UUID.randomUUID();
+        UUID admin = UUID.randomUUID();
+        UUID planId = createActivePlan("Starter", "9.99", 5);
+        Subscription subscription = subscriptionService.subscribe(tenantId, planId, admin);
+        clock.advance(TRIAL.plusDays(1));
+
+        trialConversionJob.convertExpiredTrials(TRIAL);
+
+        var payloads = subscriptionChangedPayloads(tenantId);
+        assertThat(payloads).hasSize(2);
+        assertThat(payloads.get(0).get("actorUserId").asText()).isEqualTo(admin.toString());
+        assertThat(payloads.get(1).get("status").asText()).isEqualTo("ACTIVE");
+        assertThat(payloads.get(1).get("actorUserId").isNull()).isTrue();
+        assertThat(statusOf(subscription.getId())).isEqualTo("ACTIVE");
+    }
+
+    @Test
+    @Tag("REQ-MON-01")
+    void everyPublishedPayloadHasTheFieldsTheJournalCatalogReads() throws Exception {
+        UUID tenantId = UUID.randomUUID();
+        UUID admin = UUID.randomUUID();
+        subscriptionService.subscribe(tenantId, createActivePlan("Starter", "9.99", 5), admin);
+
+        var entry = com.saas.shared.events.ActivityEventCatalog.find("SUBSCRIPTION_CHANGED").orElseThrow();
+        var payload = subscriptionChangedPayloads(tenantId).get(0);
+
+        assertThat(payload.has(entry.actorField())).isTrue();
+        assertThat(entry.metadataFields()).allSatisfy(field -> assertThat(payload.has(field)).as(field).isTrue());
+    }
+
+    private java.util.List<com.fasterxml.jackson.databind.JsonNode> subscriptionChangedPayloads(UUID tenantId) throws Exception {
+        String shardUrl = postgres.getJdbcUrl().replace("/" + postgres.getDatabaseName(), "/saas_shard_1");
+        var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        var result = new java.util.ArrayList<com.fasterxml.jackson.databind.JsonNode>();
+        try (var connection = java.sql.DriverManager.getConnection(shardUrl, "admin", "admin");
+             var statement = connection.prepareStatement("SELECT destination, channel, payload FROM billing.outbox"
+                     + " WHERE tenant_id = ? AND event_type = 'SUBSCRIPTION_CHANGED' ORDER BY created_at, id")) {
+            statement.setObject(1, tenantId);
+            try (var rs = statement.executeQuery()) {
+                while (rs.next()) {
+                    assertThat(rs.getString("destination")).isEqualTo("KAFKA");
+                    assertThat(rs.getString("channel")).isEqualTo("billing.events");
+                    result.add(mapper.readTree(rs.getString("payload")).get("payload"));
+                }
+            }
+        }
+        return result;
+    }
+
     private UUID createActivePlan(String name, String priceEur, int maxUsers) {
         UUID id = UUID.randomUUID();
         try (var connection = java.sql.DriverManager.getConnection(globalUrl, "admin", "admin");

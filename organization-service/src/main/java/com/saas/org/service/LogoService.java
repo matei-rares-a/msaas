@@ -2,9 +2,13 @@ package com.saas.org.service;
 
 import com.saas.org.entity.Membership;
 import com.saas.org.entity.TenantSettings;
+import com.saas.org.event.ThemeChangedPayload;
 import com.saas.org.repository.MembershipRepository;
 import com.saas.org.repository.TenantSettingsRepository;
 import com.saas.org.storage.ObjectStorage;
+import com.saas.shared.events.EventEnvelope;
+import com.saas.shared.outbox.OutboxDestination;
+import com.saas.shared.outbox.OutboxWriter;
 import com.saas.shared.tenancy.TenantContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -34,16 +38,18 @@ public class LogoService {
     private final ThemeService themeService;
     private final LogoValidator validator;
     private final ObjectStorage storage;
+    private final OutboxWriter outboxWriter;
     private final TransactionTemplate transactionTemplate;
 
     public LogoService(TenantSettingsRepository settingsRepository, MembershipRepository membershipRepository,
-            ThemeService themeService, LogoValidator validator, ObjectStorage storage,
+            ThemeService themeService, LogoValidator validator, ObjectStorage storage, OutboxWriter outboxWriter,
             PlatformTransactionManager transactionManager) {
         this.settingsRepository = settingsRepository;
         this.membershipRepository = membershipRepository;
         this.themeService = themeService;
         this.validator = validator;
         this.storage = storage;
+        this.outboxWriter = outboxWriter;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
@@ -75,6 +81,8 @@ public class LogoService {
                 theme.put(TenantSettings.LOGO_URL, logoUrl);
                 settings.setThemeJson(theme);
                 settingsRepository.save(settings);
+                outboxWriter.writeEvent(EventEnvelope.forTenant("LOGO_CHANGED", 1, tenantId,
+                        new ThemeChangedPayload(tenantId, callerUserId, null)), OutboxDestination.KAFKA, "org.events");
                 return previous;
             }));
         } catch (RuntimeException e) {

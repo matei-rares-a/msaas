@@ -9,6 +9,7 @@ import com.saas.auth.entity.RefreshToken;
 import com.saas.auth.entity.User;
 import com.saas.auth.event.SendPasswordChangedConfirmationCommand;
 import com.saas.auth.event.SendPasswordResetEmailCommand;
+import com.saas.auth.event.LoginPayload;
 import com.saas.auth.event.UserRegisteredPayload;
 import com.saas.auth.exception.RateLimitExceededException;
 import com.saas.auth.repository.LoginSessionRepository;
@@ -229,6 +230,9 @@ public class AuthService {
 
     private AuthResponse buildAuthResponse(User user, MembershipSummary membership) {
         String tenantName = orgServiceClient.findTenantName(membership.tenantId());
+        // a per-tenant token issued by a login is a tenant journal entry (REQ-MON-01); refreshing one is not
+        outboxWriter.writeEvent(EventEnvelope.forTenant("LOGIN", 1, membership.tenantId(),
+                new LoginPayload(membership.tenantId(), user.getId(), membership.role())), OutboxDestination.KAFKA, "auth.events");
         return buildAuthResponse(user, membership.tenantId(), membership.role(), membership.readOnly(), tenantName);
     }
 

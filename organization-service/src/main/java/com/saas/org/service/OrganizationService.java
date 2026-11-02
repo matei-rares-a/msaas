@@ -7,7 +7,10 @@ import com.saas.org.dto.RoleChangeOutcome;
 import com.saas.org.entity.AdminDemotionRequest;
 import com.saas.org.entity.Membership;
 import com.saas.org.entity.Tenant;
+import com.saas.org.event.AdminDemotionDecidedPayload;
 import com.saas.org.event.AdminDemotionEscalatedPayload;
+import com.saas.org.event.AdminDemotionRequestedPayload;
+import com.saas.org.event.MemberRoleChangedPayload;
 import com.saas.org.repository.AdminDemotionRequestRepository;
 import com.saas.org.repository.MembershipRepository;
 import com.saas.org.repository.TenantSettingsRepository;
@@ -131,12 +134,17 @@ public class OrganizationService {
                     request.setStatus(AdminDemotionRequest.Status.PENDING);
                     request.setCreatedAt(clock.instant());
                     demotionRequestRepository.save(request);
+                    publish(tenantId, "ADMIN_DEMOTION_REQUESTED", new AdminDemotionRequestedPayload(
+                            tenantId, request.getId(), callerUserId, targetUserId, newRole.name()));
                     return RoleChangeOutcome.pending(AdminDemotionRequestResponse.of(request));
                 }
             }
 
+            Membership.Role previousRole = target.getRole();
             target.setRole(newRole);
             membershipRepository.save(target);
+            publish(tenantId, "MEMBER_ROLE_CHANGED", new MemberRoleChangedPayload(
+                    tenantId, callerUserId, targetUserId, previousRole.name(), newRole.name()));
             return RoleChangeOutcome.applied(new MemberRoleResponse(target.getUserId(), target.getRole().name()));
         }));
     }
@@ -154,6 +162,8 @@ public class OrganizationService {
             request.setStatus(AdminDemotionRequest.Status.ACCEPTED);
             request.setRespondedAt(clock.instant());
             demotionRequestRepository.save(request);
+            publish(tenantId, "ADMIN_DEMOTION_ACCEPTED", new AdminDemotionDecidedPayload(
+                    tenantId, request.getId(), callerUserId, request.getNewRole().name()));
 
             return new MemberRoleResponse(target.getUserId(), target.getRole().name());
         }));
@@ -166,8 +176,15 @@ public class OrganizationService {
             request.setStatus(AdminDemotionRequest.Status.REJECTED);
             request.setRespondedAt(clock.instant());
             demotionRequestRepository.save(request);
+            publish(tenantId, "ADMIN_DEMOTION_REJECTED", new AdminDemotionDecidedPayload(
+                    tenantId, request.getId(), callerUserId, request.getNewRole().name()));
             return null;
         }));
+    }
+
+    /** One audited action = one event in this transaction's outbox (REQ-EVT-04, REQ-MON-01). */
+    private void publish(UUID tenantId, String eventType, com.saas.shared.events.EventPayload payload) {
+        outboxWriter.writeEvent(EventEnvelope.forTenant(eventType, 1, tenantId, payload), OutboxDestination.KAFKA, "org.events");
     }
 
     /** Only the targeted admin can respond to this request. */

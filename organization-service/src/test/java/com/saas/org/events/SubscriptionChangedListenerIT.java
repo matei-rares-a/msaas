@@ -158,7 +158,7 @@ class SubscriptionChangedListenerIT implements KafkaTestContainer {
      * test module's test sources was erased to an unqualified binary name in the class file. */
     private String envelopeJson(UUID tenantId, int maxUsers) throws Exception {
         var envelope = com.saas.shared.events.EventEnvelope.forTenant("SUBSCRIPTION_CHANGED", 1, tenantId,
-                new SubscriptionChangedPayload(tenantId, UUID.randomUUID(), maxUsers, "ACTIVE"));
+                new SubscriptionChangedPayload(tenantId, UUID.randomUUID(), maxUsers, "ACTIVE", null));
         return objectMapper.writeValueAsString(envelope);
     }
 

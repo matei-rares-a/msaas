@@ -4,9 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.saas.testsupport.containers.KafkaTestContainer;
 import com.saas.testsupport.containers.PostgresTestContainer;
 import com.saas.testsupport.containers.SharedContainers;
-import org.apache.kafka.clients.admin.AdminClient;
-import org.apache.kafka.clients.admin.AdminClientConfig;
-import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -42,16 +39,7 @@ import static org.awaitility.Awaitility.await;
 class MemberOffboardedListenerIT implements PostgresTestContainer, KafkaTestContainer {
 
     static {
-        // A listener that subscribes to a topic that does not exist yet only notices it after the
-        // consumer's metadata refresh (minutes); creating it first keeps the test deterministic.
-        try (AdminClient admin = AdminClient.create(Map.of(
-                AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, SharedContainers.kafka().getBootstrapServers()))) {
-            admin.createTopics(List.of(new NewTopic("org.events", 1, (short) 1))).all().get();
-        } catch (Exception e) {
-            if (!(e.getCause() instanceof org.apache.kafka.common.errors.TopicExistsException)) {
-                throw new IllegalStateException(e);
-            }
-        }
+        KafkaTestTopics.ensureListenedTopicsExist();
     }
 
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();

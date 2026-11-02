@@ -131,13 +131,21 @@ La fiecare prompt:
 ## 5. Status la data acestui fisier (2026-11-02)
 
 Fazele 0-7 sunt complete si commise (`P7.1` a fost implementat de alt agent, Kiro, si corectat in
-`P7.1 (deviere)`). Faza 8 (Personalizare) e completa: `P8.1 Tema`, `P8.2 Logo`, `P8.3 Feature flags`. Pasul curent (primul nebifat
-din plan) este **P9.1 Scrierea in jurnal** (Faza 9): consumatori de evenimente pentru lista de actiuni sensibile (login,
-roluri, invitatii, retrogradarea ultimului ADMIN, subscriptie, tema); evenimentele de parola sunt ignorate. Observatie
-pentru P9.1: schimbarea temei/logo-ului nu publica inca niciun eveniment (P8.1/P8.2 nu l-au cerut), deci P9.1 trebuie
-sa adauge intai publicarea lor din org-service (outbox -> Kafka, doar ID-uri).
+`P7.1 (deviere)`). Faza 8 (Personalizare) e completa si `P9.1 Scrierea in jurnal` e facut. Pasul curent (primul nebifat din plan) este
+**P9.2 Citirea jurnalului prin GraphQL** (`spring-boot-starter-graphql` in notification-service, rutat prin gateway): query
+doar-citire, paginat, filtrabil (data, tip, actor), fara mutatii, tenantul din token (nu din argumente), doar ADMIN si
+MANAGER, limite de adancime/complexitate, introspectie dezactivata in productie. Intrarile se citesc din
+`notif.activity_log` (RLS pe `tenant_id`, partitionat lunar); `ActivityLogWriter` o scrie, `ActivityEventCatalog`
+(shared-lib) spune ce tipuri exista.
 
 Ce exista deja si e relevant mai departe:
+- **Jurnalul (P9.1)**: `ActivityEventCatalog` (shared-lib) e contractul dintre producatori si jurnal: tip -> camp actor +
+  campuri de metadata. Un tip nou auditat = o linie in catalog + publicarea evenimentului (outbox, Kafka, doar ID-uri) + un
+  test de contract in serviciul producator (model: `ActivityEventsPublishedIT`). `ActivityLogListener` are grup Kafka propriu
+  (`notif-service-activity-log`): doua listenere in acelasi grup pe acelasi topic isi impart partitiile. Evenimentele
+  neincluse in catalog (`MEMBER_OFFBOARDED`, parola, `USER_REGISTERED`) nu ajung in jurnal; offboarding-ul nu e in lista
+  din cerinte, deci nu e jurnalizat (decizie de luat daca se doreste). Un IT in notification care porneste listenerii
+  trebuie sa apeleze `KafkaTestTopics.ensureListenedTopicsExist()` intr-un bloc static.
 - **Feature flags (P8.3)**: `org.tenant_settings.feature_flags_json` (JSONB, aceeasi linie ca tema). `FeatureFlagService.isEnabled(tenantId, flag)`
   e API-ul pentru cod; flag necunoscut/nesetat = dezactivat. Nume declarate in `saas.feature-flags.known` (env`r
   `FEATURE_FLAGS_KNOWN`). Scrierea e doar pe `/internal/**` (nerutat de gateway, pazit de `GatewayRoutesTest`); tenantul

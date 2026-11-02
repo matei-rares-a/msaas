@@ -46,35 +46,35 @@ public class BillingController {
 
     @PostMapping("/subscriptions")
     public ResponseEntity<SubscriptionResponse> subscribe(
-            @RequestHeader("X-Tenant-Id") UUID tenantId, @RequestHeader("X-Role") String role,
+            @RequestHeader("X-Tenant-Id") UUID tenantId, @RequestHeader("X-User-Id") UUID userId, @RequestHeader("X-Role") String role,
             @Valid @RequestBody SubscribeRequest request) {
         requireAdmin(role);
-        Subscription subscription = subscriptionService.subscribe(tenantId, request.getPlanId());
+        Subscription subscription = subscriptionService.subscribe(tenantId, request.getPlanId(), userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(subscription));
     }
 
     @PostMapping("/subscriptions/cancel")
     public ResponseEntity<SubscriptionResponse> cancel(
-            @RequestHeader("X-Tenant-Id") UUID tenantId, @RequestHeader("X-Role") String role) {
+            @RequestHeader("X-Tenant-Id") UUID tenantId, @RequestHeader("X-User-Id") UUID userId, @RequestHeader("X-Role") String role) {
         requireAdmin(role);
         Subscription current = subscriptionService.currentSubscription(tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("no current subscription to cancel"));
-        return ResponseEntity.ok(toResponse(subscriptionService.cancelSubscription(tenantId, current.getId())));
+        return ResponseEntity.ok(toResponse(subscriptionService.cancelSubscription(tenantId, current.getId(), userId)));
     }
 
     @PostMapping("/subscriptions/change-plan")
     public ResponseEntity<SubscriptionResponse> changePlan(
-            @RequestHeader("X-Tenant-Id") UUID tenantId, @RequestHeader("X-Role") String role,
+            @RequestHeader("X-Tenant-Id") UUID tenantId, @RequestHeader("X-User-Id") UUID userId, @RequestHeader("X-Role") String role,
             @Valid @RequestBody ChangePlanRequest request) {
         requireAdmin(role);
-        return ResponseEntity.ok(toResponse(subscriptionService.changePlan(tenantId, request.getPlanId())));
+        return ResponseEntity.ok(toResponse(subscriptionService.changePlan(tenantId, request.getPlanId(), userId)));
     }
 
     @PostMapping("/subscriptions/charge")
     public ResponseEntity<SubscriptionResponse> chargeCurrentPeriod(
-            @RequestHeader("X-Tenant-Id") UUID tenantId, @RequestHeader("X-Role") String role) {
+            @RequestHeader("X-Tenant-Id") UUID tenantId, @RequestHeader("X-User-Id") UUID userId, @RequestHeader("X-Role") String role) {
         requireAdmin(role);
-        return ResponseEntity.ok(toResponse(subscriptionService.chargeCurrentPeriod(tenantId)));
+        return ResponseEntity.ok(toResponse(subscriptionService.chargeCurrentPeriod(tenantId, userId)));
     }
 
     private void requireAdmin(String role) {

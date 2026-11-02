@@ -4,8 +4,12 @@ import com.saas.org.dto.PaletteView;
 import com.saas.org.dto.ThemeResponse;
 import com.saas.org.entity.Membership;
 import com.saas.org.entity.TenantSettings;
+import com.saas.org.event.ThemeChangedPayload;
 import com.saas.org.repository.MembershipRepository;
 import com.saas.org.repository.TenantSettingsRepository;
+import com.saas.shared.events.EventEnvelope;
+import com.saas.shared.outbox.OutboxDestination;
+import com.saas.shared.outbox.OutboxWriter;
 import com.saas.shared.tenancy.TenantContext;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -28,15 +32,17 @@ public class ThemeService {
     private final TenantSettingsRepository settingsRepository;
     private final MembershipRepository membershipRepository;
     private final PaletteCatalogReader paletteCatalog;
+    private final OutboxWriter outboxWriter;
     private final TransactionTemplate transactionTemplate;
     private final String defaultPaletteId;
 
     public ThemeService(TenantSettingsRepository settingsRepository, MembershipRepository membershipRepository,
-            PaletteCatalogReader paletteCatalog, PlatformTransactionManager transactionManager,
+            PaletteCatalogReader paletteCatalog, OutboxWriter outboxWriter, PlatformTransactionManager transactionManager,
             @Value("${saas.theme.default-palette-id}") String defaultPaletteId) {
         this.settingsRepository = settingsRepository;
         this.membershipRepository = membershipRepository;
         this.paletteCatalog = paletteCatalog;
+        this.outboxWriter = outboxWriter;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.defaultPaletteId = defaultPaletteId;
     }
@@ -83,6 +89,8 @@ public class ThemeService {
             theme.put(TenantSettings.PALETTE_ID, palette.id());
             settings.setThemeJson(theme);
             settingsRepository.save(settings);
+            outboxWriter.writeEvent(EventEnvelope.forTenant("THEME_CHANGED", 1, tenantId,
+                    new ThemeChangedPayload(tenantId, callerUserId, palette.id())), OutboxDestination.KAFKA, "org.events");
             return null;
         }));
         return getTheme(tenantId, callerUserId);

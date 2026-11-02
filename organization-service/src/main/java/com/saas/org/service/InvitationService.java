@@ -7,6 +7,7 @@ import com.saas.org.entity.Invitation;
 import com.saas.org.entity.Membership;
 import com.saas.org.entity.Tenant;
 import com.saas.org.event.InvitationAcceptedPayload;
+import com.saas.org.event.InvitationChangedPayload;
 import com.saas.org.repository.InvitationRepository;
 import com.saas.org.repository.MembershipRepository;
 import com.saas.org.repository.TenantRepository;
@@ -89,6 +90,9 @@ public class InvitationService {
             outboxWriter.writeEvent(EventEnvelope.forTenant("SEND_INVITATION_EMAIL", 1, tenantId,
                     new SendInvitationEmailCommand(invitation.getId(), tenantId, email, role.name(), invitation.getToken())),
                     OutboxDestination.RABBITMQ, "org.commands");
+            outboxWriter.writeEvent(EventEnvelope.forTenant("INVITATION_CREATED", 1, tenantId,
+                    new InvitationChangedPayload(tenantId, invitation.getId(), callerUserId, role.name())),
+                    OutboxDestination.KAFKA, "org.events"); // audited, ids only: the email stays in the RabbitMQ command (REQ-EVT-02)
 
             return InvitationResponse.of(invitation, clock.instant());
         }));
@@ -110,6 +114,9 @@ public class InvitationService {
             }
             invitation.setStatus(Invitation.Status.REVOKED);
             invitationRepository.save(invitation);
+            outboxWriter.writeEvent(EventEnvelope.forTenant("INVITATION_REVOKED", 1, tenantId,
+                    new InvitationChangedPayload(tenantId, invitation.getId(), callerUserId, invitation.getRole().name())),
+                    OutboxDestination.KAFKA, "org.events");
             return null;
         }));
     }
