@@ -7,6 +7,7 @@ import com.saas.org.dto.OrganizationResponse;
 import com.saas.org.dto.RenameOrganizationRequest;
 import com.saas.org.dto.RoleChangeOutcome;
 import com.saas.org.dto.UpdateMemberRoleRequest;
+import com.saas.org.service.OffboardingService;
 import com.saas.org.service.OrganizationService;
 import com.saas.shared.security.TenantRequestGuard;
 import jakarta.validation.Valid;
@@ -23,7 +24,19 @@ import java.util.UUID;
 public class OrganizationController {
 
     private final OrganizationService organizationService;
+    private final OffboardingService offboardingService;
     private final TenantAccessStatusClient tenantAccessStatusClient;
+
+    /** ADMIN removes a member's data from this tenant (REQ-DATA-01); the global identity is untouched. */
+    @DeleteMapping("/{tenantId}/members/{userId}")
+    public ResponseEntity<Void> offboardMember(@PathVariable UUID tenantId, @PathVariable UUID userId,
+            @RequestHeader("X-User-Id") UUID callerUserId,
+            @RequestHeader("X-Tenant-Id") UUID callerTenantId) {
+        TenantRequestGuard.requireMatch(tenantId, callerTenantId);
+        requireWritableTenant(tenantId);
+        offboardingService.offboardMember(tenantId, callerUserId, userId);
+        return ResponseEntity.noContent().build();
+    }
 
     /** The caller is identified by the gateway's X-User-Id, whether the token is an identity token
      * (0-tenant user, REQ-AUTH-03) or a per-tenant one; X-Tenant-Id is irrelevant here (the new

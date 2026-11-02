@@ -27,9 +27,8 @@ spring:
     consumer:
       group-id: notif-service
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: "*"
+      # Events are raw JSON text (the outbox relay publishes String/String); listeners deserialize themselves.
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
 
 server:
   port: 8084

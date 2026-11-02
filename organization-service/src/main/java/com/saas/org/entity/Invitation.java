@@ -42,6 +42,9 @@ public class Invitation extends TenantScopedEntity {
     @Column(nullable = false)
     private Status status = Status.PENDING;
 
+    /** The user who accepted this invitation; lets offboarding anonymize {@link #email} by id (REQ-DATA-01). */
+    private UUID acceptedBy;
+
     @CreationTimestamp
     private Instant createdAt;
 }

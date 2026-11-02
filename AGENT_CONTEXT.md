@@ -130,36 +130,43 @@ La fiecare prompt:
 
 ## 5. Status la data acestui fisier (2026-11-02)
 
-Fazele 0-6 si **P7.1 Invitatii** sunt complete si commise. P7.1 a fost implementat de alt agent (Kiro) si
-corectat ulterior (`P7.1 (deviere)`, vezi Jurnalul din plan). Pasul curent (primul nebifat din plan) este
-**P7.2 Offboarding** (Faza 7): anonimizarea numelui/email-ului in tenant, stergerea PII tenant-scoped si a
-notificarilor userului din tenant, identitatea globala neatinsa (stearsa doar la cererea userului sau cand nu
-mai are tenanti), eveniment de offboarding (doar ID-uri) consumat mai tarziu de modulele P9.6/P9.7.
-Teste cerute: datele din tenant anonimizate/sterse, facturile raman valide, userul se poate loga in celelalte
-tenanturi. REQ: DATA-01, NOTIF-05.
+Fazele 0-7 sunt complete si commise (`P7.1` a fost implementat de alt agent, Kiro, si corectat in
+`P7.1 (deviere)`; `P7.2 Offboarding` e facut). Pasul curent (primul nebifat din plan) este **P8.1 Tema**
+(Faza 8 - Personalizare): `tenant_settings.theme_json`, catalog de palete in DB globala, tema implicita la
+crearea tenantului, endpoint dedicat de citire, actualizare doar ADMIN cu `paletteId` valid.
 
-Ce exista deja si e relevant pentru P7.2:
-- **Primul consumator Kafka din proiect**: `SubscriptionChangedListener` (org-service, pachet
-  `com.saas.org.events`) - model pentru consumatori: payload `String` + `ObjectMapper`, idempotent prin
-  `ProcessedEventStore`, `EventConsumerSupport.runWithTenantFromEnvelope`, retry + DLT prin
-  `KafkaDeadLetterSupport`. REQ-EVT-08 este verificat prin ArchUnit: **doar `OrganizationService` poate
-  construi un `Tenant`** si niciun listener nu depinde de `OrganizationService`.
-- **Token de identitate** (REQ-AUTH-03): la login cu 0 tenanti, auth-service intoarce `identityToken`
-  (`JwtService.generateIdentityToken`, doar `sub`=userId, `typ=identity`, 15 min). `JwtService.parse` il
-  respinge; gateway-ul il accepta doar pe `POST /organizations` si `POST /invitations/accept`, sterge
-  headerele de context trimise de client si seteaza doar `X-User-Id`. Orice endpoint ia userul din
+Ce exista deja si e relevant mai departe:
+- **Consumatori Kafka** (model: `SubscriptionChangedListener` in org-service, `MemberOffboardedListener` in
+  notification-service si auth-service): clasa fara `@Component`, bean-uri explicite intr-o `@Configuration`,
+  payload `String` + `ObjectMapper`, idempotent prin `ProcessedEventStore`, `EventConsumerSupport`, retry +
+  DLT prin `KafkaDeadLetterSupport`. Un `kafkaListenerContainerFactory` propriu **ignora**
+  `spring.kafka.listener.auto-startup=false`: in teste listenerul porneste oricum.
+- **REQ-EVT-08** (ArchUnit in org-service): doar `OrganizationService` construieste un `Tenant`, niciun
+  listener nu depinde de el.
+- **Token de identitate** (REQ-AUTH-03): la login cu 0 tenanti, `identityToken` (`JwtService.generateIdentityToken`,
+  doar `sub`, `typ=identity`, 15 min); `JwtService.parse` il respinge; gateway-ul il accepta doar pe
+  `POST /organizations`, `POST /invitations/accept`, `DELETE /auth/account`. Orice endpoint ia userul din
   `X-User-Id`, niciodata din body (REQ-AUTH-05).
-- Invitatii: `InvitationService` (create/revoke/list/accept/updateExpiry), `tenants.max_users` ca proiectie
-  locala (NULL = fail-closed), acceptarea e blocata cand tenantul e READ_ONLY/SUSPENDED. `org_auth_reader`
-  citeste din `invitations` doar `tenant_id` si `token` (grant pe coloane, migrarea `V7`).
+- **Invitatii**: `tenants.max_users` ca proiectie locala (NULL = fail-closed); acceptarea e blocata cand
+  tenantul e READ_ONLY/SUSPENDED; `org_auth_reader` citeste din `invitations` doar `tenant_id`, `token` (`V7`).
+- **Offboarding (P7.2)**: `DELETE /organizations/{tenantId}/members/{userId}` publica `MEMBER_OFFBOARDED` pe
+  `org.events` (doar ID-uri). Consumatori: notification (sterge notificarile, anonimizeaza
+  `email_logs.to_email` dupa `recipient_user_id`), auth (revoca refresh tokenurile tenantului, anonimizeaza
+  identitatea cand userul nu mai are tenanti). **P9.4** trebuie sa completeze `recipient_user_id`; **P9.6/P9.7**
+  trebuie sa consume acelasi eveniment ca sa-si stearga datele userului. Coloanele cu date personale din shard
+  sunt pazite de `SchemaConventionsIT` (`org.invitations.email`, `notif.email_logs.to_email`).
 
-Reguli de proces adaugate dupa preluarea lucrului lui Kiro (sectiunea 0, regulile 10-12 din plan): sufixele
-de commit sunt doar `(cerinte)`/`(deviere)`/`(proces)`; linia din Jurnal ramane scurta; `.agents/` e ignorat
-de git; verifica orice lucru preluat de la alt agent cu `clean verify`, trasabilitate si verificarea fata de
-plan.
-
+Reguli de proces (sectiunea 0, regulile 10-12 din plan): sufixele de commit sunt doar `(cerinte)`/`(deviere)`/
+`(proces)`; linia din Jurnal ramane scurta; `.agents/` e ignorat de git; lucrul altui agent se verifica cu
+`clean verify`, trasabilitate si verificarea fata de plan.
 ## 6. Note/lectii utile (nu repeta greselile)
 
+- Un test de integrare nu poate presupune o tabela goala: containerul Postgres partajat (`PostgresTestContainer`)
+  e comun tuturor IT-urilor din rulare (compara numarul inainte/dupa, nu cu zero). Cu superuser-ul containerului
+  `search_path` al rolului serviciului lipseste: pentru cod cu tabele necalificate (`ProcessedEventStore`) seteaza
+  `spring.datasource.hikari.connection-init-sql=SET search_path TO <schema>,public`.
+- Un listener Kafka care se aboneaza la un topic inexistent il observa abia dupa refresh-ul de metadate (minute):
+  in teste creeaza topicul intai (`AdminClient`).
 - `mvnw verify` fara `clean` poate esua cu "Unresolved compilation problem": serverul Java din editor
   (Eclipse JDT) scrie peste `target/classes`. Ruleaza `mvnw clean verify` atomic. Cu `-pl` pastreaza `-am`;
   `-rf` foloseste un `shared-lib` invechit din `~/.m2`.

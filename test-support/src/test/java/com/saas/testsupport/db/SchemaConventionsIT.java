@@ -211,6 +211,29 @@ class SchemaConventionsIT {
                 .containsExactlyInAnyOrderElementsOf(NOT_TENANT_SCOPED);
     }
 
+    /**
+     * Personal data in the shard (REQ-DATA-01): the global identity (email, password) lives only in
+     * auth-service; tenant data refers to people by id. The only columns that hold an address are the
+     * ones offboarding anonymizes, so billing keeps working untouched when a member is removed. A new
+     * column of this kind must be added here on purpose, together with its offboarding cleanup.
+     */
+    @Test
+    @Tag("REQ-DATA-01")
+    void personalDataColumnsInTheShardAreExactlyTheOnesOffboardingAnonymizes() throws SQLException {
+        List<String> personalColumns = new ArrayList<>();
+        try (Connection c = connect("admin", "admin"); Statement st = c.createStatement();
+             ResultSet rs = st.executeQuery("select table_schema || '.' || table_name || '.' || column_name"
+                     + " from information_schema.columns where table_schema in ('org', 'billing', 'notif')"
+                     + " and column_name ~* '(email|phone|first_name|last_name|full_name|display_name|address)'")) {
+            while (rs.next()) {
+                personalColumns.add(rs.getString(1));
+            }
+        }
+
+        assertThat(personalColumns).containsExactlyInAnyOrder("org.invitations.email", "notif.email_logs.to_email");
+        assertThat(personalColumns).noneMatch(column -> column.startsWith("billing."));
+    }
+
     private static List<String> allTables() throws SQLException {
         List<String> tables = new ArrayList<>();
         // relispartition excludes monthly activity_log partitions: RLS/policies are checked on the

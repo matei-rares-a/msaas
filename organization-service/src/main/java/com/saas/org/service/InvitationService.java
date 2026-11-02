@@ -164,6 +164,7 @@ public class InvitationService {
             membershipRepository.save(membership);
 
             invitation.setStatus(Invitation.Status.ACCEPTED);
+            invitation.setAcceptedBy(acceptingUserId);
             invitationRepository.save(invitation);
 
             outboxWriter.writeEvent(EventEnvelope.forTenant("INVITATION_ACCEPTED", 1, tenantId,

@@ -93,8 +93,10 @@ class GatewayJwtFilterTest {
         UUID userId = UUID.randomUUID();
         String identityToken = jwtService.generateIdentityToken(userId);
 
-        for (String path : new String[] {"/organizations", "/invitations/accept"}) {
-            ServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.post(path)
+        for (String[] route : new String[][] {{"POST", "/organizations"}, {"POST", "/invitations/accept"}, {"DELETE", "/auth/account"}}) {
+            String path = route[1];
+            ServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest
+                    .method(org.springframework.http.HttpMethod.valueOf(route[0]), path)
                     .header("Authorization", "Bearer " + identityToken)
                     .header("X-User-Id", UUID.randomUUID().toString())
                     .header("X-Tenant-Id", UUID.randomUUID().toString())
@@ -119,6 +121,8 @@ class GatewayJwtFilterTest {
         String identityToken = jwtService.generateIdentityToken(UUID.randomUUID());
         String[][] requests = {
                 {"GET", "/organizations"},
+                {"GET", "/auth/account"},
+                {"POST", "/auth/account"},
                 {"PATCH", "/organizations/" + UUID.randomUUID()},
                 {"POST", "/organizations/" + UUID.randomUUID() + "/invitations"},
                 {"POST", "/billing/subscribe"},

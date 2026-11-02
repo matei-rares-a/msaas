@@ -15,4 +15,6 @@ public interface InvitationRepository extends TenantScopedRepository<Invitation,
     long countByStatusAndExpiresAtAfter(Invitation.Status status, Instant notAfter);
 
     List<Invitation> findAllByStatusOrderByCreatedAtDesc(Invitation.Status status);
+
+    List<Invitation> findAllByAcceptedBy(UUID acceptedBy);
 }

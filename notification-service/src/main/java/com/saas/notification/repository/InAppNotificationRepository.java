@@ -9,4 +9,6 @@ import java.util.UUID;
 public interface InAppNotificationRepository extends TenantScopedRepository<InAppNotification, UUID> {
 
     List<InAppNotification> findAllByUserIdOrderByCreatedAtDesc(UUID userId);
+
+    void deleteAllByUserId(UUID userId);
 }

@@ -42,6 +42,9 @@ class PublicNotificationCreationRemovedIT implements PostgresTestContainer {
                 {"userId": "%s", "title": "Phishing", "message": "Click here", "level": "INFO"}
                 """.formatted(UUID.randomUUID());
 
+        // the Postgres container is shared by every IT of the run: compare, do not assume an empty table
+        Integer before = jdbc.queryForObject("select count(*) from notif.in_app_notifications", Integer.class);
+
         mockMvc.perform(post("/notifications/in-app")
                         .header("X-Org-Id", UUID.randomUUID().toString())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -49,7 +52,7 @@ class PublicNotificationCreationRemovedIT implements PostgresTestContainer {
                 .andExpect(status().isNotFound());
 
         Integer rows = jdbc.queryForObject("select count(*) from notif.in_app_notifications", Integer.class);
-        assertThat(rows).isZero();
+        assertThat(rows).isEqualTo(before);
     }
 
     @Test

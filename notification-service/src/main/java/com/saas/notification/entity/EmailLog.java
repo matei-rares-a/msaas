@@ -32,6 +32,10 @@ public class EmailLog extends TenantScopedEntity {
 
     private String eventType;
 
+    /** The member this email was sent to, when the recipient is one; lets offboarding anonymize
+     * {@link #toEmail} by id (REQ-DATA-01). */
+    private UUID recipientUserId;
+
     @CreationTimestamp
     private Instant createdAt;
 }

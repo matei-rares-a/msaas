@@ -2,6 +2,7 @@ package com.saas.auth.controller;
 
 import com.saas.auth.dto.*;
 import com.saas.auth.service.AuthService;
+import com.saas.auth.service.IdentityErasureService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/auth")
@@ -19,6 +21,7 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final IdentityErasureService identityErasureService;
 
     @PostMapping("/register")
     @Operation(summary = "Register a new user")
@@ -65,5 +68,14 @@ public class AuthController {
     public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request);
         return ResponseEntity.ok().build();
+    }
+
+    /** The caller is the user in X-User-Id (set by the gateway from the token, REQ-AUTH-05); only a user
+     * who belongs to no tenant can erase the identity (REQ-DATA-01). */
+    @DeleteMapping("/account")
+    @Operation(summary = "Erase the caller's own global identity (only when in no organization)")
+    public ResponseEntity<Void> deleteAccount(@RequestHeader("X-User-Id") UUID userId) {
+        identityErasureService.deleteAccount(userId);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -25,6 +25,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(429).body(errorBody(ex.getMessage()));
     }
 
+    @ExceptionHandler(AccountInUseException.class)
+    public ResponseEntity<Map<String, Object>> handleAccountInUse(AccountInUseException ex) {
+        return ResponseEntity.status(409).body(errorBody(ex.getMessage()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
         String errors = ex.getBindingResult().getFieldErrors().stream()

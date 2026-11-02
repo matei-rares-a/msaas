@@ -7,7 +7,6 @@ import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
@@ -35,9 +34,10 @@ public class GatewayJwtFilter implements GlobalFilter, Ordered {
             "/auth/refresh"
     );
 
-    // POST routes a user without any tenant may call with an identity token (create an organization,
-    // accept an invitation).
-    private static final Set<String> IDENTITY_ROUTES = Set.of("/organizations", "/invitations/accept");
+    // Routes a user without any tenant may call with an identity token ("METHOD path"): create an
+    // organization, accept an invitation, erase their own account.
+    private static final Set<String> IDENTITY_ROUTES = Set.of(
+            "POST /organizations", "POST /invitations/accept", "DELETE /auth/account");
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
@@ -93,7 +93,7 @@ public class GatewayJwtFilter implements GlobalFilter, Ordered {
     }
 
     private static boolean isIdentityRoute(ServerHttpRequest request) {
-        return HttpMethod.POST.equals(request.getMethod()) && IDENTITY_ROUTES.contains(request.getURI().getPath());
+        return IDENTITY_ROUTES.contains(request.getMethod() + " " + request.getURI().getPath());
     }
 
     @Override
