@@ -94,10 +94,14 @@ public class ExportConfig {
     @Bean
     public SimpleRabbitListenerContainerFactory exportListenerContainerFactory(SimpleRabbitListenerContainerFactoryConfigurer configurer,
             ConnectionFactory connectionFactory, RabbitTemplate rabbitTemplate,
-            @Value("${saas.export.retry-backoff-ms:1000}") long backOffMs) {
+            @Value("${saas.export.retry-backoff-ms:1000}") long backOffMs,
+            @Value("${saas.export.listener-auto-startup:true}") boolean autoStartup) {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         configurer.configure(factory, connectionFactory);
         factory.setAdviceChain(RabbitDeadLetterSupport.retryInterceptor(rabbitTemplate, DEAD_LETTER_EXCHANGE, DEAD_LETTER_KEY, backOffMs));
+        if (!autoStartup) {
+            factory.setAutoStartup(false); // lets a test context keep this consumer off a queue another context shares
+        }
         return factory;
     }
 }

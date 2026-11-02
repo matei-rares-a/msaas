@@ -55,6 +55,17 @@ saas:
     max-depth: ${GRAPHQL_MAX_DEPTH:6}
     max-complexity: ${GRAPHQL_MAX_COMPLEXITY:1000}
     max-page-size: ${GRAPHQL_MAX_PAGE_SIZE:100}
+  # Sending emails (P9.4, REQ-NOTIF-08): a failed delivery is retried max-retries times, waiting initial-backoff, then
+  # twice that, and so on; after that the email is recorded FAILED. command-exchanges are the producers' command
+  # channels. There is no setting a user can turn emails off with (REQ-NOTIF-09).
+  email:
+    provider: ${EMAIL_PROVIDER:simulated}
+    max-retries: ${EMAIL_MAX_RETRIES:3}
+    initial-backoff: ${EMAIL_INITIAL_BACKOFF:PT1S}
+    listener-retry-backoff-ms: ${EMAIL_LISTENER_RETRY_BACKOFF_MS:1000}
+    command-exchanges: ${EMAIL_COMMAND_EXCHANGES:org.commands,auth.commands,billing.commands}
+    app-base-url: ${APP_BASE_URL:http://localhost:4200}
+    support-contact: ${EMAIL_SUPPORT_CONTACT:support@example.com}
   # Journal export (P9.3, REQ-MON-05, REQ-SCALE-03): an export whose estimated time (rows x measured cost per row)
   # is over async-threshold runs as a background job; the estimate starts from default-millis-per-row until
   # exports have been measured, then uses the average of the last timing-window runs.

@@ -1,8 +1,8 @@
 package com.saas.notification;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.saas.notification.email.EmailCommandListener;
 import com.saas.notification.entity.EmailLog;
-import com.saas.notification.service.NotificationService;
-import com.saas.shared.tenancy.TenantContext;
 import com.saas.testsupport.containers.PostgresTestContainer;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -35,7 +35,9 @@ class EmailLogPrivacyIT implements PostgresTestContainer {
     @Qualifier("requestMappingHandlerMapping")
     private RequestMappingHandlerMapping handlerMapping;
     @Autowired
-    private NotificationService notificationService;
+    private EmailCommandListener emailCommandListener;
+    @Autowired
+    private ObjectMapper objectMapper;
     @Autowired
     private JdbcTemplate jdbc;
 
@@ -62,12 +64,16 @@ class EmailLogPrivacyIT implements PostgresTestContainer {
 
     @Test
     @Tag("REQ-NOTIF-06")
-    void secretsFromEmailContentAreNeverStored() {
+    void secretsFromEmailContentAreNeverStored() throws Exception {
         UUID tenantId = UUID.randomUUID();
         String inviteToken = "invite-" + UUID.randomUUID();
         String inviteAddress = "invite-" + UUID.randomUUID() + "@test.local";
 
-        TenantContext.runWith(tenantId, () -> notificationService.sendInvitationEmail(inviteAddress, "Acme", inviteToken));
+        emailCommandListener.onCommand(objectMapper.writeValueAsString(java.util.Map.of(
+                "eventId", UUID.randomUUID(), "eventType", "SEND_INVITATION_EMAIL", "version", 1, "tenantId", tenantId,
+                "occurredAt", java.time.Instant.now().toString(),
+                "payload", java.util.Map.of("invitationId", UUID.randomUUID(), "tenantId", tenantId, "email", inviteAddress,
+                        "role", "USER", "token", inviteToken))));
 
         List<String> storedRows = jdbc.queryForList(
                 "select row_to_json(e)::text from notif.email_logs e where to_email = ?",

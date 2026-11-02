@@ -56,7 +56,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
         "spring.datasource.hikari.connection-init-sql=SET search_path TO notif,public",
         "saas.export.async-threshold=PT1S",
         "saas.export.max-rows=40",
-        "saas.export.retry-backoff-ms=20"
+        "saas.export.retry-backoff-ms=20",
+        // the email queue is shared with every other context of the run, whose consumer must not take this context's messages
+        "saas.email.listener-auto-startup=false"
 })
 @AutoConfigureMockMvc
 class ActivityLogExportIT implements PostgresTestContainer, RabbitMqTestContainer {

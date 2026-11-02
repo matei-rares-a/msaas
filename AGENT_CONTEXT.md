@@ -131,15 +131,25 @@ La fiecare prompt:
 ## 5. Status la data acestui fisier (2026-11-02)
 
 Fazele 0-7 sunt complete si commise (`P7.1` a fost implementat de alt agent, Kiro, si corectat in
-`P7.1 (deviere)`). Faza 8 (Personalizare) e completa si `P9.1 Scrierea in jurnal` e facut. P9.2 (citirea jurnalului prin GraphQL) si P9.3 (export CSV) sunt facute. Pasul curent (primul nebifat din plan) este
-**P9.4 Trimiterea email-urilor**: consumator de comenzi RabbitMQ; 3 reincercari cu backoff -> `FAILED`; doar metadate; la scrierea
-unui log pentru un destinatar care e membru se completeaza `email_logs.recipient_user_id` (altfel offboarding-ul din P7.2 nu poate
-anonimiza adresa); `EMAIL_SENT`/`EMAIL_FAILED` in jurnalul tenantului, email-urile de identitate nelogate; fara setari de
-dezactivare. REQ: MON-01, NOTIF-06, NOTIF-07, NOTIF-08, NOTIF-09. Primul consumator RabbitMQ real e cel de export (P9.3): modelul
-pentru coada, DLX si fabrica de listenere e `ExportConfig`.
+`P7.1 (deviere)`). Faza 8 (Personalizare) e completa si `P9.1 Scrierea in jurnal` e facut. P9.2 (citirea jurnalului prin GraphQL), P9.3 (export CSV) si P9.4 (trimiterea email-urilor) sunt facute. Pasul curent (primul
+nebifat din plan) este **P9.5 Notificari in-app**: generate din lista de evenimente v1 (schimbarea rolului, cerere de retrogradare
+ADMIN, invitatie acceptata, subscriptie PAST_DUE / trial care expira in 3 zile, export gata - deja scris in P9.3 - cerere si
+decizie de concediu, lunch roulette); per tenant (userul vede doar notificarile tenantului din token); listare, numar
+necitite, marcare ca citit; retentie 90 de zile (cu `MutableClock`). REQ: NOTIF-01..05. Notificarea "export gata" din P9.3
+scrie direct in `in_app_notifications` (`ActivityLogExportService.notifyRequester`): cand apare un serviciu de notificari
+comun, mutati-o acolo.
 
 Ce exista deja si e relevant mai departe:
-- **Export CSV (P9.3)**: `POST /notifications/activity-log/exports` (doar ADMIN) + `GET .../{id}` si `/{id}/download`, in pachetul `export/`.
+- **Email-uri (P9.4)**: pachetul `email`. `EmailCommandListener` consuma `notif.email-commands` (exchange-uri fanout `org|auth|billing.commands`,
+  declarate de notification-service la pornire - releul unui producator nu poate publica pana exista exchange-ul). Un tip nou de email =
+  un `case` in listener + un sablon in `EmailTemplates` + un test de contract in `EmailDeliveryIT` (JSON scris de mana, nu din clasele
+  serviciului). Email de tenant = inregistrat (`email_logs` cu id = id-ul comenzii, + `EMAIL_SENT`/`EMAIL_FAILED` in jurnal, fara adresa);
+  email de identitate (comenzile de parola) = niciodata inregistrat, chiar daca plicul are tenantId. Reincercarile (3, 1 s/2 s/4 s)
+  sunt in `EmailSender`, nu in containerul Rabbit; containerul retrimite doar esecurile de procesare (DB, JSON invalid) si apoi
+  DLQ. `EmailProvider` real (SMTP) nu exista in v1: `SimulatedEmailProvider`. Un IT inlocuieste furnizorul si `EmailSender.Sleeper`
+  cu bean-uri `@Primary` (vezi `EmailDeliveryIT`). Pentru "nu s-a intamplat nimic" publica o comanda ulterioara si asteapta-o: un singur
+  consumator le trateaza in ordine. Un tenant diferit pentru comanda-santinela, altfel ea apare in jurnalul verificat.
+  Cozile RabbitMQ sunt ale brokerului partajat, nu ale contextului: orice context Spring cache-uit cu listener pornit le consuma. Un IT care foloseste o coada seteaza pe celelalte saas.email.listener-auto-startup=false / saas.export.listener-auto-startup=false (vezi ActivityLogExportIT si EmailDeliveryIT); un consumator RabbitMQ nou are nevoie de acelasi comutator.- **Export CSV (P9.3)**: `POST /notifications/activity-log/exports` (doar ADMIN) + `GET .../{id}` si `/{id}/download`, in pachetul `export/`.
   `ExportTimings` decide inline/fundal din media masurata ms/intrare x numarul de intrari fata de `saas.export.async-threshold`; un IT
   isi fixeaza decizia inregistrand 20 de masuratori (`measuredCost` in `ActivityLogExportIT`), altfel rularile inline anterioare o schimba.
   Jobul de fundal = rand in `notif.export_jobs` + comanda in outbox spre exchange-ul fanout `notif.export-commands`; fisierul sta in
