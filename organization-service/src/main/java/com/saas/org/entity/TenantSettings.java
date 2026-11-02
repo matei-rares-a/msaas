@@ -38,6 +38,11 @@ public class TenantSettings extends TenantScopedEntity {
     @Column(nullable = false, columnDefinition = "jsonb")
     private Map<String, Object> themeJson = new LinkedHashMap<>();
 
+    /** Feature flags (REQ-PERS-07): flag name -> boolean; a missing flag is disabled. */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = false, columnDefinition = "jsonb")
+    private Map<String, Object> featureFlagsJson = new LinkedHashMap<>();
+
     @CreationTimestamp
     private Instant createdAt;
 

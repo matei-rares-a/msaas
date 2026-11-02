@@ -100,6 +100,10 @@ saas:
   storage:
     local:
       root: ${OBJECT_STORAGE_LOCAL_ROOT:./data/object-storage}
+  # Feature flags the platform knows (P8.3, REQ-PERS-07): comma-separated names; a new flag is a new name here,
+  # never a migration. Every flag is disabled for every tenant until a platform operator switches it on.
+  feature-flags:
+    known: ${FEATURE_FLAGS_KNOWN:}
   # Palette every new tenant starts with (P8.1, REQ-PERS-05); must exist in global.palettes
   theme:
     default-palette-id: ${DEFAULT_PALETTE_ID:default}

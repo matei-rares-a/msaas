@@ -70,6 +70,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
+        // Spring's own client errors (no such route 404, wrong method 405, unsupported media type 415, ...)
+        // carry their status; reporting them as 500 would hide caller mistakes as server faults
+        if (ex instanceof org.springframework.web.ErrorResponse errorResponse) {
+            return ResponseEntity.status(errorResponse.getStatusCode()).body(errorBody(ex.getMessage()));
+        }
         log.error("Unexpected error", ex);
         return ResponseEntity.status(500).body(errorBody("Internal server error"));
     }

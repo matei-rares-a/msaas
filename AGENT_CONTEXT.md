@@ -131,11 +131,18 @@ La fiecare prompt:
 ## 5. Status la data acestui fisier (2026-11-02)
 
 Fazele 0-7 sunt complete si commise (`P7.1` a fost implementat de alt agent, Kiro, si corectat in
-`P7.1 (deviere)`). `P8.1 Tema` si `P8.2 Logo` sunt facute. Pasul curent (primul nebifat din plan) este **P8.3 Feature flags per tenant**
-(Faza 8): flag-uri booleene in `tenant_settings` (valoare implicita dezactivat, un flag activ pentru un tenant nu
-afecteaza alt tenant).
+`P7.1 (deviere)`). Faza 8 (Personalizare) e completa: `P8.1 Tema`, `P8.2 Logo`, `P8.3 Feature flags`. Pasul curent (primul nebifat
+din plan) este **P9.1 Scrierea in jurnal** (Faza 9): consumatori de evenimente pentru lista de actiuni sensibile (login,
+roluri, invitatii, retrogradarea ultimului ADMIN, subscriptie, tema); evenimentele de parola sunt ignorate. Observatie
+pentru P9.1: schimbarea temei/logo-ului nu publica inca niciun eveniment (P8.1/P8.2 nu l-au cerut), deci P9.1 trebuie
+sa adauge intai publicarea lor din org-service (outbox -> Kafka, doar ID-uri).
 
 Ce exista deja si e relevant mai departe:
+- **Feature flags (P8.3)**: `org.tenant_settings.feature_flags_json` (JSONB, aceeasi linie ca tema). `FeatureFlagService.isEnabled(tenantId, flag)`
+  e API-ul pentru cod; flag necunoscut/nesetat = dezactivat. Nume declarate in `saas.feature-flags.known` (env`r
+  `FEATURE_FLAGS_KNOWN`). Scrierea e doar pe `/internal/**` (nerutat de gateway, pazit de `GatewayRoutesTest`); tenantul
+  citeste prin `GET /organizations/{tenantId}/feature-flags`. Org `GlobalExceptionHandler` mapeaza acum `ErrorResponse`;
+  auth/billing/notification au inca `handleGeneric` care transforma 404/405 in 500 (neremediat, in afara pasului).
 - **Logo (P8.2)**: `ObjectStorage` (`com.saas.org.storage`) e singura cale spre fisiere; `LocalObjectStorage` e
   `@Component` si doar pachetul ei o cunoaste (ArchUnit). Cheie `tenants/<tenantId>/logo-<uuid>.<png|jpg>`.
   `LogoValidator` decide dupa bytes, nu dupa nume. Limite in `saas.logo.*` (2 MB, 1024x1024). Un nou furnizor
@@ -175,6 +182,7 @@ Reguli de proces (sectiunea 0, regulile 10-12 din plan): sufixele de commit sunt
   e comun tuturor IT-urilor din rulare (compara numarul inainte/dupa, nu cu zero). Cu superuser-ul containerului
   `search_path` al rolului serviciului lipseste: pentru cod cu tabele necalificate (`ProcessedEventStore`) seteaza
   `spring.datasource.hikari.connection-init-sql=SET search_path TO <schema>,public`.
+- `SchemaConventionsIT` sorteaza migrarile dupa numarul versiunii (nu lexicografic: `V10` ar trece inaintea `V1__baseline`).
 - Fiecare IT cu container propriu (`startTopology()`) are nevoie de `test.marker=<NumeClasa>` in `@SpringBootTest`:
   Spring refoloseste contextul intre clase cu aceeasi configuratie, deci o clasa ar primi DataSource-ul containerului
   deja oprit al alteia (`Connection is not available, request timed out`).

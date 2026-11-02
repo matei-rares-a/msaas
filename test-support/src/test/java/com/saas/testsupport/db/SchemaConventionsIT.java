@@ -180,7 +180,11 @@ class SchemaConventionsIT {
             Path migrations = ROOT.resolve(service.getValue()).resolve("src/main/resources/db/migration");
             List<Path> files;
             try (var paths = java.nio.file.Files.list(migrations)) {
-                files = paths.sorted().toList();
+                // by version number: a plain string sort puts V10 before V1__baseline
+                files = paths.sorted(java.util.Comparator.comparingInt(p -> {
+                    String name = p.getFileName().toString();
+                    return Integer.parseInt(name.substring(1, name.indexOf("__")));
+                })).toList();
             }
 
             assertThat(files).as("%s starts from a baseline migration", service.getValue()).isNotEmpty();
