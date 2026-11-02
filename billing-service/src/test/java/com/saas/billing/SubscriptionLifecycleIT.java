@@ -5,6 +5,7 @@ import com.saas.billing.payment.SimulatedPaymentGateway;
 import com.saas.billing.service.GracePeriodEscalationJob;
 import com.saas.billing.service.SubscriptionService;
 import com.saas.billing.service.TrialConversionJob;
+import com.saas.billing.service.TrialExpiryReminderJob;
 import com.saas.testsupport.containers.SharedContainers;
 import com.saas.testsupport.time.MutableClock;
 import org.junit.jupiter.api.AfterAll;
@@ -45,6 +46,7 @@ class SubscriptionLifecycleIT {
     private static final PostgreSQLContainer<?> postgres = startTopology();
     private static final Duration TRIAL = Duration.ofDays(14);
     private static final Duration GRACE_PERIOD = Duration.ofDays(7);
+    private static final Duration REMINDER = Duration.ofDays(3);
     private static String globalUrl;
 
     @Autowired
@@ -53,6 +55,8 @@ class SubscriptionLifecycleIT {
     private TrialConversionJob trialConversionJob;
     @Autowired
     private GracePeriodEscalationJob gracePeriodEscalationJob;
+    @Autowired
+    private TrialExpiryReminderJob trialExpiryReminderJob;
     @Autowired
     private SimulatedPaymentGateway simulatedPaymentGateway;
     @Autowired
@@ -281,14 +285,95 @@ class SubscriptionLifecycleIT {
         assertThat(entry.metadataFields()).allSatisfy(field -> assertThat(payload.has(field)).as(field).isTrue());
     }
 
+    @Test
+    @Tag("REQ-NOTIF-03")
+    void aSubscriptionThatJustWentPastDueSaysSoAndOneThatWasAlreadyPastDueDoesNot() throws Exception {
+        UUID tenantId = UUID.randomUUID();
+        Subscription subscription = subscriptionService.subscribe(tenantId, createActivePlan("Starter", "9.99", 5));
+        subscriptionService.markStatus(tenantId, subscription.getId(), Subscription.Status.ACTIVE);
+
+        simulatedPaymentGateway.setFailureMode(SimulatedPaymentGateway.FailureMode.ALWAYS_FAIL);
+        subscriptionService.chargeCurrentPeriod(tenantId);
+        subscriptionService.chargeCurrentPeriod(tenantId); // still failing: not a new transition
+
+        var statuses = subscriptionChangedPayloads(tenantId).stream()
+                .map(p -> p.get("previousStatus").isNull() ? "null->" + p.get("status").asText()
+                        : p.get("previousStatus").asText() + "->" + p.get("status").asText()).toList();
+        assertThat(statuses).containsExactly("null->TRIALING", "TRIALING->ACTIVE", "ACTIVE->PAST_DUE", "PAST_DUE->PAST_DUE");
+    }
+
+    @Test
+    @Tag("REQ-NOTIF-03")
+    void aTrialInItsLastThreeDaysIsAnnouncedOnceAndOnlyOnce() throws Exception {
+        UUID tenantId = UUID.randomUUID();
+        Subscription subscription = subscriptionService.subscribe(tenantId, createActivePlan("Starter", "9.99", 5));
+        var start = subscription.getStartDate();
+
+        trialExpiryReminderJob.remindEndingTrials(TRIAL, REMINDER);
+        assertThat(outboxPayloads(tenantId, "TRIAL_EXPIRING")).as("day 0: too early").isEmpty();
+
+        clock.advance(Duration.ofDays(10));
+        trialExpiryReminderJob.remindEndingTrials(TRIAL, REMINDER);
+        assertThat(outboxPayloads(tenantId, "TRIAL_EXPIRING")).as("day 10: still too early").isEmpty();
+
+        clock.advance(Duration.ofDays(1));
+        trialExpiryReminderJob.remindEndingTrials(TRIAL, REMINDER);
+        var announced = outboxPayloads(tenantId, "TRIAL_EXPIRING");
+        assertThat(announced).as("day 11: three days left").hasSize(1);
+        assertThat(announced.get(0).get("tenantId").asText()).isEqualTo(tenantId.toString());
+        assertThat(announced.get(0).get("subscriptionId").asText()).isEqualTo(subscription.getId().toString());
+        assertThat(new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules()
+                .treeToValue(announced.get(0).get("trialEndsAt"), java.time.Instant.class))
+                .isCloseTo(start.plus(TRIAL), org.assertj.core.api.Assertions.within(1, java.time.temporal.ChronoUnit.MILLIS));
+        assertThat(names(announced.get(0))).containsExactlyInAnyOrder("tenantId", "subscriptionId", "trialEndsAt");
+
+        trialExpiryReminderJob.remindEndingTrials(TRIAL, REMINDER);
+        clock.advance(Duration.ofDays(1));
+        trialExpiryReminderJob.remindEndingTrials(TRIAL, REMINDER);
+        assertThat(outboxPayloads(tenantId, "TRIAL_EXPIRING")).as("runs again, no repeat").hasSize(1);
+    }
+
+    @Test
+    @Tag("REQ-NOTIF-03")
+    void aTrialThatIsCanceledOrAlreadyOverIsNotAnnounced() throws Exception {
+        UUID canceledTenant = UUID.randomUUID();
+        UUID overTenant = UUID.randomUUID();
+        UUID plan = createActivePlan("Starter", "9.99", 5);
+        Subscription canceled = subscriptionService.subscribe(canceledTenant, plan);
+        subscriptionService.subscribe(overTenant, plan);
+        subscriptionService.cancelSubscription(canceledTenant, canceled.getId());
+
+        clock.advance(TRIAL.minusDays(2));
+        trialExpiryReminderJob.remindEndingTrials(TRIAL, REMINDER);
+        assertThat(outboxPayloads(canceledTenant, "TRIAL_EXPIRING")).as("canceled").isEmpty();
+        assertThat(outboxPayloads(overTenant, "TRIAL_EXPIRING")).as("in the window").hasSize(1);
+
+        UUID lateTenant = UUID.randomUUID();
+        subscriptionService.subscribe(lateTenant, plan);
+        clock.advance(TRIAL.plusDays(1));
+        trialExpiryReminderJob.remindEndingTrials(TRIAL, REMINDER);
+        assertThat(outboxPayloads(lateTenant, "TRIAL_EXPIRING")).as("already expired when the job first sees it").isEmpty();
+    }
+
+    private static java.util.List<String> names(com.fasterxml.jackson.databind.JsonNode node) {
+        java.util.List<String> names = new java.util.ArrayList<>();
+        node.fieldNames().forEachRemaining(names::add);
+        return names;
+    }
+
     private java.util.List<com.fasterxml.jackson.databind.JsonNode> subscriptionChangedPayloads(UUID tenantId) throws Exception {
+        return outboxPayloads(tenantId, "SUBSCRIPTION_CHANGED");
+    }
+
+    private java.util.List<com.fasterxml.jackson.databind.JsonNode> outboxPayloads(UUID tenantId, String eventType) throws Exception {
         String shardUrl = postgres.getJdbcUrl().replace("/" + postgres.getDatabaseName(), "/saas_shard_1");
         var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
         var result = new java.util.ArrayList<com.fasterxml.jackson.databind.JsonNode>();
         try (var connection = java.sql.DriverManager.getConnection(shardUrl, "admin", "admin");
              var statement = connection.prepareStatement("SELECT destination, channel, payload FROM billing.outbox"
-                     + " WHERE tenant_id = ? AND event_type = 'SUBSCRIPTION_CHANGED' ORDER BY created_at, id")) {
+                     + " WHERE tenant_id = ? AND event_type = ? ORDER BY created_at, id")) {
             statement.setObject(1, tenantId);
+            statement.setString(2, eventType);
             try (var rs = statement.executeQuery()) {
                 while (rs.next()) {
                     assertThat(rs.getString("destination")).isEqualTo("KAFKA");

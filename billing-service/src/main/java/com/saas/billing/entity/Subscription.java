@@ -43,6 +43,9 @@ public class Subscription extends TenantScopedEntity {
      * period (7 days by default) is measured from here, not from each individual failed retry. */
     private Instant pastDueSince;
 
+    /** Set when the "trial expiring" event was published, so it is published once per trial (REQ-NOTIF-03). */
+    private Instant trialReminderSentAt;
+
     @CreationTimestamp
     private Instant createdAt;
 

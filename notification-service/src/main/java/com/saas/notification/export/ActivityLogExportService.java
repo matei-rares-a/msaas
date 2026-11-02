@@ -6,8 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.saas.notification.activity.ActivityLogFilterParser;
 import com.saas.notification.activity.ActivityLogQuery;
 import com.saas.notification.activity.ActivityLogReader;
-import com.saas.notification.entity.InAppNotification;
-import com.saas.notification.repository.InAppNotificationRepository;
+import com.saas.notification.inapp.InAppNotificationService;
 import com.saas.notification.security.Caller;
 import com.saas.shared.events.EventEnvelope;
 import com.saas.shared.outbox.OutboxDestination;
@@ -80,7 +79,7 @@ public class ActivityLogExportService {
     private final ExportJobStore store;
     private final ExportTimings timings;
     private final OutboxWriter outboxWriter;
-    private final InAppNotificationRepository notifications;
+    private final InAppNotificationService notifications;
     private final ObjectMapper objectMapper;
     private final TransactionTemplate transactionTemplate;
     private final Clock clock;
@@ -89,7 +88,7 @@ public class ActivityLogExportService {
     private final Duration retention;
 
     ActivityLogExportService(ActivityLogReader reader, ExportJobStore store, ExportTimings timings, OutboxWriter outboxWriter,
-            InAppNotificationRepository notifications, ObjectMapper objectMapper, PlatformTransactionManager transactionManager,
+            InAppNotificationService notifications, ObjectMapper objectMapper, PlatformTransactionManager transactionManager,
             Clock clock, Duration asyncThreshold, long maxRows, Duration retention) {
         this.reader = reader;
         this.store = store;
@@ -168,13 +167,9 @@ public class ActivityLogExportService {
     }
 
     private void notifyRequester(UUID userId, UUID jobId) {
-        InAppNotification notification = new InAppNotification();
-        notification.setId(UUID.randomUUID());
-        notification.setUserId(userId);
-        notification.setTitle("Export ready");
-        notification.setMessage("Your activity journal export is ready to download: /notifications/activity-log/exports/" + jobId + "/download");
-        notification.setLevel("INFO");
-        notifications.save(notification);
+        notifications.create(new InAppNotificationService.NewNotification(userId, "ACTIVITY_EXPORT_READY", "Export ready",
+                "Your activity journal export is ready to download: /notifications/activity-log/exports/" + jobId + "/download",
+                "INFO"));
     }
 
     private record Csv(byte[] bytes, long rows) {

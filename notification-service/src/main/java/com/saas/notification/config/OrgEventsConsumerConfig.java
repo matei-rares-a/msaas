@@ -9,6 +9,7 @@ import com.saas.shared.events.consumer.ProcessedEventStore;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
@@ -46,10 +47,13 @@ public class OrgEventsConsumerConfig {
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory(
-            ConsumerFactory<String, String> consumerFactory, KafkaTemplate<String, String> orgEventsDeadLetterTemplate) {
+            ConsumerFactory<String, String> consumerFactory, KafkaTemplate<String, String> orgEventsDeadLetterTemplate,
+            @Value("${spring.kafka.listener.auto-startup:true}") boolean autoStartup) {
         ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
         factory.setCommonErrorHandler(KafkaDeadLetterSupport.errorHandler(orgEventsDeadLetterTemplate, 1000L));
+        // a custom factory bypasses Boot's configurer, which is what would otherwise apply this property
+        factory.setAutoStartup(autoStartup);
         return factory;
     }
 }

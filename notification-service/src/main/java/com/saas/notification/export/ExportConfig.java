@@ -2,7 +2,7 @@ package com.saas.notification.export;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.saas.notification.activity.ActivityLogReader;
-import com.saas.notification.repository.InAppNotificationRepository;
+import com.saas.notification.inapp.InAppNotificationService;
 import com.saas.shared.events.consumer.RabbitDeadLetterSupport;
 import com.saas.shared.outbox.OutboxWriter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -46,7 +46,7 @@ public class ExportConfig {
 
     @Bean
     public ActivityLogExportService activityLogExportService(ActivityLogReader reader, DataSource dataSource, ExportTimings timings,
-            OutboxWriter outboxWriter, InAppNotificationRepository notifications, ObjectMapper objectMapper,
+            OutboxWriter outboxWriter, InAppNotificationService notifications, ObjectMapper objectMapper,
             PlatformTransactionManager transactionManager, Clock clock,
             @Value("${saas.export.async-threshold:PT5S}") Duration asyncThreshold,
             @Value("${saas.export.max-rows:500000}") long maxRows,

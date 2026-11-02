@@ -21,6 +21,9 @@ public class ExpiredTrialFinder {
     public record OverdueGracePeriod(UUID tenantId, UUID subscriptionId) {
     }
 
+    public record TrialEndingSoon(UUID tenantId, UUID subscriptionId, Instant startDate) {
+    }
+
     private final JdbcTemplate jdbcTemplate;
 
     public ExpiredTrialFinder(DataSource jobReaderDataSource) {
@@ -45,5 +48,21 @@ public class ExpiredTrialFinder {
                         UUID.fromString(rs.getString("tenant_id")),
                         UUID.fromString(rs.getString("id"))),
                 Timestamp.from(cutoff));
+    }
+
+    /**
+     * Trials that started between {@code startedAfter} and {@code startedBefore} and have not had their
+     * "expiring soon" notice (REQ-NOTIF-03): old enough to be within the warning window, young enough not to be
+     * expired already (an expired trial is converted, not warned about).
+     */
+    public List<TrialEndingSoon> findTrialsEndingSoon(Instant startedAfter, Instant startedBefore) {
+        return jdbcTemplate.query(
+                "SELECT tenant_id, id, start_date FROM billing.subscriptions WHERE status = 'TRIALING'"
+                        + " AND trial_reminder_sent_at IS NULL AND start_date >= ? AND start_date <= ?",
+                (rs, n) -> new TrialEndingSoon(
+                        UUID.fromString(rs.getString("tenant_id")),
+                        UUID.fromString(rs.getString("id")),
+                        rs.getTimestamp("start_date").toInstant()),
+                Timestamp.from(startedAfter), Timestamp.from(startedBefore));
     }
 }

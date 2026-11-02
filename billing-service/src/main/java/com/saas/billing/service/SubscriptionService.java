@@ -4,6 +4,7 @@ import com.saas.billing.entity.Invoice;
 import com.saas.billing.entity.Payment;
 import com.saas.billing.entity.Subscription;
 import com.saas.billing.event.SubscriptionChangedPayload;
+import com.saas.billing.event.TrialExpiringPayload;
 import com.saas.billing.plan.PlanCatalogReader;
 import com.saas.billing.plan.PlanSummary;
 import com.saas.billing.repository.InvoiceRepository;
@@ -18,6 +19,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -73,7 +75,7 @@ public class SubscriptionService {
             subscription.setStartDate(clock.instant());
             subscriptionRepository.save(subscription);
 
-            publishChanged(tenantId, plan.id(), plan.maxUsers(), subscription.getStatus(), actorUserId);
+            publishChanged(tenantId, plan.id(), plan.maxUsers(), subscription.getStatus(), null, actorUserId);
             return subscription;
         }));
     }
@@ -102,11 +104,12 @@ public class SubscriptionService {
             if (subscription.getStatus() == Subscription.Status.CANCELED) {
                 throw new IllegalStateException("subscription is already canceled");
             }
+            Subscription.Status previousStatus = subscription.getStatus();
             subscription.setStatus(Subscription.Status.CANCELED);
             subscription.setEndDate(clock.instant());
             subscriptionRepository.save(subscription);
 
-            publishChanged(tenantId, null, 0, subscription.getStatus(), actorUserId);
+            publishChanged(tenantId, null, 0, subscription.getStatus(), previousStatus, actorUserId);
             return subscription;
         }));
     }
@@ -120,6 +123,7 @@ public class SubscriptionService {
         TenantContext.callWith(tenantId, () -> transactionTemplate.execute(status -> {
             Subscription subscription = subscriptionRepository.findById(subscriptionId)
                     .orElseThrow(() -> new IllegalArgumentException("subscription not found"));
+            Subscription.Status previousStatus = subscription.getStatus();
             subscription.setStatus(newStatus);
             if (newStatus == Subscription.Status.ACTIVE) {
                 subscription.setPastDueSince(null);
@@ -129,7 +133,7 @@ public class SubscriptionService {
             subscriptionRepository.save(subscription);
 
             PlanSummary plan = planCatalogReader.findById(subscription.getPlanId()).orElse(null);
-            publishChanged(tenantId, subscription.getPlanId(), plan == null ? 0 : plan.maxUsers(), newStatus, actorUserId);
+            publishChanged(tenantId, subscription.getPlanId(), plan == null ? 0 : plan.maxUsers(), newStatus, previousStatus, actorUserId);
             return null;
         }));
     }
@@ -194,10 +198,32 @@ public class SubscriptionService {
         return TenantContext.callWith(tenantId, () -> transactionTemplate.execute(status -> invoiceRepository.findAll()));
     }
 
-    private void publishChanged(UUID tenantId, UUID planId, int maxUsers, Subscription.Status status, UUID actorUserId) {
+    /**
+     * Publishes the "trial expiring" event for a subscription that is still TRIALING and has not had it yet
+     * (REQ-NOTIF-03), and records that in the same transaction, so a repeated run of the job does not repeat it.
+     *
+     * @return whether the event was published
+     */
+    public boolean remindTrialExpiring(UUID tenantId, UUID subscriptionId, Instant trialEndsAt) {
+        return Boolean.TRUE.equals(TenantContext.callWith(tenantId, () -> transactionTemplate.execute(status -> {
+            Subscription subscription = subscriptionRepository.findById(subscriptionId).orElse(null);
+            if (subscription == null || subscription.getStatus() != Subscription.Status.TRIALING
+                    || subscription.getTrialReminderSentAt() != null) {
+                return false;
+            }
+            subscription.setTrialReminderSentAt(clock.instant());
+            subscriptionRepository.save(subscription);
+            outboxWriter.writeEvent(EventEnvelope.forTenant(TrialExpiringPayload.EVENT_TYPE, 1, tenantId,
+                    new TrialExpiringPayload(tenantId, subscriptionId, trialEndsAt)), OutboxDestination.KAFKA, "billing.events");
+            return true;
+        })));
+    }
+    private void publishChanged(UUID tenantId, UUID planId, int maxUsers, Subscription.Status status,
+            Subscription.Status previousStatus, UUID actorUserId) {
         EventEnvelope<SubscriptionChangedPayload> envelope = EventEnvelope.forTenant(
                 "SUBSCRIPTION_CHANGED", 1, tenantId,
-                new SubscriptionChangedPayload(tenantId, planId, maxUsers, status.name(), actorUserId));
+                new SubscriptionChangedPayload(tenantId, planId, maxUsers, status.name(), actorUserId,
+                        previousStatus == null ? null : previousStatus.name()));
         outboxWriter.writeEvent(envelope, OutboxDestination.KAFKA, "billing.events");
     }
 }

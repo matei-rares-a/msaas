@@ -36,6 +36,10 @@ spring:
 server:
   port: 8084
 
+# organization-service, asked who the admins and managers of a tenant are when a notification is addressed to them (P9.5)
+org-service:
+  base-url: ${ORG_SERVICE_BASE_URL:http://localhost:8082}
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
@@ -55,6 +59,12 @@ saas:
     max-depth: ${GRAPHQL_MAX_DEPTH:6}
     max-complexity: ${GRAPHQL_MAX_COMPLEXITY:1000}
     max-page-size: ${GRAPHQL_MAX_PAGE_SIZE:100}
+  # In-app notifications (P9.5, REQ-NOTIF-05): retention 90 days, swept daily. directory-timeout bounds the call that asks
+  # organization-service who the admins and managers are (org-service.base-url below).
+  in-app:
+    retention: ${IN_APP_RETENTION:P90D}
+    purge-cron: ${IN_APP_PURGE_CRON:0 0 3 * * *}
+    directory-timeout: ${IN_APP_DIRECTORY_TIMEOUT:PT5S}
   # Sending emails (P9.4, REQ-NOTIF-08): a failed delivery is retried max-retries times, waiting initial-backoff, then
   # twice that, and so on; after that the email is recorded FAILED. command-exchanges are the producers' command
   # channels. There is no setting a user can turn emails off with (REQ-NOTIF-09).

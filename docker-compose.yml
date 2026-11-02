@@ -241,6 +241,7 @@ services:
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_USER: ${RABBITMQ_USER}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      ORG_SERVICE_BASE_URL: http://organization-service:8082
     depends_on:
       pgbouncer:
         condition: service_healthy

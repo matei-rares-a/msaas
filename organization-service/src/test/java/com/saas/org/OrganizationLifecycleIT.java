@@ -132,6 +132,54 @@ class OrganizationLifecycleIT {
                         .jsonPath("$.length()").value(2));
     }
 
+    @Test
+    @Tag("REQ-NOTIF-03")
+    void internalMembersEndpointListsTheIdsOfTheTenantsMembersWithTheGivenRolesOnly() throws Exception {
+        UUID admin = UUID.randomUUID();
+        UUID tenantId = UUID.fromString((String) createOrganization("Members Co", admin).getBody().get("id"));
+        UUID manager = addMember(tenantId, "MANAGER", false);
+        UUID readOnlyManager = addMember(tenantId, "MANAGER", true);
+        UUID user = addMember(tenantId, "USER", false);
+        UUID otherAdmin = UUID.randomUUID();
+        UUID otherTenant = UUID.fromString((String) createOrganization("Other Co", otherAdmin).getBody().get("id"));
+
+        var approvers = membersOf(tenantId, "ADMIN,MANAGER");
+        var users = membersOf(tenantId, "USER");
+
+        assertThat(approvers).containsExactlyInAnyOrder(admin.toString(), manager.toString(), readOnlyManager.toString());
+        assertThat(users).containsExactly(user.toString());
+        assertThat(membersOf(otherTenant, "ADMIN,MANAGER")).containsExactly(otherAdmin.toString());
+        assertThat(membersOf(otherTenant, "USER")).isEmpty();
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest(name = "roles={0} is refused")
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"OWNER", "ADMIN,,MANAGER", "admin", "ADMIN;MANAGER", ""})
+    @Tag("REQ-NOTIF-03")
+    void internalMembersEndpointRefusesARoleThatDoesNotExist(String roles) throws Exception {
+        UUID tenantId = UUID.fromString((String) createOrganization("Roles Co", UUID.randomUUID()).getBody().get("id"));
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .get("/internal/tenants/{tenantId}/members", tenantId).param("roles", roles))
+                .andExpect(status().isBadRequest());
+    }
+
+    private java.util.List<String> membersOf(UUID tenantId, String roles) throws Exception {
+        var result = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .get("/internal/tenants/{tenantId}/members", tenantId).param("roles", roles))
+                .andExpect(status().isOk()).andReturn();
+        var body = new com.fasterxml.jackson.databind.ObjectMapper().readTree(result.getResponse().getContentAsString());
+        java.util.List<String> ids = new java.util.ArrayList<>();
+        body.get("userIds").forEach(id -> ids.add(id.asText()));
+        return ids;
+    }
+
+    private UUID addMember(UUID tenantId, String role, boolean readOnly) throws Exception {
+        UUID userId = UUID.randomUUID();
+        updateAsTenant(tenantId, "INSERT INTO org.memberships (id, tenant_id, user_id, role, read_only) VALUES (?, ?, ?, ?, ?)",
+                UUID.randomUUID(), tenantId, userId, role, readOnly);
+        return userId;
+    }
+
     private ResponseEntity<Map> createOrganization(String name, UUID creatorUserId) throws Exception {
         var result = mockMvc.perform(post("/organizations")
                         .contentType("application/json")

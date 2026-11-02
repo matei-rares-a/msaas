@@ -88,6 +88,16 @@ public class OrganizationService {
                 .orElseThrow(() -> new IllegalArgumentException("organization not found")));
     }
 
+    /**
+     * The ids of the tenant's members who hold one of the given roles, for services that need to address a
+     * notification to "the admins and managers" without keeping a copy of the roles (REQ-NOTIF-03). Ids only,
+     * RLS-scoped to the tenant.
+     */
+    public java.util.List<UUID> memberIdsWithRoles(UUID tenantId, java.util.Set<Membership.Role> roles) {
+        return TenantContext.callWith(tenantId, () -> transactionTemplate.execute(status ->
+                membershipRepository.findAllByRoleIn(roles).stream().map(Membership::getUserId).sorted().toList()));
+    }
+
     /** Minimal write path to exercise the read-only flag (REQ-ROLE-06); the full permission matrix is P4.2. */
     public OrganizationResponse renameOrganization(UUID tenantId, UUID callerUserId, String newName) {
         return TenantContext.callWith(tenantId, () -> transactionTemplate.execute(status -> {

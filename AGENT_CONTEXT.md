@@ -131,16 +131,28 @@ La fiecare prompt:
 ## 5. Status la data acestui fisier (2026-11-02)
 
 Fazele 0-7 sunt complete si commise (`P7.1` a fost implementat de alt agent, Kiro, si corectat in
-`P7.1 (deviere)`). Faza 8 (Personalizare) e completa si `P9.1 Scrierea in jurnal` e facut. P9.2 (citirea jurnalului prin GraphQL), P9.3 (export CSV) si P9.4 (trimiterea email-urilor) sunt facute. Pasul curent (primul
-nebifat din plan) este **P9.5 Notificari in-app**: generate din lista de evenimente v1 (schimbarea rolului, cerere de retrogradare
-ADMIN, invitatie acceptata, subscriptie PAST_DUE / trial care expira in 3 zile, export gata - deja scris in P9.3 - cerere si
-decizie de concediu, lunch roulette); per tenant (userul vede doar notificarile tenantului din token); listare, numar
-necitite, marcare ca citit; retentie 90 de zile (cu `MutableClock`). REQ: NOTIF-01..05. Notificarea "export gata" din P9.3
-scrie direct in `in_app_notifications` (`ActivityLogExportService.notifyRequester`): cand apare un serviciu de notificari
-comun, mutati-o acolo.
+`P7.1 (deviere)`). Faza 8 (Personalizare) e completa si `P9.1 Scrierea in jurnal` e facut. P9.2 (citirea jurnalului prin GraphQL), P9.3 (export CSV), P9.4 (email-uri) si P9.5 (notificari in-app) sunt facute. Pasul curent
+(primul nebifat din plan) este **P9.6 Modulul cereri de concediu** (org-service, schema `org`): activarea modulelor per tenant din
+`tenant_settings` (doar ADMIN, implicit dezactivat) + fus orar al tenantului; cereri, zile lucratoare, sold, zile libere,
+tranzitii de stare, aprobare cu regula anti-auto-aprobare, calendarul echipei, evenimente Kafka doar cu ID-uri, notificari si
+intrari in jurnal, stergere la offboarding. REQ: MOD-01, LEAVE-01..08, MON-01, NOTIF-03. Pentru notificari: o regula noua in
+`InAppNotificationRules` (+ tipul in `HANDLED_EVENT_TYPES`) si un test in `InAppNotificationListenerIT`; pentru jurnal: o linie in
+`ActivityEventCatalog`. Cele doua sunt independente.
 
 Ce exista deja si e relevant mai departe:
-- **Email-uri (P9.4)**: pachetul `email`. `EmailCommandListener` consuma `notif.email-commands` (exchange-uri fanout `org|auth|billing.commands`,
+- **Notificari in-app (P9.5)**: pachetul `inapp` din notification-service. Regulile (eveniment -> destinatar -> text) sunt toate in
+  `InAppNotificationRules`; destinatarii "ADMIN/MANAGER" se cer la momentul evenimentului de la org-service
+  (`GET /internal/tenants/{id}/members?roles=`, `MemberDirectory`), nu dintr-o copie locala a rolurilor. Evenimente fara rol in payload
+  (`TRIAL_EXPIRING`, `SUBSCRIPTION_CHANGED`) vin de la billing; `SubscriptionChangedPayload` are `previousStatus` ca sa se vada
+  tranzitia in PAST_DUE. Retentia (90 zile) sterge peste tenanti FARA rol BYPASSRLS: politicile `retention_purge_*` din `V7` deschid
+  doar randurile mai vechi decat `app.purge_before`, setat de job in propria tranzactie; acelasi tipar rezolva orice curatare
+  cross-tenant viitoare (curatarea exporturilor expirate din P9.3 inca se face per tenant, la urmatorul export). Testele RLS
+  folosesc `SET LOCAL ROLE` pe un rol non-superuser creat in tranzactie (vezi `InAppRetentionIT.asTester`), singura cale de a proba RLS
+  cand containerul de test ruleaza ca superuser. Timpurile Instant din payload-urile outbox sunt numere zecimale (secunde epoch):
+  parseaza-le cu `ObjectMapper.treeToValue(node, Instant.class)`, nu cu `Instant.parse`. `spring.kafka.listener.auto-startup=false` e
+  respectat si de fabrica custom (inainte fiecare context de test cu `@KafkaListener` consuma, indiferent de proprietate). Un test Kafka
+  cap-coada pentru un listener nou cere un grup propriu sau un context propriu: consumatorii din contextele Spring cache-uite
+  disputa partitiile (un singur partition per topic in teste), de aceea in-app are doar un test structural de legatura.- **Email-uri (P9.4)**: pachetul `email`. `EmailCommandListener` consuma `notif.email-commands` (exchange-uri fanout `org|auth|billing.commands`,
   declarate de notification-service la pornire - releul unui producator nu poate publica pana exista exchange-ul). Un tip nou de email =
   un `case` in listener + un sablon in `EmailTemplates` + un test de contract in `EmailDeliveryIT` (JSON scris de mana, nu din clasele
   serviciului). Email de tenant = inregistrat (`email_logs` cu id = id-ul comenzii, + `EMAIL_SENT`/`EMAIL_FAILED` in jurnal, fara adresa);

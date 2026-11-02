@@ -7,6 +7,7 @@ import com.saas.billing.service.GracePeriodEscalationJob;
 import com.saas.billing.service.PaymentService;
 import com.saas.billing.service.SubscriptionService;
 import com.saas.billing.service.TrialConversionJob;
+import com.saas.billing.service.TrialExpiryReminderJob;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
@@ -19,7 +20,7 @@ import javax.sql.DataSource;
 import java.time.Clock;
 import java.time.Duration;
 
-/** Billing's scheduled jobs (REQ-BILL-06 trial conversion, REQ-BILL-04 grace-period escalation). */
+/** Billing's scheduled jobs (REQ-BILL-06 trial conversion, REQ-BILL-04 grace-period escalation, REQ-NOTIF-03 trial reminder). */
 @Configuration
 @EnableScheduling
 public class BillingSchedulingConfig {
@@ -49,6 +50,34 @@ public class BillingSchedulingConfig {
         return new TrialConversionScheduler(job, Duration.ofDays(trialDays));
     }
 
+    @Bean
+    public TrialExpiryReminderJob trialExpiryReminderJob(ExpiredTrialFinder finder, SubscriptionService subscriptionService, Clock clock) {
+        return new TrialExpiryReminderJob(finder, subscriptionService, clock);
+    }
+
+    @Bean
+    public TrialExpiryReminderScheduler trialExpiryReminderScheduler(TrialExpiryReminderJob job,
+            @Value("${saas.billing.trial-days:14}") long trialDays,
+            @Value("${saas.billing.trial-reminder-days:3}") long reminderDays) {
+        return new TrialExpiryReminderScheduler(job, Duration.ofDays(trialDays), Duration.ofDays(reminderDays));
+    }
+
+    public static class TrialExpiryReminderScheduler {
+        private final TrialExpiryReminderJob job;
+        private final Duration trialDuration;
+        private final Duration warningPeriod;
+
+        TrialExpiryReminderScheduler(TrialExpiryReminderJob job, Duration trialDuration, Duration warningPeriod) {
+            this.job = job;
+            this.trialDuration = trialDuration;
+            this.warningPeriod = warningPeriod;
+        }
+
+        @Scheduled(cron = "${saas.billing.trial-reminder-cron:0 15 4 * * *}")
+        public void remindEndingTrials() {
+            job.remindEndingTrials(trialDuration, warningPeriod);
+        }
+    }
     @Bean
     public GracePeriodEscalationJob gracePeriodEscalationJob(ExpiredTrialFinder finder,
             SubscriptionService subscriptionService, Clock clock) {

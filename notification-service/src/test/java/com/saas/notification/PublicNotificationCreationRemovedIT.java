@@ -49,7 +49,7 @@ class PublicNotificationCreationRemovedIT implements PostgresTestContainer {
                         .header("X-Org-Id", UUID.randomUUID().toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isMethodNotAllowed()); // the path exists for reading (P9.5); creating is not allowed on it
 
         Integer rows = jdbc.queryForObject("select count(*) from notif.in_app_notifications", Integer.class);
         assertThat(rows).isEqualTo(before);
