@@ -1,0 +1,9 @@
+# Production profile (REQ-MON-08): the schema must not be discoverable through introspection, so a client
+# cannot enumerate the API; the typed queries it was built against keep working.
+spring:
+  graphql:
+    schema:
+      introspection:
+        enabled: false
+    graphiql:
+      enabled: false

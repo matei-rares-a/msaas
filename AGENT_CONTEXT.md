@@ -131,14 +131,14 @@ La fiecare prompt:
 ## 5. Status la data acestui fisier (2026-11-02)
 
 Fazele 0-7 sunt complete si commise (`P7.1` a fost implementat de alt agent, Kiro, si corectat in
-`P7.1 (deviere)`). Faza 8 (Personalizare) e completa si `P9.1 Scrierea in jurnal` e facut. Pasul curent (primul nebifat din plan) este
-**P9.2 Citirea jurnalului prin GraphQL** (`spring-boot-starter-graphql` in notification-service, rutat prin gateway): query
-doar-citire, paginat, filtrabil (data, tip, actor), fara mutatii, tenantul din token (nu din argumente), doar ADMIN si
-MANAGER, limite de adancime/complexitate, introspectie dezactivata in productie. Intrarile se citesc din
-`notif.activity_log` (RLS pe `tenant_id`, partitionat lunar); `ActivityLogWriter` o scrie, `ActivityEventCatalog`
-(shared-lib) spune ce tipuri exista.
+`P7.1 (deviere)`). Faza 8 (Personalizare) e completa si `P9.1 Scrierea in jurnal` e facut. P9.2 (citirea jurnalului prin GraphQL) e facut. Pasul curent (primul nebifat din plan) este
+**P9.3 Export CSV**: doar ADMIN; decizie sync/async pe baza timpului mediu masurat al operatiei; async ruleaza ca job si genereaza notificarea "export gata". REQ: MON-05, SCALE-03. Se poate refolosi `ActivityLogReader` (filtre izolare pe tenant deja acolo).
 
 Ce exista deja si e relevant mai departe:
+- **Citirea jurnalului (P9.2)**: GraphQL pe `/notifications/graphql` (`graphql/` + `activity-log.graphqls`), doar `Query`; identitatea vine
+  din antetele gateway-ului prin `CallerContextInterceptor`, niciodata din argumente. `QueryOnlyInterceptor` refuza mutatii/subscriptii
+  inainte de executie. Limite in `ActivityLogGraphQlConfig` (`saas.graphql.*`). Un IT GraphQL cu MockMvc cere `asyncDispatch`;
+  cel de productie foloseste `@ActiveProfiles("prod")`. Testele cu Postgres de test nu probeaza RLS (superuser), doar filtrul explicit.
 - **Jurnalul (P9.1)**: `ActivityEventCatalog` (shared-lib) e contractul dintre producatori si jurnal: tip -> camp actor +
   campuri de metadata. Un tip nou auditat = o linie in catalog + publicarea evenimentului (outbox, Kafka, doar ID-uri) + un
   test de contract in serviciul producator (model: `ActivityEventsPublishedIT`). `ActivityLogListener` are grup Kafka propriu

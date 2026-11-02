@@ -1,4 +1,7 @@
 spring:
+  graphql:
+    # under /notifications so the gateway's existing route reaches it and nothing else is exposed (REQ-MON-08)
+    path: /notifications/graphql
   config:
     import: optional:file:.env[.properties],optional:file:../.env[.properties]
   application:
@@ -47,6 +50,11 @@ management:
 saas:
   tenancy:
     enabled: true
+  # Limits on what one journal query may cost (P9.2, REQ-MON-08)
+  graphql:
+    max-depth: ${GRAPHQL_MAX_DEPTH:6}
+    max-complexity: ${GRAPHQL_MAX_COMPLEXITY:1000}
+    max-page-size: ${GRAPHQL_MAX_PAGE_SIZE:100}
   outbox:
     enabled: true
     relay:
