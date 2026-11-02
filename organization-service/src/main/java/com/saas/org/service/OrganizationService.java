@@ -10,6 +10,7 @@ import com.saas.org.entity.Tenant;
 import com.saas.org.event.AdminDemotionEscalatedPayload;
 import com.saas.org.repository.AdminDemotionRequestRepository;
 import com.saas.org.repository.MembershipRepository;
+import com.saas.org.repository.TenantSettingsRepository;
 import com.saas.org.repository.TenantRepository;
 import com.saas.shared.events.EventEnvelope;
 import com.saas.shared.outbox.OutboxDestination;
@@ -35,16 +36,20 @@ public class OrganizationService {
     private final TenantRepository tenantRepository;
     private final MembershipRepository membershipRepository;
     private final AdminDemotionRequestRepository demotionRequestRepository;
+    private final TenantSettingsRepository settingsRepository;
+    private final ThemeService themeService;
     private final OutboxWriter outboxWriter;
     private final Clock clock;
     private final TransactionTemplate transactionTemplate;
 
     public OrganizationService(TenantRepository tenantRepository, MembershipRepository membershipRepository,
-            AdminDemotionRequestRepository demotionRequestRepository, OutboxWriter outboxWriter, Clock clock,
-            PlatformTransactionManager transactionManager) {
+            AdminDemotionRequestRepository demotionRequestRepository, TenantSettingsRepository settingsRepository,
+            ThemeService themeService, OutboxWriter outboxWriter, Clock clock, PlatformTransactionManager transactionManager) {
         this.tenantRepository = tenantRepository;
         this.membershipRepository = membershipRepository;
         this.demotionRequestRepository = demotionRequestRepository;
+        this.settingsRepository = settingsRepository;
+        this.themeService = themeService;
         this.outboxWriter = outboxWriter;
         this.clock = clock;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
@@ -65,6 +70,8 @@ public class OrganizationService {
             membership.setRole(Membership.Role.ADMIN);
             membership.setReadOnly(false);
             membershipRepository.save(membership);
+
+            settingsRepository.save(themeService.newDefaultSettings()); // REQ-PERS-05
 
             return new OrganizationResponse(tenant.getId(), tenant.getName());
         }));

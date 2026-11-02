@@ -131,11 +131,18 @@ La fiecare prompt:
 ## 5. Status la data acestui fisier (2026-11-02)
 
 Fazele 0-7 sunt complete si commise (`P7.1` a fost implementat de alt agent, Kiro, si corectat in
-`P7.1 (deviere)`; `P7.2 Offboarding` e facut). Pasul curent (primul nebifat din plan) este **P8.1 Tema**
-(Faza 8 - Personalizare): `tenant_settings.theme_json`, catalog de palete in DB globala, tema implicita la
-crearea tenantului, endpoint dedicat de citire, actualizare doar ADMIN cu `paletteId` valid.
+`P7.1 (deviere)`). `P8.1 Tema` e facut. Pasul curent (primul nebifat din plan) este **P8.2 Logo** (Faza 8):
+interfata `ObjectStorage` + implementare locala, doar PNG/JPG verificat dupa magic bytes, limita de marime si
+dimensiuni, cheie de stocare per tenant; rezultatul ajunge in `theme_json.logoUrl` (`ThemeService` il returneaza
+deja, iar `updatePalette` pastreaza celelalte chei).
 
 Ce exista deja si e relevant mai departe:
+- **Tema (P8.1)**: `global.palettes` (auth-service `V9`, citit de org-service prin `PaletteCatalogReader`, un
+  `DataSource` propriu, nu bean); `org.tenant_settings.theme_json` JSONB, o singura linie per tenant, creata la
+  `createOrganization` (tema implicita `saas.theme.default-palette-id`); `ThemeService` + `ThemeController`
+  (`/organizations/{tenantId}/theme`). `UpdateThemeRequest` respinge orice proprietate in afara `paletteId`
+  (`ignoreUnknown=false` nu functioneaza cu mapper-ul Spring Boot: folosim `@JsonAnySetter` + `@AssertTrue`).
+  P8.3 adauga flag-urile in aceeasi tabela (coloana noua), nu intr-una separata.
 - **Consumatori Kafka** (model: `SubscriptionChangedListener` in org-service, `MemberOffboardedListener` in
   notification-service si auth-service): clasa fara `@Component`, bean-uri explicite intr-o `@Configuration`,
   payload `String` + `ObjectMapper`, idempotent prin `ProcessedEventStore`, `EventConsumerSupport`, retry +
@@ -165,6 +172,9 @@ Reguli de proces (sectiunea 0, regulile 10-12 din plan): sufixele de commit sunt
   e comun tuturor IT-urilor din rulare (compara numarul inainte/dupa, nu cu zero). Cu superuser-ul containerului
   `search_path` al rolului serviciului lipseste: pentru cod cu tabele necalificate (`ProcessedEventStore`) seteaza
   `spring.datasource.hikari.connection-init-sql=SET search_path TO <schema>,public`.
+- Fiecare IT cu container propriu (`startTopology()`) are nevoie de `test.marker=<NumeClasa>` in `@SpringBootTest`:
+  Spring refoloseste contextul intre clase cu aceeasi configuratie, deci o clasa ar primi DataSource-ul containerului
+  deja oprit al alteia (`Connection is not available, request timed out`).
 - Un listener Kafka care se aboneaza la un topic inexistent il observa abia dupa refresh-ul de metadate (minute):
   in teste creeaza topicul intai (`AdminClient`).
 - `mvnw verify` fara `clean` poate esua cu "Unresolved compilation problem": serverul Java din editor
