@@ -3,6 +3,10 @@ package com.saas.org.exception;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import com.saas.org.service.LogoTooLargeException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -50,6 +54,18 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Map<String, Object>> handleUnreadableBody(HttpMessageNotReadableException ex) {
         return ResponseEntity.badRequest().body(errorBody("invalid request body"));
+    }
+
+    /** A logo over the size limit (REQ-PERS-03): refused by the multipart limit or by the service's own check. */
+    @ExceptionHandler({LogoTooLargeException.class, MaxUploadSizeExceededException.class})
+    public ResponseEntity<Map<String, Object>> handleTooLarge(Exception ex) {
+        return ResponseEntity.status(413).body(errorBody("the file is too large"));
+    }
+
+    /** No file part in a logo upload. */
+    @ExceptionHandler({MissingServletRequestPartException.class, MultipartException.class})
+    public ResponseEntity<Map<String, Object>> handleBadUpload(Exception ex) {
+        return ResponseEntity.badRequest().body(errorBody("a file part named 'file' is required"));
     }
 
     @ExceptionHandler(Exception.class)

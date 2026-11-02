@@ -7,6 +7,12 @@ spring:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/saas_shard_1
     username: ${ORG_DB_USER:org_svc}
     password: ${ORG_DB_PASSWORD}
+  servlet:
+    multipart:
+      # the same limit the service enforces itself (saas.logo.max-bytes): the container refuses a bigger upload
+      # before it is buffered, and the service re-checks, so neither layer is the only guard (REQ-PERS-03)
+      max-file-size: ${LOGO_MAX_BYTES:2097152}B
+      max-request-size: ${LOGO_MAX_BYTES:2097152}B
   jpa:
     hibernate:
       ddl-auto: validate
@@ -85,6 +91,15 @@ saas:
         url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/saas_global
         username: ${ORG_DB_USER:org_svc}
         password: ${ORG_DB_PASSWORD}
+  # Logo limits (P8.2, REQ-PERS-03): 2 MB and 1024x1024 px by default
+  logo:
+    max-bytes: ${LOGO_MAX_BYTES:2097152}
+    max-width: ${LOGO_MAX_WIDTH:1024}
+    max-height: ${LOGO_MAX_HEIGHT:1024}
+  # Object storage behind the ObjectStorage interface: local directory now, replaceable by an external provider
+  storage:
+    local:
+      root: ${OBJECT_STORAGE_LOCAL_ROOT:./data/object-storage}
   # Palette every new tenant starts with (P8.1, REQ-PERS-05); must exist in global.palettes
   theme:
     default-palette-id: ${DEFAULT_PALETTE_ID:default}

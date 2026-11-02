@@ -38,3 +38,5 @@ dist/
 
 ### Workspace-ul altor agenti (nu e sursa de adevar) ###
 .agents/
+### Local object storage (P8.2) ###
+data/

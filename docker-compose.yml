@@ -173,6 +173,9 @@ services:
       RABBITMQ_USER: ${RABBITMQ_USER}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
       BILLING_SERVICE_BASE_URL: http://billing-service:8083
+      OBJECT_STORAGE_LOCAL_ROOT: /data/object-storage
+    volumes:
+      - org-object-storage:/data/object-storage
     depends_on:
       pgbouncer:
         condition: service_healthy
@@ -254,6 +257,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  org-object-storage:
 
 networks:
   default:

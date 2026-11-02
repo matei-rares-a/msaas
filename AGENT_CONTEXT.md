@@ -131,12 +131,15 @@ La fiecare prompt:
 ## 5. Status la data acestui fisier (2026-11-02)
 
 Fazele 0-7 sunt complete si commise (`P7.1` a fost implementat de alt agent, Kiro, si corectat in
-`P7.1 (deviere)`). `P8.1 Tema` e facut. Pasul curent (primul nebifat din plan) este **P8.2 Logo** (Faza 8):
-interfata `ObjectStorage` + implementare locala, doar PNG/JPG verificat dupa magic bytes, limita de marime si
-dimensiuni, cheie de stocare per tenant; rezultatul ajunge in `theme_json.logoUrl` (`ThemeService` il returneaza
-deja, iar `updatePalette` pastreaza celelalte chei).
+`P7.1 (deviere)`). `P8.1 Tema` si `P8.2 Logo` sunt facute. Pasul curent (primul nebifat din plan) este **P8.3 Feature flags per tenant**
+(Faza 8): flag-uri booleene in `tenant_settings` (valoare implicita dezactivat, un flag activ pentru un tenant nu
+afecteaza alt tenant).
 
 Ce exista deja si e relevant mai departe:
+- **Logo (P8.2)**: `ObjectStorage` (`com.saas.org.storage`) e singura cale spre fisiere; `LocalObjectStorage` e
+  `@Component` si doar pachetul ei o cunoaste (ArchUnit). Cheie `tenants/<tenantId>/logo-<uuid>.<png|jpg>`.
+  `LogoValidator` decide dupa bytes, nu dupa nume. Limite in `saas.logo.*` (2 MB, 1024x1024). Un nou furnizor
+  (S3) inseamna o a doua implementare + configurare. In IT-uri, `saas.storage.local.root` arata spre un director temporar.
 - **Tema (P8.1)**: `global.palettes` (auth-service `V9`, citit de org-service prin `PaletteCatalogReader`, un
   `DataSource` propriu, nu bean); `org.tenant_settings.theme_json` JSONB, o singura linie per tenant, creata la
   `createOrganization` (tema implicita `saas.theme.default-palette-id`); `ThemeService` + `ThemeController`
