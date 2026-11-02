@@ -35,3 +35,6 @@ build/
 node_modules/
 dist/
 .angular/
+
+### Workspace-ul altor agenti (nu e sursa de adevar) ###
+.agents/

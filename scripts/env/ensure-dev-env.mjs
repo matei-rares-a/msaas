@@ -11,7 +11,7 @@
  *   node scripts/env/ensure-dev-env.mjs
  *   node scripts/env/ensure-dev-env.mjs --check    report only, exit 1 when not ready
  */
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
 import { createConnection } from 'node:net';
 import { join } from 'node:path';
@@ -58,8 +58,9 @@ const missing = (message) => {
 };
 const note = (message) => console.log(`  ${message}`);
 
-function run(command, args, { silent = true } = {}) {
-  const result = spawnSync(command, args, { encoding: 'utf8', shell: false });
+/** Every call has a timeout: `docker info` can hang while the daemon is half started. */
+function run(command, args, { silent = true, timeoutMs = 30_000 } = {}) {
+  const result = spawnSync(command, args, { encoding: 'utf8', shell: false, timeout: timeoutMs });
   if (result.error || result.status !== 0) {
     return { ok: false, output: `${result.stdout ?? ''}${result.stderr ?? ''}`.trim() };
   }
@@ -155,9 +156,18 @@ function findBrowser() {
   return (candidates[platform] ?? []).find((path) => existsSync(path)) ?? null;
 }
 
+/** Docker Desktop is a long-running GUI process: it must be detached with no inherited pipes, otherwise
+ * a synchronous spawn waits for it to exit and the script never gets past this step. */
 function startDockerDesktop() {
   if (platform === 'win32') {
-    return run('cmd', ['/c', 'start', '', 'C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe']).ok;
+    const exe = 'C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe';
+    if (!existsSync(exe)) {
+      return false;
+    }
+    const child = spawn(exe, [], { detached: true, stdio: 'ignore' });
+    child.on('error', () => {});
+    child.unref();
+    return true;
   }
   if (platform === 'darwin') {
     return run('open', ['-a', 'Docker']).ok;
@@ -228,7 +238,7 @@ if (options.skipImages) {
     } else {
       let pulled = false;
       for (let attempt = 1; attempt <= 3 && !pulled; attempt++) {
-        pulled = run('docker', ['pull', '-q', image]).ok;
+        pulled = run('docker', ['pull', '-q', image], { timeoutMs: 600_000 }).ok;
         if (!pulled) {
           console.log(`  pull failed (attempt ${attempt}/3), retrying: ${image}`);
         }

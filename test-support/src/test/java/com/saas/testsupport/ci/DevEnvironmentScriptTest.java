@@ -49,6 +49,17 @@ class DevEnvironmentScriptTest {
     }
 
     @Test
+    void devEnvScriptCannotHangOnADaemonThatIsStillStarting() throws IOException {
+        String script = Files.readString(REPO_ROOT.resolve("scripts/env/ensure-dev-env.mjs"));
+
+        // Docker Desktop must be started detached, with no pipes inherited from this process...
+        assertThat(script).contains("detached: true").contains("stdio: 'ignore'");
+        assertThat(script).doesNotContain("'start', ''");
+        // ...and no child process may run without a timeout.
+        assertThat(script).contains("timeout: timeoutMs");
+    }
+
+    @Test
     void secretsAreReadFromDotEnvNotHardcoded() throws IOException {
         String envScript = Files.readString(REPO_ROOT.resolve("scripts/env/ensure-dev-env.mjs"));
         String stackScript = Files.readString(REPO_ROOT.resolve("scripts/infra/local-stack.mjs"));

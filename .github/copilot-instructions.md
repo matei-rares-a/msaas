@@ -18,7 +18,7 @@ Workspace-ul urmeaza un plan de implementare obligatoriu. Surse de adevar:
 - `mvnw -pl <modul> -am verify` trece pentru modulele atinse (fara teste sarite sau `@Disabled`); pentru frontend `npm run build` + `npm run test:ci`.
 - `node scripts/verify/check-traceability.mjs` trece.
 - Verificarea fata de plan (mai jos) e completa.
-- Pasul e bifat, are o linie in Jurnalul de progres si exista un commit local `P<faza>.<pas>: <rezumat>`.
+- Pasul e bifat, are o linie in Jurnalul de progres, sectiunea 5 din [AGENT_CONTEXT.md](../AGENT_CONTEXT.md) (status) e actualizata si exista un commit local `P<faza>.<pas>: <rezumat>`.
 
 ## Schimbari de cerinte (doar la cerere explicita)
 1. Clarifica deciziile deschise cu utilizatorul (optiuni + recomandare) inainte de a scrie.
@@ -45,11 +45,18 @@ Workspace-ul urmeaza un plan de implementare obligatoriu. Surse de adevar:
 - Teste de integrare in servicii: implementeaza doar interfetele `*TestContainer` necesare, opreste listenerii brokerilor nefolositi (`spring.rabbitmq.listener.simple.auto-startup=false`, `spring.kafka.listener.auto-startup=false`), pastreaza aceeasi configuratie `@SpringBootTest` in clasele unui serviciu (context refolosit).
 - Ruleaza un modul mereu cu `-am` (`test-support` nu e publicat intr-un repository).
 - Parametrii din sectiunea 4 a planului sunt valori implicite configurabile, nu cerinte.
+- Identitatea vine din token: un endpoint care actioneaza pentru un user ia `X-User-Id` (si tenantul din `X-Tenant-Id`), setate de gateway; niciodata un id de user sau de tenant din corpul cererii (REQ-AUTH-05). Un user fara tenant foloseste tokenul de identitate, valid doar pe `POST /organizations` si `POST /invitations/accept`.
+- Dupa `mvnw verify` fara `clean`, serverul Java din editor poate scrie peste `target/classes` (erori "Unresolved compilation problem"): ruleaza `mvnw clean verify` atomic.
 
 ## Commit-uri
 - Mesajul incepe cu ID-ul pasului: `P0.2: modulul test-support`.
-- Modificari din afara pasului curent: pasul curent + sufix, ex. `P1.1 (cerinte): ...`, `P1.1 (deviere): ...`, `P1.1 (proces): ...`.
+- Modificari din afara pasului curent: pasul curent + sufix, ex. `P1.1 (cerinte): ...`, `P1.1 (deviere): ...`, `P1.1 (proces): ...`. Lista de sufixe e inchisa; nu se inventeaza altele (ex. `(FEAT-001)`), detaliile merg in corpul mesajului.
+- Linia din Jurnalul de progres e scurta (cel mult ~900 de caractere); detaliile de implementare merg in mesajul commit-ului.
 - Fara push, force, reset sau stergeri ireversibile fara confirmare.
+
+## Lucrul altor agenti
+- Comituri sau modificari necomise facute de alt agent se verifica la preluare cu aceleasi reguli: conformitate cu REQUIREMENTS.md, verificare fata de plan, `mvnw clean verify`, trasabilitate. Nepotrivirile se raporteaza, apoi se repara ca `(deviere)`.
+- `.agents/` (spatiul de lucru al altor agenti) e ignorat de git si nu e sursa de adevar. [AGENT_CONTEXT.md](../AGENT_CONTEXT.md) e un rezumat pentru preluare si trebuie actualizat la fiecare pas bifat.
 
 ## Mediu local
 - Pregatirea mediului se face cu scripturi, nu cu pasi manuali. `scripts/` e grupat dupa scop si scris in Node (`.mjs`), ca sa ruleze pe orice masina; secretele se citesc din `.env`, nu se scriu in scripturi.

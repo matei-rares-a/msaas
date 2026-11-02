@@ -1,0 +1,220 @@
+# Context pentru agenti (handoff)
+
+Document de predare pentru orice agent care preia acest workspace. Nu inlocuieste sursele de adevar
+(`REQUIREMENTS.md`, `IMPLEMENTATION_PLAN.md`, `.github/copilot-instructions.md`) - le rezuma si adauga
+contextul practic (decizii, conventii de cod, capcane) acumulat in sesiunile anterioare.
+
+## 1. Surse de adevar si ordinea lor
+
+1. `.github/copilot-instructions.md` - regulile de proces, obligatorii la fiecare prompt (rezumate mai jos).
+2. `REQUIREMENTS.md` - CE se construieste (comportament, reguli de business).
+3. `IMPLEMENTATION_PLAN.md` - CUM si IN CE ORDINE: sectiunea 0 (reguli), sectiunea 1 (catalog REQ -> pas),
+   sectiunea 4 (parametri configurabili, NU cerinte), sectiunea 5 (jurnal de progres, un rand per pas, cu
+   detalii tehnice suficiente cat sa reconstruiesti decizia fara sa recitesti codul).
+
+## 2. Fluxul de lucru obligatoriu (din copilot-instructions.md)
+
+La fiecare prompt:
+1. Citeste planul, gaseste primul pas nebifat (`[ ]`) in ordinea fazelor - ala e pasul curent.
+2. Clasifica cererea: tine de pasul curent -> lucreaza; tine de alt pas/e deviere -> spune explicit si
+   cere confirmare; e schimbare de cerinte -> urmeaza procedura de schimbare (clarifica -> REQUIREMENTS.md
+   -> verifica contradictii -> catalogul -> pasii afectati -> sectiunea 4 -> jurnal -> commit cu sufixul
+   `(cerinte)`); e doar o intrebare -> raspunde fara sa modifici fisiere.
+3. Inainte de orice test de integrare: `node scripts/env/ensure-dev-env.mjs --check` (sau fara `--check`
+   ca sa porneasca Docker automat daca nu ruleaza).
+4. Un pas e "terminat" doar daca: cod complet pentru toate REQ-urile pasului; fiecare REQ are minim un
+   test `@Tag("REQ-...")`; `mvnw verify` trece pe modulele atinse (fara teste sarite/`@Disabled`);
+   `node scripts/verify/check-traceability.mjs` trece; verificarea fata de plan e completa (vezi mai jos);
+   pasul e bifat `[x]`, are rand nou in jurnal, commit local `P<faza>.<pas>: <rezumat>`.
+5. Raporteaza mereu la final: `Pn.m: descriere OK / teste OK / fara extra OK` (sau ce lipseste) +
+   REQ-urile verificate si nepotrivirile fata de REQUIREMENTS.md (sau "nicio nepotrivire").
+6. Fara push, fara stergeri ireversibile, fara modificari in afara pasului curent fara confirmare
+   explicita a utilizatorului.
+7. Comenzile manuale repetate (sau care au avut nevoie de reincercare/corectura) devin scripturi in
+   `scripts/` (`env/`, `infra/`, `verify/`), idempotente, Node `.mjs`, cu `--check` unde are sens.
+
+## 3. Arhitectura (pe scurt)
+
+- **Module Maven** (root `msaas-parent`, Boot 3.2.5, Java 21): `test-support`, `shared-lib`, `api-gateway`
+  (reactiv, Spring Cloud Gateway), `auth-service`, `organization-service`, `billing-service`,
+  `notification-service`. Build: `.\mvnw.cmd -B -ntp verify` din radacina (sau `-pl <modul> -am` pentru un
+  singur modul + dependintele lui).
+- **Baze de date**: PgBouncer (transaction pooling) in fata Postgres. `saas_global` (schema `auth` -
+  identitati/refresh-reset tokens; schema `global` - catalog planuri `global.plans`, maparea
+  `tenant_id -> shard_id`, viitor catalog palete P8.1). `saas_shard_1` (schema per serviciu: `org`,
+  `billing`, `notif`). Un rol DB LOGIN per serviciu (`auth_svc`, `org_svc`, `billing_svc`, `notif_svc`),
+  plus roluri BYPASSRLS punctuale pentru citiri cross-tenant (`outbox_relay`, `org_auth_reader`,
+  `billing_job_reader`). Fiecare tabel tenant-scoped are `tenant_id`, RLS fortat, policy pe
+  `app.tenant_id`, unique `(tenant_id, id)`.
+- **Tenancy**: `shared-lib` - `TenantContext` (ThreadLocal), `TenantScopedEntity` (`@TenantId` Hibernate),
+  `TenantAwareJpaTransactionManager` (`SET LOCAL app.tenant_id` la inceputul tranzactiei; necesita
+  `TenantContext` deja setat). De aceea serviciile cu scriere (OrganizationService, SubscriptionService,
+  PaymentService) folosesc **`TransactionTemplate` programatic, NU `@Transactional`**: proxy-ul AOP ar
+  porni tranzactia inainte ca metoda sa apuce sa cheme `TenantContext.callWith(tenantId, ...)`.
+- **JWT (P5.3)**: o singura implementare in `shared-lib` (`com.saas.shared.security.JwtService` +
+  `AccessTokenClaims` + `JwtAutoConfiguration`, bean creat doar daca `jwt.secret` e configurat). Claims:
+  `sub`=userId, `tenantId`, `role`, `readOnly`, `tenantName`, `displayName`, `iat`/`exp`. Acces 15 min.
+  Token de identitate pentru useri fara tenant: vezi sectiunea 5.
+  Gateway-ul valideaza tokenul si transmite context prin headere: `X-User-Id`, `X-Tenant-Id`, `X-Role`.
+  `TenantRequestGuard.requireMatch(pathTenantId, headerTenantId)` (shared-lib) respinge cu 403 cand un
+  token al tenantului A ar atinge resursele tenantului B, chiar daca userul e membru si acolo.
+- **Evenimente**: outbox transactional (`shared-lib`): `OutboxWriter.writeEvent(envelope, destination,
+  channel)` scrie in tranzactia apelantului; `OutboxRelay` (rol BYPASSRLS, publica separat). Kafka =
+  **doar identificatori**, fara PII (REQ-EVT-02). RabbitMQ = comenzi care pot purta PII (ex. email pentru
+  retrimitere) - vezi `SendPasswordResetEmailCommand`/`SendPasswordChangedConfirmationCommand` in
+  auth-service. `EventEnvelope.forTenant(...)`/`forIdentity(...)`; evenimentele de identitate (fara
+  tenant) trebuie sa implementeze `IdentityEventPayload` (subjectUserId pentru routing key).
+- **Cross-service, sincron**: cand un serviciu are nevoie de o informatie live din alt serviciu (nu merita
+  o proiectie locala), se foloseste un `RestClient` simplu, cu base-url din proprietate +
+  variabila de mediu (`*_SERVICE_BASE_URL`), vezi `OrgServiceClient` (auth -> org, P5.2) si
+  `TenantAccessStatusClient` (org -> billing, P6.4, **fail-open** la "ACTIVE" daca serviciul tinta nu
+  raspunde, ca o cadere sa nu blocheze restul platformei).
+- **Citiri cross-DB fara serviciu HTTP**: cand un serviciu trebuie sa citeasca o tabela a altui serviciu
+  fara sa treaca prin HTTP (ex. catalogul global de planuri din billing-service), se construieste un
+  `DataSource` simplu, **ca field, NU ca bean Spring** (vezi `PlanCatalogReader`, `MembershipLookupService`)
+  - un al doilea bean `DataSource` neconditionat strica auto-configurarea Flyway/JPA (eroare criptica
+    "dataSource ... is required").
+- **Cititori cross-tenant (BYPASSRLS)**: pentru job-uri/finder-e care trebuie sa vada randuri din toti
+  tenantii (ex. `PendingAdminDemotionFinder`, `ExpiredTrialFinder`), se foloseste un rol DB dedicat,
+  BYPASSRLS, SELECT-only pe EXACT tabelele necesare (niciodata acces larg). Adaugarea unui rol nou atinge:
+  `db/init/01-topology.sh` (rol + grant CONNECT) + migrarea proprie a serviciului (grant pe tabela, pazit
+  cu `IF EXISTS (SELECT 1 FROM pg_roles ...)` pentru containerele de test fara topologia completa) +
+  `.env` + `docker-compose.yml` (env pe serviciul postgres, pe PgBouncer `DATABASE_URLS`, pe serviciul
+  care-l foloseste) + `scripts/env/ensure-dev-env.mjs` (`requiredEnvKeys`) +
+  `test-support` (`DatabaseTopologyIT`, `SchemaConventionsIT` - adauga noua parola in containerele lor).
+
+## 4. Conventii de cod stabilite
+
+- Servicii cu scriere tenant-scoped: constructor cu `PlatformTransactionManager` -> `new
+  TransactionTemplate(...)` in camp; orice metoda publica = `TenantContext.callWith(tenantId, () ->
+  transactionTemplate.execute(status -> {...}))`.
+- `Clock` injectat peste tot (niciodata `Instant.now()`/`LocalDateTime.now()` direct in cod nou) - fiecare
+  serviciu are un `XyzClockConfig` cu `@Bean @ConditionalOnMissingBean(Clock.class)` ca fallback
+  `Clock.systemUTC()`; testele suprascriu cu `MutableClock` + `@TestConfiguration` **`@Primary`**
+  obligatoriu (altfel Spring poate rezolva non-determinist beanul gresit cand ambele exista).
+- Job-uri programate (scheduler): clasa simpla (finder/job) fara adnotari, instantiata explicit intr-un
+  `@Configuration` prin `@Bean`; un wrapper static nested class cu `@Scheduled(cron = "${prop:default}")`
+  care cheama job-ul (vezi `AdminDemotionEscalationConfig`, `BillingSchedulingConfig`). Job-ul e apelabil
+  direct din teste (fara sa astepti cron-ul).
+- Migrari Flyway: fiecare modul incepe cu `V1__baseline...sql`; migrarile NU muta date (doar structura);
+  verificat automat de `SchemaConventionsIT`.
+- Entitati globale (fara tenant) se marcheaza `@GlobalEntity` (shared-lib), nu extind
+  `TenantScopedEntity` - verificat de `TenancyArchRules`/`TenancyArchTest` in fiecare serviciu.
+- Exception handling per serviciu: `GlobalExceptionHandler` (`@RestControllerAdvice`) cu acelasi tipar in
+  toate serviciile: `SecurityException`->403, `IllegalStateException`->409,
+  `IllegalArgumentException`/`MethodArgumentNotValidException`->400, `Exception`->500.
+- Teste de integrare (`*IT`, Failsafe): doua tipare de container Postgres:
+  1. **Container generic** (`implements PostgresTestContainer` din test-support, `@ServiceConnection`) -
+     cand nu conteaza rolul DB exact folosit (ex. `PaymentServiceIT`, `ActivityLogPartitionMaintenanceIT`).
+  2. **Container dedicat cu topologia reala** (ruleaza `db/init/01-topology.sh` + migrarile reale, cu
+     `System.setProperty(...)` intr-un initializator static eager, NU `@DynamicPropertySource` - s-a
+     dovedit nesigur in acest proiect) - cand testul are nevoie de un rol DB specific (`org_svc`,
+     `billing_job_reader` etc.) sau de comportament doar vizibil cu topologia completa. Vezi
+     `OrganizationLifecycleIT`, `SubscriptionLifecycleIT`, `TenantAccessGuardIT`.
+  - Cand doua clase de test din acelasi modul folosesc containerul dedicat, fiecare are nevoie de propriul
+    `test.marker=<NumeClasa>` in `@SpringBootTest(properties=...)` ca Spring sa nu refoloseasca gresit
+    contextul intre ele.
+  - Pentru servicii care trebuie sa simuleze un alt serviciu HTTP in acelasi test (ex. auth -> org, org ->
+    billing), se foloseste un `com.sun.net.httpserver.HttpServer` minimal pornit static, cu un camp
+    `static volatile String xyzResponse` mutabil intre apeluri (vezi `LoginFlowIT`, `TenantAccessGuardIT`).
+  - `MutableClock` si `SimulatedPaymentGateway.FailureMode` sunt beanuri singleton **per clasa de test**
+    (contextul Spring e cache-uit): `clock.advance(...)` facut intr-un test ramane si in urmatoarele teste
+    din aceeasi clasa. Nu scrie asertiuni pe numere agregate ("converted == 1") peste o clasa cu clock
+    comun - verifica doar starea entitatii proprii testului. Reseteaza starea comuna mutabila
+    (`FailureMode`) intr-un `@BeforeEach`.
+  - Citiri directe din DB in teste (verificare stare, nu prin service): conexiune directa
+    `DriverManager.getConnection(url, "admin", "admin")` (bypasseaza RLS), NU JdbcTemplate-ul aplicatiei
+    (legat la alt rol/alta baza) si NU `set_config` pe un pool cu >1 conexiuni (sesiune-level, nu se leaga
+    garantat de aceeasi conexiune fizica decat cu `SingleConnectionDataSource` sau
+    `hikari.maximum-pool-size=1`).
+
+## 5. Status la data acestui fisier (2026-11-02)
+
+Fazele 0-6 si **P7.1 Invitatii** sunt complete si commise. P7.1 a fost implementat de alt agent (Kiro) si
+corectat ulterior (`P7.1 (deviere)`, vezi Jurnalul din plan). Pasul curent (primul nebifat din plan) este
+**P7.2 Offboarding** (Faza 7): anonimizarea numelui/email-ului in tenant, stergerea PII tenant-scoped si a
+notificarilor userului din tenant, identitatea globala neatinsa (stearsa doar la cererea userului sau cand nu
+mai are tenanti), eveniment de offboarding (doar ID-uri) consumat mai tarziu de modulele P9.6/P9.7.
+Teste cerute: datele din tenant anonimizate/sterse, facturile raman valide, userul se poate loga in celelalte
+tenanturi. REQ: DATA-01, NOTIF-05.
+
+Ce exista deja si e relevant pentru P7.2:
+- **Primul consumator Kafka din proiect**: `SubscriptionChangedListener` (org-service, pachet
+  `com.saas.org.events`) - model pentru consumatori: payload `String` + `ObjectMapper`, idempotent prin
+  `ProcessedEventStore`, `EventConsumerSupport.runWithTenantFromEnvelope`, retry + DLT prin
+  `KafkaDeadLetterSupport`. REQ-EVT-08 este verificat prin ArchUnit: **doar `OrganizationService` poate
+  construi un `Tenant`** si niciun listener nu depinde de `OrganizationService`.
+- **Token de identitate** (REQ-AUTH-03): la login cu 0 tenanti, auth-service intoarce `identityToken`
+  (`JwtService.generateIdentityToken`, doar `sub`=userId, `typ=identity`, 15 min). `JwtService.parse` il
+  respinge; gateway-ul il accepta doar pe `POST /organizations` si `POST /invitations/accept`, sterge
+  headerele de context trimise de client si seteaza doar `X-User-Id`. Orice endpoint ia userul din
+  `X-User-Id`, niciodata din body (REQ-AUTH-05).
+- Invitatii: `InvitationService` (create/revoke/list/accept/updateExpiry), `tenants.max_users` ca proiectie
+  locala (NULL = fail-closed), acceptarea e blocata cand tenantul e READ_ONLY/SUSPENDED. `org_auth_reader`
+  citeste din `invitations` doar `tenant_id` si `token` (grant pe coloane, migrarea `V7`).
+
+Reguli de proces adaugate dupa preluarea lucrului lui Kiro (sectiunea 0, regulile 10-12 din plan): sufixele
+de commit sunt doar `(cerinte)`/`(deviere)`/`(proces)`; linia din Jurnal ramane scurta; `.agents/` e ignorat
+de git; verifica orice lucru preluat de la alt agent cu `clean verify`, trasabilitate si verificarea fata de
+plan.
+
+## 6. Note/lectii utile (nu repeta greselile)
+
+- `mvnw verify` fara `clean` poate esua cu "Unresolved compilation problem": serverul Java din editor
+  (Eclipse JDT) scrie peste `target/classes`. Ruleaza `mvnw clean verify` atomic. Cu `-pl` pastreaza `-am`;
+  `-rf` foloseste un `shared-lib` invechit din `~/.m2`.
+- `ensure-dev-env.mjs` porneste Docker Desktop detasat (`detached`, `stdio: 'ignore'`) si toate comenzile
+  au timeout; un `spawnSync` care mosteneste pipe-urile unui proces de lunga durata nu se termina niciodata
+  (`DevEnvironmentScriptTest` pazeste asta).
+- `edit` pe un fisier cu CRLF: potrivirile pe mai multe linii merg, dar un `old_str` identic in doua locuri
+  e respins; verifica dupa fiecare editare ca nu a ramas o adnotare duplicata sau lipsa.
+- La editarea YAML cu `replace_string_in_file`, citeste tot blocul inainte si dupa - un `oldString` scurt
+  (ex. doar `relay:\n  enabled: false`) poate lasa liniile urmatoare (schema/datasource) orfane sub
+  parintele gresit -> `DuplicateKeyException` la pornire. S-a intamplat o data in `billing-service`.
+- Un al doilea bean `DataSource` neconditionat/necalificat sparge auto-configurarea Flyway/JPA - construieste
+  mereu DataSource-urile suplimentare ca field simplu in constructorul clasei care le foloseste.
+  `@AutoConfiguration` cu `@ConditionalOnBean(DataSource.class)` are nevoie de
+  `@AutoConfigureAfter(DataSourceAutoConfiguration.class)` explicit, altfel conditia poate fi evaluata
+  prea devreme.
+  `spring.jpa.open-in-view=true` (implicit Boot) + multi-tenancy Hibernate e o capcana: sesiunea OSIV se
+  deschide/fixeaza tenantul inainte ca request-ul sa apuce sa seteze `TenantContext` -> seteaza
+  `open-in-view: false` in toate serviciile tenant-scoped.
+- `@TestConfiguration` cu un `@Bean Clock` care suprascrie fallback-ul de productie trebuie sa fie
+  `@Primary`, altfel Spring poate rezolva non-determinist beanul gresit (bug latent descoperit o data,
+  retroactiv in alta clasa de test).
+- Testcontainers + `@DynamicPropertySource` s-a dovedit nesigur in acest proiect: foloseste
+  `System.setProperty(...)` intr-un initializator static eager in loc.
+- `JdbcShardMappingRepository`/`ShardResolver` exista in shared-lib (P2.4) dar NU sunt cablate/folosite in
+  productie inca - exista un singur shard azi, asa ca fiecare serviciu se conecteaza direct la
+  `saas_shard_1` prin `spring.datasource.url`. Nu presupune ca rutarea pe shard-uri functioneaza end-to-end.
+- `.env` contine parole de dezvoltare publice INTENTIONAT (decizie 2026-09-30, de revizuit inainte de
+  orice deploy real) - citeste scripturile/aplicatia din `.env`, nu codifica parole in cod.
+- Secretele niciodata prin `vscode_askQuestions`; raspunsurile catre utilizator sunt in romana (vezi
+  `copilot-instructions.md`); skill-ul `/caveman` (intensitate `full`) se foloseste la implementare, proza
+  normala pentru decizii de cerinte/securitate/operatii ireversibile.
+
+## 7. Comenzi utile
+
+```powershell
+# Mediu (Docker, JDK, imagini) - inainte de orice test de integrare
+node scripts/env/ensure-dev-env.mjs --check   # doar raporteaza
+node scripts/env/ensure-dev-env.mjs           # porneste Docker daca lipseste
+
+# Build/teste
+.\mvnw.cmd -B -ntp verify                               # tot (8 module)
+.\mvnw.cmd -B -ntp -pl <modul> -am verify                # un modul + dependintele
+.\mvnw.cmd -B -ntp -pl <modul> -am verify "-Dit.test=NumeClasa" "-Dfailsafe.failIfNoSpecifiedTests=false"
+
+# Trasabilitate REQ -> test (obligatoriu inainte de a bifa un pas)
+node scripts/verify/check-traceability.mjs
+
+# Stiva locala pentru verificari manuale (fara porturi publicate, nu intra in conflict cu Postgres nativ)
+node scripts/infra/local-stack.mjs --up
+node scripts/infra/local-stack.mjs --down
+```
+
+## 8. Ce sa faci cu acest fisier
+
+Nu e sursa de adevar - daca intra in contradictie cu `IMPLEMENTATION_PLAN.md`/`REQUIREMENTS.md`, acelea
+castiga. Actualizeaza-l (sau sterge-l) cand devine invechit; cel mai simplu semnal ca trebuie actualizat:
+sectiunea 5 (status) nu mai corespunde cu primul pas nebifat din plan.
