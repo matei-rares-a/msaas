@@ -75,3 +75,29 @@ jobs:
         with:
           name: playwright-traces
           path: angular_base/test-results/
+
+  e2e:
+    name: E2E (whole platform on Docker Compose)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Script self-test
+        run: node --test scripts/infra/e2e-stack.test.mjs
+      # builds the jars, starts the stack, runs the tests, stops the stack
+      - name: E2E suite
+        run: node scripts/infra/e2e-stack.mjs --all
+      - name: Test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-reports
+          path: e2e-tests/target/failsafe-reports/

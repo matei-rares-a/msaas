@@ -37,26 +37,26 @@ Fiecare ID trebuie sa apara in cel putin un test (tag) dupa ce pasul lui e bifat
 | ID | Rezumat | Pas |
 |---|---|---|
 | REQ-AUTH-01 | Login email+parola; 1 tenant -> token direct | P5.2, P11.1 |
-| REQ-AUTH-02 | >1 tenant -> lista + `loginSessionId` opac, temporar, single-use; al doilea apel emite tokenul | P5.2, P11.1 |
-| REQ-AUTH-03 | 0 tenanti -> lista goala + token de identitate (doar userId); userul poate crea organizatie (devine ADMIN) sau accepta o invitatie, cu identitatea din token | P4.1, P5.2, P7.1, P11.1 |
-| REQ-AUTH-04 | Token separat per tenant; fara token multi-tenant comutabil | P5.3, P11.1 |
-| REQ-AUTH-05 | Claims: userId, tenantId, rol, info UI; fara date despre alte tenanturi | P5.3 |
+| REQ-AUTH-02 | >1 tenant -> lista + `loginSessionId` opac, temporar, single-use; al doilea apel emite tokenul | P5.2, P11.1, P12.1 |
+| REQ-AUTH-03 | 0 tenanti -> lista goala + token de identitate (doar userId); userul poate crea organizatie (devine ADMIN) sau accepta o invitatie, cu identitatea din token | P4.1, P5.2, P7.1, P11.1, P12.1 |
+| REQ-AUTH-04 | Token separat per tenant; fara token multi-tenant comutabil | P5.3, P11.1, P12.1 |
+| REQ-AUTH-05 | Claims: userId, tenantId, rol, info UI; fara date despre alte tenanturi | P5.3, P12.1 |
 | REQ-ROLE-01 | ADMIN: toate privilegiile org/billing/useri | P4.2, P6.5 |
-| REQ-ROLE-02 | ADMIN invita cu orice rol; doar ADMIN invita ADMIN/MANAGER | P7.1 |
+| REQ-ROLE-02 | ADMIN invita cu orice rol; doar ADMIN invita ADMIN/MANAGER | P7.1, P12.1 |
 | REQ-ROLE-03 | Cel putin un ADMIN per organizatie | P4.3 |
 | REQ-ROLE-04 | Retragerea care lasa un singur ADMIN cere acceptul celui vizat; timeout -> escaladare suport | P4.3 |
 | REQ-ROLE-05 | USER: acces de baza, fara management, fara invitatii | P4.2, P7.1, P11.4 |
 | REQ-ROLE-06 | Flag scriere/doar-citire pe membership, independent de rol | P4.1, P11.4 |
 | REQ-INV-01 | Expirare invitatii configurabila per tenant | P7.1 |
-| REQ-INV-02 | ADMIN poate revoca o invitatie | P7.1 |
-| REQ-MGR-01 | MANAGER invita doar cu rolul USER | P7.1 |
+| REQ-INV-02 | ADMIN poate revoca o invitatie | P7.1, P12.1 |
+| REQ-MGR-01 | MANAGER invita doar cu rolul USER | P7.1, P12.1 |
 | REQ-MGR-02 | MANAGER vede billing, fara actiuni financiare | P6.5, P11.4 |
 | REQ-MGR-03 | Managementul rolurilor exclusiv ADMIN | P4.2 |
 | REQ-MGR-04 | MANAGER vede jurnalul de activitate | P9.2, P11.4 |
 | REQ-MGR-05 | Fara limita min/max de MANAGER | P4.2 |
-| REQ-DATA-01 | Offboarding: anonimizare nume/email in tenant, stergere PII tenant; identitatea globala neatinsa | P7.2 |
+| REQ-DATA-01 | Offboarding: anonimizare nume/email in tenant, stergere PII tenant; identitatea globala neatinsa | P7.2, P12.1 |
 | REQ-DATA-02 | `tenant_id` + mapare `tenant_id -> shard_id` (un shard azi) | P2.3, P2.4 |
-| REQ-DATA-03 | Doua straturi: filtrare in aplicatie + RLS | P2.2, P2.3 |
+| REQ-DATA-03 | Doua straturi: filtrare in aplicatie + RLS | P2.2, P2.3, P12.1 |
 | REQ-DATA-04 | Un DB per shard, o schema per serviciu, un rol DB per serviciu | P2.1 |
 | REQ-DATA-05 | DB globala: identitati, cataloage, mapare shard | P2.1 |
 | REQ-DATA-06 | Rezolvarea shard-ului prin maparea globala cache-uita | P2.4 |
@@ -74,7 +74,7 @@ Fiecare ID trebuie sa apara in cel putin un test (tag) dupa ce pasul lui e bifat
 | REQ-PERS-05 | Tema implicita la crearea tenantului | P8.1 |
 | REQ-PERS-06 | Tema prin endpoint dedicat, aplicata la reload | P8.1, P11.2 |
 | REQ-PERS-07 | Feature flags per tenant in `tenant_settings` | P8.3 |
-| REQ-MON-01 | Se jurnalizeaza actiunile sensibile + livrarea email-urilor de tenant; nu CRUD | P9.1, P9.4, P9.6 |
+| REQ-MON-01 | Se jurnalizeaza actiunile sensibile + livrarea email-urilor de tenant; nu CRUD | P9.1, P9.4, P9.6, P12.1 |
 | REQ-MON-02 | Jurnal vizibil ADMIN+MANAGER | P9.2 |
 | REQ-MON-03 | Retentie 6 luni configurabila (minute/ore in test) | P3.5 |
 | REQ-MON-04 | Raport la cerere, paginat, filtrabil | P9.2 |
@@ -92,27 +92,27 @@ Fiecare ID trebuie sa apara in cel putin un test (tag) dupa ce pasul lui e bifat
 | REQ-ARCH-04 | Teste de integrare obligatorii in CI | P0.4 |
 | REQ-BILL-01 | Payment gateway abstract + implementare simulata | P6.2 |
 | REQ-BILL-02 | Schimbare plan = cancel + resubscribe, fara proratare | P6.3 |
-| REQ-BILL-03 | `maxUsers` impus la invitare | P7.1 |
-| REQ-BILL-04 | Esec simulat -> PAST_DUE, 7 zile read-only, apoi suspendare | P6.4 |
-| REQ-BILL-05 | Fiecare incercare de plata persistata | P6.2 |
-| REQ-BILL-06 | Trial 14 zile, conversie automata la ACTIVE | P6.3 |
+| REQ-BILL-03 | `maxUsers` impus la invitare | P7.1, P12.1 |
+| REQ-BILL-04 | Esec simulat -> PAST_DUE, 7 zile read-only, apoi suspendare | P6.4, P12.1 |
+| REQ-BILL-05 | Fiecare incercare de plata persistata | P6.2, P12.1 |
+| REQ-BILL-06 | Trial 14 zile, conversie automata la ACTIVE | P6.3, P12.1 |
 | REQ-BILL-07 | Moneda unica EUR | P6.1 |
 | REQ-PWD-01 | Parola globala per identitate | P5.1 |
-| REQ-PWD-02 | Token reset 1h, single-use; o cerere noua le invalideaza pe cele vechi | P5.4 |
-| REQ-PWD-03 | Anti-enumerare: raspuns si timp similar | P5.4 |
-| REQ-PWD-04 | Access token 15 min; resetul revoca toate refresh token-urile | P5.3, P5.4 |
+| REQ-PWD-02 | Token reset 1h, single-use; o cerere noua le invalideaza pe cele vechi | P5.4, P12.1 |
+| REQ-PWD-03 | Anti-enumerare: raspuns si timp similar | P5.4, P12.1 |
+| REQ-PWD-04 | Access token 15 min; resetul revoca toate refresh token-urile | P5.3, P5.4, P12.1 |
 | REQ-PWD-05 | Rate limit reset: 3/ora per email, 10/ora per IP | P5.4 |
-| REQ-PWD-06 | Politica parola: min 12, lista de parole compromise, fara complexitate/istoric | P5.1 |
+| REQ-PWD-06 | Politica parola: min 12, lista de parole compromise, fara complexitate/istoric | P5.1, P12.1 |
 | REQ-PWD-07 | Email de confirmare dupa schimbarea parolei | P5.4 |
-| REQ-PWD-08 | Resetul nu apare in jurnalul de tenant | P5.4, P9.1 |
+| REQ-PWD-08 | Resetul nu apare in jurnalul de tenant | P5.4, P9.1, P12.1 |
 | REQ-PWD-09 | Resetul poate fi initiat doar de user | P5.4 |
 | REQ-NOTIF-01 | Notificari in-app per tenant | P9.5 |
 | REQ-NOTIF-02 | Generate doar de sistem; fara endpoint public de creare | P1.3, P9.5 |
-| REQ-NOTIF-03 | Lista de evenimente v1 care genereaza notificari | P9.5, P9.6, P9.7 |
+| REQ-NOTIF-03 | Lista de evenimente v1 care genereaza notificari | P9.5, P9.6, P9.7, P12.1 |
 | REQ-NOTIF-04 | Incarcare la deschidere, numar necitite prin polling 60s | P9.5, P11.3 |
 | REQ-NOTIF-05 | Retentie 90 zile; stergere la offboarding | P9.5, P7.2 |
-| REQ-NOTIF-06 | Din email-uri se pastreaza doar metadate | P1.1, P9.4 |
-| REQ-NOTIF-07 | Email-urile de tenant in jurnal (`EMAIL_SENT`/`EMAIL_FAILED`); fara endpoint de cautare | P1.1, P9.4 |
+| REQ-NOTIF-06 | Din email-uri se pastreaza doar metadate | P1.1, P9.4, P12.1 |
+| REQ-NOTIF-07 | Email-urile de tenant in jurnal (`EMAIL_SENT`/`EMAIL_FAILED`); fara endpoint de cautare | P1.1, P9.4, P12.1 |
 | REQ-NOTIF-08 | 3 reincercari cu backoff -> `FAILED` | P9.4 |
 | REQ-NOTIF-09 | Fara dezactivare de notificari de catre user | P9.4 |
 | REQ-UPL-01 | Fara upload generic; endpoint-ul existent se elimina | P1.2 |
@@ -126,21 +126,20 @@ Fiecare ID trebuie sa apara in cel putin un test (tag) dupa ce pasul lui e bifat
 | REQ-EVT-08 | Fara tenant automat la inregistrare | P4.1, P5.1 |
 | REQ-EVT-09 | Autorizare sincrona la login; proiectii locale in rest | P5.2, P7.1 |
 | REQ-EVT-10 | Ordine per tenant: cheie `tenantId` (`userId` pentru identitate) | P3.4 |
-| REQ-MOD-01 | Module de business in org-service, tenant-scoped; activare per tenant doar de ADMIN (setare de organizatie, nu feature flag), implicit dezactivate, datele pastrate la dezactivare; doar-citire blocheaza orice scriere; gratie/suspendare aplicate si actiunilor automate; fus orar per tenant ales de ADMIN (implicit `Europe/Bucharest`) | P9.6, P9.7, P11.5 |
-| REQ-LEAVE-01 | Cerere pentru sine: `ODIHNA`/`FARA_PLATA`, zile intregi in acelasi an, motiv vizibil doar aprobatorilor | P9.6, P11.5 |
+| REQ-MOD-01 | Module de business in org-service, tenant-scoped; activare per tenant doar de ADMIN (setare de organizatie, nu feature flag), implicit dezactivate, datele pastrate la dezactivare; doar-citire blocheaza orice scriere; gratie/suspendare aplicate si actiunilor automate; fus orar per tenant ales de ADMIN (implicit `Europe/Bucharest`) | P9.6, P9.7, P11.5, P12.1 |
+| REQ-LEAVE-01 | Cerere pentru sine: `ODIHNA`/`FARA_PLATA`, zile intregi in acelasi an, motiv vizibil doar aprobatorilor | P9.6, P11.5, P12.1 |
 | REQ-LEAVE-02 | Se numara doar zilele lucratoare (fara weekend si zile libere definite de ADMIN) | P9.6, P11.5 |
-| REQ-LEAVE-03 | Sold `ODIHNA`: implicit per tenant + suprascriere per user (ADMIN); disponibil = alocat - aprobat - pending; depasire sau suprapunere respinsa | P9.6, P11.5 |
-| REQ-LEAVE-04 | Stari `PENDING`/`APPROVED`/`REJECTED`/`CANCELLED`; anulare doar inainte de inceput, zilele revin | P9.6, P11.5 |
-| REQ-LEAVE-05 | Aproba MANAGER/ADMIN fara flag doar-citire, niciodata propria cerere; solicitantul e singurul aprobator -> auto-aprobare jurnalizata | P9.6, P11.5 |
-| REQ-LEAVE-06 | Vizibilitate: proprii + sold; calendar echipa fara tip/motiv; aprobatorii vad tot | P9.6, P11.5 |
-| REQ-LEAVE-07 | Notificari (cerere noua catre ceilalti aprobatori; aprobare/respingere/anulare de catre aprobator catre solicitant) + intrari in jurnal | P9.6 |
-| REQ-LEAVE-08 | Offboarding: cererile userului din tenant se sterg | P9.6 |
-| REQ-LUNCH-01 | Configurare (zi, ora limita, marime grup 2-4) de MANAGER/ADMIN | P9.7, P11.5 |
-| REQ-LUNCH-02 | O runda pe saptamana; inscriere per runda, retragere pana la ora limita; anulare de MANAGER/ADMIN | P9.7, P11.5 |
-| REQ-LUNCH-03 | Grupare aleatoare la ora limita, minim 2 per grup, evitarea perechilor recente; sub 2 participanti -> runda anulata | P9.7 |
-| REQ-LUNCH-04 | Notificare cu grupul (sau anularea); participantii isi vad grupul, MANAGER/ADMIN toate grupurile | P9.7, P11.5 |
-| REQ-LUNCH-05 | Retentie 90 zile; offboarding sterge participarile; nu apare in jurnal | P9.7 |
-
+| REQ-LEAVE-03 | Sold `ODIHNA`: implicit per tenant + suprascriere per user (ADMIN); disponibil = alocat - aprobat - pending; depasire sau suprapunere respinsa | P9.6, P11.5, P12.1 |
+| REQ-LEAVE-04 | Stari `PENDING`/`APPROVED`/`REJECTED`/`CANCELLED`; anulare doar inainte de inceput, zilele revin | P9.6, P11.5, P12.1 |
+| REQ-LEAVE-05 | Aproba MANAGER/ADMIN fara flag doar-citire, niciodata propria cerere; solicitantul e singurul aprobator -> auto-aprobare jurnalizata | P9.6, P11.5, P12.1 |
+| REQ-LEAVE-06 | Vizibilitate: proprii + sold; calendar echipa fara tip/motiv; aprobatorii vad tot | P9.6, P11.5, P12.1 |
+| REQ-LEAVE-07 | Notificari (cerere noua catre ceilalti aprobatori; aprobare/respingere/anulare de catre aprobator catre solicitant) + intrari in jurnal | P9.6, P12.1 |
+| REQ-LEAVE-08 | Offboarding: cererile userului din tenant se sterg | P9.6, P12.1 |
+| REQ-LUNCH-01 | Configurare (zi, ora limita, marime grup 2-4) de MANAGER/ADMIN | P9.7, P11.5, P12.1 |
+| REQ-LUNCH-02 | O runda pe saptamana; inscriere per runda, retragere pana la ora limita; anulare de MANAGER/ADMIN | P9.7, P11.5, P12.1 |
+| REQ-LUNCH-03 | Grupare aleatoare la ora limita, minim 2 per grup, evitarea perechilor recente; sub 2 participanti -> runda anulata | P9.7, P12.1 |
+| REQ-LUNCH-04 | Notificare cu grupul (sau anularea); participantii isi vad grupul, MANAGER/ADMIN toate grupurile | P9.7, P11.5, P12.1 |
+| REQ-LUNCH-05 | Retentie 90 zile; offboarding sterge participarile; nu apare in jurnal | P9.7, P12.1 |
 In afara scopului acestei versiuni (nu se testeaza, doar se verifica ca nu au fost introduse): read replicas, autoscaling, monitorizare cross-tenant, rolul TEMP, broadcast de anunturi, multi-moneda, multi-regiune, concediu medical, jumatati de zi si report de zile de concediu.
 
 ---
@@ -172,6 +171,8 @@ Scripturi (grupate dupa scop; `scripts/env` = masina, `scripts/infra` = containe
 | `scripts/env/install-prerequisites.ps1` (Windows) / `.sh` (Linux, macOS) | o singura data, pe o masina noua | instaleaza Docker, JDK 21, Maven, Node |
 | `node scripts/env/ensure-dev-env.mjs` | la inceputul fiecarei sesiuni de lucru si dupa fiecare repornire | `JAVA_HOME` catre JDK 21, porneste Docker si asteapta, descarca imaginile testelor (cu reincercari), `CHROME_BIN` pentru testele Angular, `npm ci` daca lipseste `node_modules`, verifica cheile din `.env`; `--check` doar raporteaza |
 | `node scripts/infra/local-stack.mjs --up` / `--down` | doar pentru verificari manuale cu docker compose | porneste/opreste stiva intr-un proiect separat, fara porturi publicate (nu intra in conflict cu Postgres-ul local); testele de integrare nu au nevoie de el, isi pornesc singure containerele |
+| `node scripts/infra/e2e-stack.mjs --all` (sau `--up` / `--test` / `--down`, `--skip-build`) | P12.1, inainte de a bifa pasul si in CI (job `e2e`) | construieste jar-urile si ridica toata platforma din docker-compose (proiect `msaas-e2e`, doar gateway `127.0.0.1:18080` si Postgres `127.0.0.1:15432` publicate), ruleaza `mvnw -Pe2e -pl e2e-tests -am verify` si o opreste |
+| `node --test scripts/infra/e2e-stack.test.mjs` | la modificarea scriptului E2E si in CI | testul scriptului (override-ul generat, porturile, comenzile) |
 | `node scripts/verify/check-traceability.mjs` | inainte de bifarea unui pas si in CI | fiecare REQ datorat are test; tag-urile necunoscute esueaza |
 | `node --test scripts/verify/check-traceability.test.mjs` | la modificarea scriptului de trasabilitate si in CI | testul scriptului de trasabilitate |
 
@@ -318,7 +319,7 @@ Comenzi standard (`mvnw.cmd` pe Windows / `./mvnw` pe Linux; necesita JDK 21 in 
   - Teste (toata faza): teste unit pe servicii/guard-uri + Playwright pe fluxurile de login, tema, notificari si cerere de concediu.
 
 ### Faza 12 - E2E si finalizare
-- [ ] **P12.1 Suita E2E** pe Docker Compose: izolare intre tenanti, invitatie -> accept -> login, perioada de gratie billing, resetare parola, cerere de concediu -> aprobare -> notificare, runda de lunch roulette.
+- [x] **P12.1 Suita E2E** pe Docker Compose: izolare intre tenanti, invitatie -> accept -> login, perioada de gratie billing, resetare parola, cerere de concediu -> aprobare -> notificare, runda de lunch roulette.
 - [ ] **P12.2 Trasabilitate 100%**: toate REQ-urile din catalog au teste; documentele vechi care descriu alt comportament (ex. rezumate "production ready") sunt actualizate sau marcate ca depasite.
 - [ ] **P12.3 Verificari non-cod**: configuratia de deployment foloseste doar regiunea EU (REQ-DATA-13); elementele din afara scopului nu au fost introduse.
 
@@ -416,6 +417,7 @@ Valorile de mai jos nu sunt fixate in REQUIREMENTS.md; se folosesc ca implicite 
 | P11.3 | 2026-11-03 | Notificari in frontend (REQ-NOTIF-04). `NotificationService` (`core/services`): `start()` incarca prima pagina (`GET /notifications/in-app?page=0&size=20`, cu `unreadCount`-ul din raspuns) si porneste un `timer(60000, 60000)` care intreaba `GET .../unread-count`; `stop()` opreste polling-ul si goleste lista si contorul (la schimbarea tenantului sau la logout); un `start()` nou inlocuieste polling-ul vechi (nu se aduna); `markRead` / `markAllRead` (PATCH) actualizeaza lista si contorul local (fara dublu-decrement pentru o notificare deja citita; la esec nimic nu se schimba); `UNREAD_POLL_MS = 60_000`. `AppComponent`: acelasi flux ca la tema - `start()` cand aplicatia se deschide pentru un tenant si la schimbarea tenantului, `stop()` la logout/`ngOnDestroy`; bara de sus are linkul `Notifications` cu insigna (`notification-badge`) cand sunt necitite. `/notifications` (`NotificationsComponent`, `AuthGuard`): lista (cele necitite marcate), click = marcare ca citita (o singura data), `Mark all as read`, stare goala, eroare la incarcare. Bug gasit de testul unitar: un poll esuat inchidea tot fluxul (eroarea trecea prin `switchMap`), deci polling-ul se oprea dupa prima eroare - acum fiecare poll are `catchError` propriu. Presupuneri (mod autopilot): doar prima pagina (20), fara paginare in UI (cerinta cere doar incarcare la deschidere + numar necitite); notificarile nu se reincarca la intervale, doar contorul (cum cere cerinta); contorul din bara vine din polling, iar lista se reincarca la deschiderea paginii. Teste: 89 unit (`notification.service.spec` cu `fakeAsync` - 60 s exact, nu 59, polling care continua dupa esec, stop, restart; `notifications.component.spec`; `app.component.spec` actualizat) + 20 Playwright (`e2e/notifications.spec.ts`: contor la deschidere, fara insigna cand nu sunt necitite, polling cu `page.clock` - nimic inainte de 60 s, apoi contorul nou, marcare individuala si globala, pagina cere autentificare; `e2e/session.ts` = `signedInAs` comun). `npm run build` + `test:ci` + `e2e` verzi; backend neatins. Verificare fata de plan: descriere OK / teste OK (unit + Playwright) / fara extra OK |
 | P11.4 | 2026-11-03 | UI pe roluri in frontend. `AccessService`/`permissionsOf` (`core/services`): o singura functie pura cu ce se OFERA in interfata dupa rol + flag doar-citire (billing: ADMIN/MANAGER; actiuni de billing: doar ADMIN cu scriere; jurnal: ADMIN/MANAGER; invitatii: ADMIN/MANAGER cu scriere, ADMIN cu orice rol, MANAGER doar USER; tema: ADMIN cu scriere; doar-citire scoate orice scriere, indiferent de rol; rol necunoscut/lipsa = nimic). Guard-uri `billingGuard`/`journalGuard`/`invitationsGuard` (`permission.guards.ts`): ascund pagina si trimit la dashboard - serverul ramane autoritatea. Bara de sus arata linkurile dupa rol si insigna `read-only`; dashboard-ul nou arata tenantul, rolul, un anunt de acces doar-citire si doar dalele permise. Billing (`/billing`, tenantul din token): abonament + facturi pentru MANAGER, buton de anulare doar pentru ADMIN cu scriere (`POST /billing/subscriptions/cancel`), nota ca schimbarile sunt ale administratorului, 404 la abonament = stare nu eroare. Invitatii (`/invitations`): lista, formular cu rolurile permise, revocare, fara formular pentru USER/doar-citire (cu motivul). Jurnal (`/journal`, `JournalService`): clientul GraphQL - `POST /notifications/graphql` cu un `query` (niciodata mutatie), filtre (de la/pana la, tipuri de eveniment, actor) si pagina ca variabile, tenantul NICIODATA argument; `FORBIDDEN` din raspuns -> mesaj dedicat. DEVIERE (confirmata de realitatea backend-ului): sablonul vechi nu corespundea API-ului (`GET /organizations` si `/billing/plans` nu exista, invitatiile erau pe alt URL, rolul `MEMBER` nu exista) - `features/organization`, `pages/admin`, `admin.service`, `organization.service` si vechiul `billing`/`dashboard` au fost inlocuite cu pagini aliniate la backend; rutele `organization/:id`, `billing/:id` si `admin` nu mai exista. Presupuneri (mod autopilot): fara ecran de alegere/schimbare de plan (nu exista endpoint pentru catalogul de planuri), fara lista de membri si fara schimbare de rol in UI (nu exista endpoint de listare a membrilor; schimbarea rolului ramane doar in API), cu alegerea celuilalt tenant prin relogare. Teste: 128 unit (`access.service.spec` - matricea rol x flag, `permission.guards.spec`, `journal.service.spec`, `billing`/`invitations`/`journal`/`dashboard` `.component.spec`) + 32 Playwright (`e2e/roles.spec.ts`: bara pe rol pentru ADMIN/MANAGER/USER, USER pe adrese interzise fara cereri de date, MANAGER billing doar-citire, ADMIN anuleaza / ADMIN doar-citire nu, jurnal GraphQL cu pagini si filtre, invitatii pe rol, doar-citire pe toate rolurile; testele de login actualizate la noul dashboard/rute). `npm run build` (fara avertismente) + `test:ci` + `e2e` verzi; backend neatins. Verificare fata de plan: descriere OK (cu devierea de mai sus) / teste OK (unit + Playwright) / fara extra OK |
 | P11.5 | 2026-11-03 | UI module de business in frontend. `ModulesService` (`core/services`): setarile modulelor + fusul orar ale tenantului (`GET/PUT /organizations/{t}/modules`, `PUT .../timezone`), citite de `AppComponent` odata cu tenantul activ (la fel ca tema/notificarile), sterse la logout; erori = toate modulele oprite. `moduleGuard` (`permission.guards.ts`): pagina unui modul se deschide doar daca modulul e pornit (setarile se citesc intai daca lipsesc - fara ghicit) si doar pentru cine are voie; linkurile din bara/dashboard apar doar pentru module pornite. `/modules` (`ModulesComponent`, doar ADMIN cu scriere): pornit/oprit per modul + fus orar; oprirea pastreaza datele (textul spune asta). Concediu: `/leave` (sold alocat/aprobat/in asteptare/disponibil, cerere pentru sine - tip, prima/ultima zi, motiv; niciodata un user in corp -, cererile proprii cu anulare pentru PENDING/APPROVED, calendarul echipei luna curenta + urmatoarea, fara tip/motiv); `/leave/approvals` (MANAGER/ADMIN cu scriere: cererile `PENDING` cu `scope=ALL`, motivul vizibil doar aici, aprobare/respingere cu comentariu optional, fara decizie pe propria cerere); `/leave/policy` (doar ADMIN cu scriere: alocatia implicita, alocatia unui membru si revenirea la implicit, zilele libere pe an). Lunch roulette: `/lunch` (runda saptamanii, cati s-au inscris, inscriere/retragere doar cat e OPEN si pentru cine poate scrie, anulata cu motiv; grupul meu si toate grupurile pentru MANAGER/ADMIN din ULTIMA runda FORMED - dupa ora limita runda formata nu mai e `current`, deci grupurile se cauta in `GET /lunch/rounds`; setari - zi, ora HH:mm, marime 2-4 - si anulare doar pentru MANAGER/ADMIN cu scriere). `AccessService` primeste `canWrite`, `canManageModules`, `canApproveLeave`, `canSetLeavePolicy`, `canConfigureLunch`, `canSeeAllLunchGroups` (matrice rol x doar-citire testata). Presupuneri (mod autopilot): grupurile si calendarul arata primele 8 caractere din id (serviciul nu tine nume si nu exista endpoint de listare a membrilor - numele ar cere o schimbare in backend, in afara fazei); calendarul acopera luna curenta + urmatoarea, fara navigare; fara paginare in lista cererilor (primele 20); formularul de lunch trimite ora ca text HH:mm cu validare locala, serverul ramane autoritatea. Teste: 186 unit (`access.service.spec` extins, `modules.service.spec` cu guard-urile, `modules`/`leave`/`leave-approvals` (incl. politica)/`lunch` `.component.spec`) + 50 Playwright (`e2e/modules.spec.ts`, `leave.spec.ts` - cerere -> aprobare de catre alt utilizator -> sold si calendar urmeaza, anulare, doar-citire, cine decide, ADMIN schimba alocatia si membrul o vede -, `lunch.spec.ts`; `e2e/organization-api.ts` = org-service simulat in memorie, partajat intre pagini). `npm run build` (fara avertismente) + `test:ci` + `e2e` verzi; backend neatins. Verificare fata de plan: descriere OK / teste OK (unit + Playwright pe login, tema, notificari si cerere de concediu, ca in plan) / fara extra OK |
+| P12.1 | 2026-11-03 | Suita E2E pe Docker Compose (modulul nou `e2e-tests`, REST Assured + Awaitility + JDBC pe baza reala; doar cu profilul Maven `e2e`, deci `mvnw verify` obisnuit nu il atinge). `scripts/infra/e2e-stack.mjs` (`--up` / `--test` / `--down` / `--all`, `--skip-build`): construieste jar-urile (`-Dmaven.test.skip=true`), porneste proiectul `msaas-e2e` din `docker-compose.yml` + un override generat (doar gateway `127.0.0.1:18080` si Postgres `127.0.0.1:15432` publicate; limita de cereri ridicata; plata simulata `ALWAYS_FAIL`; joburile billing la 10 s) si asteapta serviciile sanatoase. 21 teste: izolare intre tenanti si login cu doua organizatii (AUTH-02/03/04/05, DATA-01/03), invitatie -> accept -> login + limita de locuri + revocare + email jurnalizat ca metadate (INV-02, ROLE-02, MGR-01, MON-01, NOTIF-06/07), perioada de gratie billing (trial expirat -> plata esuata -> READ_ONLY -> SUSPENDED, BILL-03..06), resetare parola (PWD-02/03/04/06/08), cerere de concediu -> aprobare -> notificare, anulare, offboarding, modul oprit (MOD-01, LEAVE-01/03..08, NOTIF-03), runda lunch cu grupuri si anulare (LUNCH-01..05). Probleme de deployment gasite de E2E (nicio rulare anterioara nu pornise serviciile in compose) si reparate ca deviere: (1) rutele gateway-ului erau `localhost` fix -> `*_SERVICE_URL`; (2) relay-ul outbox era oprit in compose -> `SAAS_OUTBOX_RELAY_ENABLED` + parola; (3) Flyway primea `SPRING_FLYWAY_URL` fara utilizator -> `SPRING_FLYWAY_USER`/`PASSWORD` (rolul serviciului, proprietar al schemei); (4) `outboxRelayDataSource` era bean al doilea `DataSource` si strica JPA/Flyway -> relay-ul isi tine singur pool-ul (inchis cu contextul); (5) `OutboxRelay`/config mentionau `RabbitTemplate` in semnaturi si auth-service (fara RabbitMQ) nu pornea -> `OutboxRelay.RabbitPublisher`, cautarea template-ului intr-o clasa imbricata. `SimulatedPaymentGateway` citeste `saas.billing.payment.simulated-failure-mode` (implicit `ALWAYS_SUCCEED`). Presupuneri (autopilot): limita de reset 10/ora per adresa se goleste inainte de fiecare test de resetare (toate cererile vin de la adresa gateway-ului); un test de lunch dureaza ~2,5 minute (joburile ruleaza din minut in minut). Teste noi: `OutboxRelayAutoConfigurationTest` (6), `SimulatedPaymentGatewayTest` (4), `e2e-stack.test.mjs` (7) + cele 21 E2E. Job CI nou `e2e`. Verificare fata de plan: descriere OK / teste OK / fara extra OK (devierile de mai sus raportate) |
 otif-service-activity-log (un al doilea listener in grupul 
 otif-service ar imparti partitiile cu cel de offboarding), scrie 
 otif.activity_log doar pentru tipuri din catalog si doar cu tenant; copiaza numai campurile din catalog; idempotenta cu id derivat din eveniment. Teste: ActivityLogListenerIT (28, Kafka real), ActivityEventsPublishedIT (8), SubscriptionLifecycleIT (+3), LoginFlowIT (+4), ActivityEventCatalogTest (4). Build complet verde. Verificare fata de plan: descriere OK / teste OK / fara extra OK |

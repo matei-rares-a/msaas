@@ -572,7 +572,7 @@ class ActivityLogExportIT implements PostgresTestContainer, RabbitMqTestContaine
 
     /** Stands in for the scheduled relay (disabled in tests): publishes what the outbox holds to RabbitMQ. */
     private void drainOutbox() {
-        OutboxRelay relay = new OutboxRelay(dataSource, "notif", null, rabbitTemplate);
+        OutboxRelay relay = new OutboxRelay(dataSource, "notif", null, rabbitTemplate::convertAndSend);
         while (relay.pollAndPublishOnce(100) > 0) {
             // keep going until the outbox is empty
         }

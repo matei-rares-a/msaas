@@ -1,6 +1,5 @@
 package com.saas.shared.outbox;
 
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -22,21 +21,40 @@ import java.util.concurrent.TimeoutException;
  * only marked published after a successful send, so a crash before that redelivers it on the next poll
  * (at-least-once, REQ-EVT-05 - consumers are made idempotent in P3.3).
  */
-public class OutboxRelay {
+public class OutboxRelay implements AutoCloseable {
 
+    private final DataSource relayDataSource;
     private final JdbcTemplate jdbcTemplate;
     private final TransactionTemplate transactionTemplate;
     private final String schema;
     private final KafkaTemplate<String, String> kafkaTemplate;
-    private final RabbitTemplate rabbitTemplate;
+    private final RabbitPublisher rabbitPublisher;
 
     public OutboxRelay(DataSource relayDataSource, String schema,
-                        KafkaTemplate<String, String> kafkaTemplate, RabbitTemplate rabbitTemplate) {
+                        KafkaTemplate<String, String> kafkaTemplate, RabbitPublisher rabbitPublisher) {
+        this.relayDataSource = relayDataSource;
         this.jdbcTemplate = new JdbcTemplate(relayDataSource);
         this.transactionTemplate = new TransactionTemplate(new DataSourceTransactionManager(relayDataSource));
         this.schema = schema;
         this.kafkaTemplate = kafkaTemplate;
-        this.rabbitTemplate = rabbitTemplate;
+        this.rabbitPublisher = rabbitPublisher;
+    }
+
+    /**
+     * What the relay needs from RabbitMQ. A neutral type rather than RabbitTemplate, so the relay can be loaded (and introspected by
+     * Spring) in a service that has no RabbitMQ on its classpath.
+     */
+    @FunctionalInterface
+    public interface RabbitPublisher {
+        void send(String exchange, String routingKey, String payload);
+    }
+
+    /** Releases the relay's own connection pool when the application stops; a data source that has nothing to close is left alone. */
+    @Override
+    public void close() throws Exception {
+        if (relayDataSource instanceof AutoCloseable closeable) {
+            closeable.close();
+        }
     }
 
     /** @return how many rows were published in this batch. */
@@ -78,10 +96,10 @@ public class OutboxRelay {
                 }
             }
             case RABBITMQ -> {
-                if (rabbitTemplate == null) {
+                if (rabbitPublisher == null) {
                     throw new IllegalStateException("no RabbitTemplate configured for an outbox row bound for RabbitMQ");
                 }
-                rabbitTemplate.convertAndSend(row.channel(), row.routingKey(), row.payload());
+                rabbitPublisher.send(row.channel(), row.routingKey(), row.payload());
             }
         }
     }

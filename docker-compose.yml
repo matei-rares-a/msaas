@@ -116,6 +116,11 @@ services:
     environment:
       JWT_SECRET: ${JWT_SECRET}
       REDIS_HOST: redis
+      # inside the compose network the services are reached by name, not on localhost
+      AUTH_SERVICE_URL: http://auth-service:8081
+      ORG_SERVICE_URL: http://organization-service:8082
+      BILLING_SERVICE_URL: http://billing-service:8083
+      NOTIFICATION_SERVICE_URL: http://notification-service:8084
     depends_on:
       redis:
         condition: service_healthy
@@ -146,7 +151,11 @@ services:
       DB_PORT: 6432
       AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD}
       SPRING_FLYWAY_URL: jdbc:postgresql://postgres:5432/saas_global
+      SPRING_FLYWAY_USER: auth_svc
+      SPRING_FLYWAY_PASSWORD: ${AUTH_DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
+      SAAS_OUTBOX_RELAY_ENABLED: "true"
+      OUTBOX_RELAY_DB_PASSWORD: ${OUTBOX_RELAY_DB_PASSWORD}
       KAFKA_BROKERS: kafka:29092
       ORG_SERVICE_BASE_URL: http://organization-service:8082
     depends_on:
@@ -174,7 +183,11 @@ services:
       ORG_DB_PASSWORD: ${ORG_DB_PASSWORD}
       ORG_AUTH_READER_DB_PASSWORD: ${ORG_AUTH_READER_DB_PASSWORD}
       SPRING_FLYWAY_URL: jdbc:postgresql://postgres:5432/saas_shard_1
+      SPRING_FLYWAY_USER: org_svc
+      SPRING_FLYWAY_PASSWORD: ${ORG_DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
+      SAAS_OUTBOX_RELAY_ENABLED: "true"
+      OUTBOX_RELAY_DB_PASSWORD: ${OUTBOX_RELAY_DB_PASSWORD}
       KAFKA_BROKERS: kafka:29092
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_USER: ${RABBITMQ_USER}
@@ -213,7 +226,11 @@ services:
       BILLING_DB_PASSWORD: ${BILLING_DB_PASSWORD}
       BILLING_JOB_READER_DB_PASSWORD: ${BILLING_JOB_READER_DB_PASSWORD}
       SPRING_FLYWAY_URL: jdbc:postgresql://postgres:5432/saas_shard_1
+      SPRING_FLYWAY_USER: billing_svc
+      SPRING_FLYWAY_PASSWORD: ${BILLING_DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
+      SAAS_OUTBOX_RELAY_ENABLED: "true"
+      OUTBOX_RELAY_DB_PASSWORD: ${OUTBOX_RELAY_DB_PASSWORD}
       KAFKA_BROKERS: kafka:29092
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_USER: ${RABBITMQ_USER}
@@ -247,7 +264,11 @@ services:
       DB_PORT: 6432
       NOTIF_DB_PASSWORD: ${NOTIF_DB_PASSWORD}
       SPRING_FLYWAY_URL: jdbc:postgresql://postgres:5432/saas_shard_1
+      SPRING_FLYWAY_USER: notif_svc
+      SPRING_FLYWAY_PASSWORD: ${NOTIF_DB_PASSWORD}
       KAFKA_BROKERS: kafka:29092
+      SAAS_OUTBOX_RELAY_ENABLED: "true"
+      OUTBOX_RELAY_DB_PASSWORD: ${OUTBOX_RELAY_DB_PASSWORD}
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_USER: ${RABBITMQ_USER}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}

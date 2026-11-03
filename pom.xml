@@ -176,4 +176,13 @@
             </plugin>
         </plugins>
     </build>
+    <profiles>
+        <!-- End-to-end tests on the compose stack (P12.1): scripts/infra/e2e-stack.mjs, mode all -->
+        <profile>
+            <id>e2e</id>
+            <modules>
+                <module>e2e-tests</module>
+            </modules>
+        </profile>
+    </profiles>
 </project>

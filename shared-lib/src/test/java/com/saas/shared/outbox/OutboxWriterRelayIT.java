@@ -148,7 +148,7 @@ class OutboxWriterRelayIT implements KafkaTestContainer, RabbitMqTestContainer {
         // default exchange ("") routes to the queue named by the routing key
         writeInTenantTransaction(tenantId, false, OutboxDestination.RABBITMQ, "", queue, payload);
 
-        OutboxRelay relay = new OutboxRelay(relayDataSource, "app", null, rabbitTemplate);
+        OutboxRelay relay = new OutboxRelay(relayDataSource, "app", null, rabbitTemplate::convertAndSend);
         assertThat(relay.pollAndPublishOnce(10)).isEqualTo(1);
 
         assertThat(EventAssertions.awaitRabbitMessage(queue, payload::equals)).isEqualTo(payload);
