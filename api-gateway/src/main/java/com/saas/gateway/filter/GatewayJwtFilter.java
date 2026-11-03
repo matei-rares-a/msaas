@@ -44,7 +44,7 @@ public class GatewayJwtFilter implements GlobalFilter, Ordered {
         String path = exchange.getRequest().getURI().getPath();
 
         // Allow public paths through
-        if (PUBLIC_PATHS.stream().anyMatch(path::startsWith)) {
+        if (isPublicPath(path)) {
             return chain.filter(exchange);
         }
 
@@ -71,6 +71,11 @@ public class GatewayJwtFilter implements GlobalFilter, Ordered {
                 .build();
 
         return chain.filter(exchange.mutate().request(mutated).build());
+    }
+
+    /** Paths that need no token; the rate limit (REQ-SCALE-02) reads the same list, so the two never disagree. */
+    public static boolean isPublicPath(String path) {
+        return PUBLIC_PATHS.stream().anyMatch(path::startsWith);
     }
 
     /** A tenant-less user (REQ-AUTH-03) holds only an identity token, valid solely on the routes it

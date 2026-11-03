@@ -6,6 +6,13 @@ spring:
     import: optional:file:.env[.properties],optional:file:../.env[.properties]
   application:
     name: api-gateway
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+      # a slow or dead Redis must not hold requests: the rate limit lets them through (REQ-SCALE-02)
+      timeout: 500ms
+      connect-timeout: 1s
   cloud:
     gateway:
       globalcors:
@@ -35,6 +42,16 @@ spring:
           uri: http://localhost:8084
           predicates:
             - Path=/notifications/**
+
+# Rate limiting (P10.2, REQ-SCALE-02): per user, plus an aggregate per tenant that grows with its active users.
+# Defaults, not requirements (section 4 of the plan).
+saas:
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    user-per-second: ${RATE_LIMIT_USER_PER_SECOND:10}
+    tenant-per-active-user-per-second: ${RATE_LIMIT_TENANT_PER_ACTIVE_USER_PER_SECOND:5}
+    active-window: ${RATE_LIMIT_ACTIVE_WINDOW:PT5M}
+    redis-timeout: ${RATE_LIMIT_REDIS_TIMEOUT:PT0.2S}
 
 jwt:
   secret: ${JWT_SECRET}
