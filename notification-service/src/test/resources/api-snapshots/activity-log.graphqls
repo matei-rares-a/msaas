@@ -1,0 +1,43 @@
+type ActivityLogEntry {
+  "The user who acted; null when the system acted (e.g. an escalation)."
+  actorUserId: String
+  "ISO-8601 instant the entry was recorded."
+  createdAt: String!
+  eventType: String!
+  id: ID!
+  "The event's details as a JSON object text: identifiers, roles and statuses only, never a name or an email."
+  metadata: String!
+}
+
+type ActivityLogPage {
+  items: [ActivityLogEntry!]!
+  "Zero-based page number."
+  page: Int!
+  size: Int!
+  totalItems: Int!
+  totalPages: Int!
+}
+
+"""
+
+The tenant activity journal, read-only (REQ-MON-08). There is deliberately no Mutation and no Subscription
+type, and the tenant is never an argument: it comes from the caller's token, so one tenant cannot ask for
+another's entries. Only ADMIN and MANAGER may read (REQ-MON-02). Changes to this schema are additive: a
+field is marked @deprecated, never removed or changed (REQ-ARCH-03).
+"""
+type Query {
+  "The caller's own tenant journal, newest first. Rejected with FORBIDDEN for any role but ADMIN and MANAGER."
+  activityLog(filter: ActivityLogFilter, page: Int = 0, size: Int = 20): ActivityLogPage!
+}
+
+"All filters are optional and combine with AND."
+input ActivityLogFilter {
+  "Only entries made by this user (a UUID)."
+  actorUserId: String
+  "Only entries of these event types, e.g. [\"MEMBER_ROLE_CHANGED\"] (at most 20)."
+  eventTypes: [String!]
+  "Only entries at or after this instant (ISO-8601, e.g. 2026-11-02T10:00:00Z)."
+  from: String
+  "Only entries before this instant (ISO-8601)."
+  to: String
+}

@@ -1,0 +1,424 @@
+{
+  "components" : {
+    "schemas" : {
+      "AccessStatusResponse" : {
+        "properties" : {
+          "status" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ChangePlanRequest" : {
+        "properties" : {
+          "planId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "planId"
+        ],
+        "type" : "object"
+      },
+      "InvoiceResponse" : {
+        "properties" : {
+          "amountEur" : {
+            "type" : "number"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "issuedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "paidAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "subscriptionId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SubscribeRequest" : {
+        "properties" : {
+          "planId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "planId"
+        ],
+        "type" : "object"
+      },
+      "SubscriptionResponse" : {
+        "properties" : {
+          "endDate" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "pastDueSince" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "planId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "startDate" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      }
+    }
+  },
+  "info" : {
+    "title" : "OpenAPI definition",
+    "version" : "v0"
+  },
+  "openapi" : "3.0.1",
+  "paths" : {
+    "/billing/invoices" : {
+      "get" : {
+        "operationId" : "invoices",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Role",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/InvoiceResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "billing-controller"
+        ]
+      }
+    },
+    "/billing/subscription" : {
+      "get" : {
+        "operationId" : "currentSubscription",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Role",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SubscriptionResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "billing-controller"
+        ]
+      }
+    },
+    "/billing/subscriptions" : {
+      "post" : {
+        "operationId" : "subscribe",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Role",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SubscribeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SubscriptionResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "billing-controller"
+        ]
+      }
+    },
+    "/billing/subscriptions/cancel" : {
+      "post" : {
+        "operationId" : "cancel",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Role",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SubscriptionResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "billing-controller"
+        ]
+      }
+    },
+    "/billing/subscriptions/change-plan" : {
+      "post" : {
+        "operationId" : "changePlan",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Role",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ChangePlanRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SubscriptionResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "billing-controller"
+        ]
+      }
+    },
+    "/billing/subscriptions/charge" : {
+      "post" : {
+        "operationId" : "chargeCurrentPeriod",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Role",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SubscriptionResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "billing-controller"
+        ]
+      }
+    },
+    "/internal/tenants/{tenantId}/access-status" : {
+      "get" : {
+        "operationId" : "accessStatus",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccessStatusResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "internal-tenant-access-controller"
+        ]
+      }
+    }
+  }
+}

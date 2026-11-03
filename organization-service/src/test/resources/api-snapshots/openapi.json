@@ -1,0 +1,3242 @@
+{
+  "components" : {
+    "schemas" : {
+      "AcceptInvitationRequest" : {
+        "properties" : {
+          "token" : {
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "token"
+        ],
+        "type" : "object"
+      },
+      "AcceptInvitationResponse" : {
+        "properties" : {
+          "role" : {
+            "type" : "string"
+          },
+          "tenantId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "AllowanceRequest" : {
+        "properties" : {
+          "allowance" : {
+            "format" : "int32",
+            "maximum" : 366,
+            "minimum" : 0,
+            "type" : "integer"
+          }
+        },
+        "required" : [
+          "allowance"
+        ],
+        "type" : "object"
+      },
+      "BalanceView" : {
+        "properties" : {
+          "allocated" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "approved" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "available" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "pending" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "userId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "year" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "CalendarEntry" : {
+        "properties" : {
+          "endDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "startDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "userId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "CreateInvitationRequest" : {
+        "properties" : {
+          "email" : {
+            "type" : "string"
+          },
+          "role" : {
+            "enum" : [
+              "ADMIN",
+              "MANAGER",
+              "USER"
+            ],
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "email",
+          "role"
+        ],
+        "type" : "object"
+      },
+      "CreateLeaveRequest" : {
+        "properties" : {
+          "endDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "reason" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "startDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "type" : {
+            "enum" : [
+              "FARA_PLATA",
+              "ODIHNA"
+            ],
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "endDate",
+          "startDate",
+          "type"
+        ],
+        "type" : "object"
+      },
+      "CreateOrganizationRequest" : {
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "name"
+        ],
+        "type" : "object"
+      },
+      "DecisionRequest" : {
+        "properties" : {
+          "comment" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "EnableModuleRequest" : {
+        "properties" : {
+          "enabled" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [
+          "enabled"
+        ],
+        "type" : "object"
+      },
+      "HolidayRequest" : {
+        "properties" : {
+          "date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "name" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "date",
+          "name"
+        ],
+        "type" : "object"
+      },
+      "HolidayView" : {
+        "properties" : {
+          "date" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "InvitationResponse" : {
+        "properties" : {
+          "email" : {
+            "type" : "string"
+          },
+          "expiresAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "LeavePage" : {
+        "properties" : {
+          "items" : {
+            "items" : {
+              "$ref" : "#/components/schemas/LeaveRequestView"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalItems" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "LeaveRequestView" : {
+        "properties" : {
+          "autoApproved" : {
+            "type" : "boolean"
+          },
+          "cancelledAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "cancelledBy" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "days" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "decidedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "decidedBy" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "decisionComment" : {
+            "type" : "string"
+          },
+          "endDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "reason" : {
+            "type" : "string"
+          },
+          "startDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [
+              "APPROVED",
+              "CANCELLED",
+              "PENDING",
+              "REJECTED"
+            ],
+            "type" : "string"
+          },
+          "type" : {
+            "enum" : [
+              "FARA_PLATA",
+              "ODIHNA"
+            ],
+            "type" : "string"
+          },
+          "userId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "LunchConfigRequest" : {
+        "properties" : {
+          "cutoff" : {
+            "type" : "string"
+          },
+          "day" : {
+            "type" : "string"
+          },
+          "groupSize" : {
+            "format" : "int32",
+            "maximum" : 4,
+            "minimum" : 2,
+            "type" : "integer"
+          }
+        },
+        "required" : [
+          "cutoff",
+          "day",
+          "groupSize"
+        ],
+        "type" : "object"
+      },
+      "LunchConfigView" : {
+        "properties" : {
+          "cutoff" : {
+            "type" : "string"
+          },
+          "day" : {
+            "type" : "string"
+          },
+          "groupSize" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "timezone" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "LunchRoundDetail" : {
+        "properties" : {
+          "groups" : {
+            "items" : {
+              "items" : {
+                "format" : "uuid",
+                "type" : "string"
+              },
+              "type" : "array"
+            },
+            "type" : "array"
+          },
+          "myGroup" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "round" : {
+            "$ref" : "#/components/schemas/LunchRoundView"
+          }
+        },
+        "type" : "object"
+      },
+      "LunchRoundPage" : {
+        "properties" : {
+          "items" : {
+            "items" : {
+              "$ref" : "#/components/schemas/LunchRoundView"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalItems" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "LunchRoundView" : {
+        "properties" : {
+          "cancelReason" : {
+            "type" : "string"
+          },
+          "deadlineAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "enrolled" : {
+            "type" : "boolean"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "participantCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "status" : {
+            "enum" : [
+              "CANCELLED",
+              "FORMED",
+              "OPEN"
+            ],
+            "type" : "string"
+          },
+          "weekStart" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "MemberIdsResponse" : {
+        "properties" : {
+          "userIds" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "MemberRoleResponse" : {
+        "properties" : {
+          "role" : {
+            "type" : "string"
+          },
+          "userId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "MembershipSummaryResponse" : {
+        "properties" : {
+          "readOnly" : {
+            "type" : "boolean"
+          },
+          "role" : {
+            "type" : "string"
+          },
+          "tenantId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ModulesResponse" : {
+        "properties" : {
+          "modules" : {
+            "additionalProperties" : {
+              "type" : "boolean"
+            },
+            "type" : "object"
+          },
+          "timezone" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "OrganizationResponse" : {
+        "properties" : {
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "PaletteView" : {
+        "properties" : {
+          "definition" : {
+            "additionalProperties" : {
+              "type" : "object"
+            },
+            "type" : "object"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "PolicyView" : {
+        "properties" : {
+          "defaultAllowance" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "RenameOrganizationRequest" : {
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "name"
+        ],
+        "type" : "object"
+      },
+      "SetFeatureFlagRequest" : {
+        "properties" : {
+          "enabled" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [
+          "enabled"
+        ],
+        "type" : "object"
+      },
+      "TenantNameResponse" : {
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ThemeResponse" : {
+        "properties" : {
+          "logoUrl" : {
+            "type" : "string"
+          },
+          "palette" : {
+            "$ref" : "#/components/schemas/PaletteView"
+          },
+          "paletteId" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "TimezoneRequest" : {
+        "properties" : {
+          "timezone" : {
+            "maxLength" : 64,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "timezone"
+        ],
+        "type" : "object"
+      },
+      "UpdateInvitationExpiryRequest" : {
+        "properties" : {
+          "expiryDays" : {
+            "format" : "int32",
+            "minimum" : 1,
+            "type" : "integer"
+          }
+        },
+        "required" : [
+          "expiryDays"
+        ],
+        "type" : "object"
+      },
+      "UpdateMemberRoleRequest" : {
+        "properties" : {
+          "role" : {
+            "enum" : [
+              "ADMIN",
+              "MANAGER",
+              "USER"
+            ],
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "role"
+        ],
+        "type" : "object"
+      },
+      "UpdateThemeRequest" : {
+        "properties" : {
+          "paletteId" : {
+            "pattern" : "^[a-z0-9-]{1,50}$",
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "paletteId"
+        ],
+        "type" : "object"
+      }
+    }
+  },
+  "info" : {
+    "title" : "OpenAPI definition",
+    "version" : "v0"
+  },
+  "openapi" : "3.0.1",
+  "paths" : {
+    "/internal/tenants/{tenantId}" : {
+      "get" : {
+        "operationId" : "tenantName",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TenantNameResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "internal-tenant-controller"
+        ]
+      }
+    },
+    "/internal/tenants/{tenantId}/feature-flags/{flag}" : {
+      "put" : {
+        "operationId" : "set",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "flag",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SetFeatureFlagRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : {
+                    "type" : "boolean"
+                  },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "internal-feature-flag-controller"
+        ]
+      }
+    },
+    "/internal/tenants/{tenantId}/members" : {
+      "get" : {
+        "operationId" : "members",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "roles",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MemberIdsResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "internal-tenant-controller"
+        ]
+      }
+    },
+    "/internal/users/{userId}/memberships" : {
+      "get" : {
+        "operationId" : "memberships",
+        "parameters" : [
+          {
+            "in" : "path",
+            "name" : "userId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/MembershipSummaryResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "internal-membership-controller"
+        ]
+      }
+    },
+    "/invitations/accept" : {
+      "post" : {
+        "operationId" : "accept",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AcceptInvitationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AcceptInvitationResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "invitation-controller"
+        ]
+      }
+    },
+    "/organizations" : {
+      "post" : {
+        "operationId" : "create",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateOrganizationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OrganizationResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "organization-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}" : {
+      "patch" : {
+        "operationId" : "rename",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RenameOrganizationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OrganizationResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "organization-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/admin-demotion-requests/{requestId}/accept" : {
+      "post" : {
+        "operationId" : "acceptAdminDemotion",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "requestId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MemberRoleResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "organization-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/admin-demotion-requests/{requestId}/reject" : {
+      "post" : {
+        "operationId" : "rejectAdminDemotion",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "requestId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "organization-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/feature-flags" : {
+      "get" : {
+        "operationId" : "get_3",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : {
+                    "type" : "boolean"
+                  },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "feature-flag-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/invitation-expiry" : {
+      "patch" : {
+        "operationId" : "updateExpiry",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateInvitationExpiryRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "invitation-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/invitations" : {
+      "get" : {
+        "operationId" : "list_1",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/InvitationResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "invitation-controller"
+        ]
+      },
+      "post" : {
+        "operationId" : "create_2",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateInvitationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InvitationResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "invitation-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/invitations/{invitationId}" : {
+      "delete" : {
+        "operationId" : "revoke",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "invitationId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "invitation-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/leave/balance" : {
+      "get" : {
+        "operationId" : "balance",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "userId",
+            "required" : false,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "year",
+            "required" : false,
+            "schema" : {
+              "format" : "int32",
+              "type" : "integer"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BalanceView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "leave-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/leave/balances/{userId}" : {
+      "delete" : {
+        "operationId" : "removeOverride",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "userId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "leave-controller"
+        ]
+      },
+      "put" : {
+        "operationId" : "setOverride",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "userId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AllowanceRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "leave-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/leave/calendar" : {
+      "get" : {
+        "operationId" : "calendar",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "from",
+            "required" : true,
+            "schema" : {
+              "format" : "date",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "to",
+            "required" : true,
+            "schema" : {
+              "format" : "date",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/CalendarEntry"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "leave-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/leave/holidays" : {
+      "get" : {
+        "operationId" : "holidays",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "year",
+            "required" : true,
+            "schema" : {
+              "format" : "int32",
+              "type" : "integer"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/HolidayView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "leave-controller"
+        ]
+      },
+      "post" : {
+        "operationId" : "addHoliday",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/HolidayRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HolidayView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "leave-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/leave/holidays/{date}" : {
+      "delete" : {
+        "operationId" : "removeHoliday",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "date",
+            "required" : true,
+            "schema" : {
+              "format" : "date",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "leave-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/leave/policy" : {
+      "get" : {
+        "operationId" : "policy",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PolicyView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "leave-controller"
+        ]
+      },
+      "put" : {
+        "operationId" : "setPolicy",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AllowanceRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PolicyView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "leave-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/leave/requests" : {
+      "get" : {
+        "operationId" : "list",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "page",
+            "required" : false,
+            "schema" : {
+              "default" : 0,
+              "format" : "int32",
+              "type" : "integer"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "scope",
+            "required" : false,
+            "schema" : {
+              "default" : "MINE",
+              "enum" : [
+                "ALL",
+                "MINE"
+              ],
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "size",
+            "required" : false,
+            "schema" : {
+              "default" : 20,
+              "format" : "int32",
+              "type" : "integer"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "status",
+            "required" : false,
+            "schema" : {
+              "enum" : [
+                "APPROVED",
+                "CANCELLED",
+                "PENDING",
+                "REJECTED"
+              ],
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "userId",
+            "required" : false,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LeavePage"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "leave-controller"
+        ]
+      },
+      "post" : {
+        "operationId" : "create_1",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateLeaveRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LeaveRequestView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "leave-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/leave/requests/{requestId}" : {
+      "get" : {
+        "operationId" : "get_2",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "requestId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LeaveRequestView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "leave-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/leave/requests/{requestId}/approve" : {
+      "post" : {
+        "operationId" : "approve",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "requestId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DecisionRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LeaveRequestView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "leave-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/leave/requests/{requestId}/cancel" : {
+      "post" : {
+        "operationId" : "cancel",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "requestId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LeaveRequestView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "leave-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/leave/requests/{requestId}/reject" : {
+      "post" : {
+        "operationId" : "reject",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "requestId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DecisionRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LeaveRequestView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "leave-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/lunch/config" : {
+      "get" : {
+        "operationId" : "config",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LunchConfigView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "lunch-controller"
+        ]
+      },
+      "put" : {
+        "operationId" : "setConfig",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LunchConfigRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LunchConfigView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "lunch-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/lunch/rounds" : {
+      "get" : {
+        "operationId" : "rounds",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "page",
+            "required" : false,
+            "schema" : {
+              "default" : 0,
+              "format" : "int32",
+              "type" : "integer"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "size",
+            "required" : false,
+            "schema" : {
+              "default" : 20,
+              "format" : "int32",
+              "type" : "integer"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LunchRoundPage"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "lunch-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/lunch/rounds/current" : {
+      "get" : {
+        "operationId" : "current",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LunchRoundView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "lunch-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/lunch/rounds/current/cancel" : {
+      "post" : {
+        "operationId" : "cancelCurrent",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LunchRoundView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "lunch-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/lunch/rounds/current/enrollment" : {
+      "delete" : {
+        "operationId" : "withdraw",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LunchRoundView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "lunch-controller"
+        ]
+      },
+      "put" : {
+        "operationId" : "enroll",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LunchRoundView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "lunch-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/lunch/rounds/{roundId}" : {
+      "get" : {
+        "operationId" : "round",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "roundId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LunchRoundDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "lunch-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/members/{userId}" : {
+      "delete" : {
+        "operationId" : "offboardMember",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "userId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "organization-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/members/{userId}/role" : {
+      "patch" : {
+        "operationId" : "updateMemberRole",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "userId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateMemberRoleRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "organization-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/modules" : {
+      "get" : {
+        "operationId" : "get_1",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ModulesResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "module-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/modules/{module}" : {
+      "put" : {
+        "operationId" : "setEnabled",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "module",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/EnableModuleRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ModulesResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "module-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/theme" : {
+      "get" : {
+        "operationId" : "get",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ThemeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "theme-controller"
+        ]
+      },
+      "put" : {
+        "operationId" : "update",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateThemeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ThemeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "theme-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/theme/logo" : {
+      "get" : {
+        "operationId" : "download",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "format" : "byte",
+                    "type" : "string"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "logo-controller"
+        ]
+      },
+      "put" : {
+        "operationId" : "upload",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "properties" : {
+                  "file" : {
+                    "format" : "binary",
+                    "type" : "string"
+                  }
+                },
+                "required" : [
+                  "file"
+                ],
+                "type" : "object"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : {
+                    "type" : "string"
+                  },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "logo-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/theme/palettes" : {
+      "get" : {
+        "operationId" : "palettes",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/PaletteView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "theme-controller"
+        ]
+      }
+    },
+    "/organizations/{tenantId}/timezone" : {
+      "put" : {
+        "operationId" : "setTimezone",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "tenantId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TimezoneRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ModulesResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "module-controller"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,508 @@
+{
+  "components" : {
+    "schemas" : {
+      "JobResponse" : {
+        "properties" : {
+          "completedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "expiresAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "jobId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "rowCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "statusUrl" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "NotificationPage" : {
+        "properties" : {
+          "items" : {
+            "items" : {
+              "$ref" : "#/components/schemas/NotificationView"
+            },
+            "type" : "array"
+          },
+          "page" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "size" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "totalItems" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "unreadCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "NotificationView" : {
+        "properties" : {
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "eventType" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "level" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "read" : {
+            "type" : "boolean"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      }
+    }
+  },
+  "info" : {
+    "title" : "OpenAPI definition",
+    "version" : "v0"
+  },
+  "openapi" : "3.0.1",
+  "paths" : {
+    "/notifications/activity-log/exports" : {
+      "post" : {
+        "operationId" : "export",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Role",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Export the journal as CSV: 200 with the file when small, 202 with a job when it runs in the background",
+        "tags" : [
+          "Activity log export"
+        ]
+      }
+    },
+    "/notifications/activity-log/exports/{jobId}" : {
+      "get" : {
+        "operationId" : "status",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Role",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "jobId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/JobResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Status of a background export you requested",
+        "tags" : [
+          "Activity log export"
+        ]
+      }
+    },
+    "/notifications/activity-log/exports/{jobId}/download" : {
+      "get" : {
+        "operationId" : "download",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Role",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "jobId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "format" : "byte",
+                    "type" : "string"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Download the CSV of a finished background export you requested",
+        "tags" : [
+          "Activity log export"
+        ]
+      }
+    },
+    "/notifications/health" : {
+      "get" : {
+        "operationId" : "health",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Health check",
+        "tags" : [
+          "Notifications"
+        ]
+      }
+    },
+    "/notifications/in-app" : {
+      "get" : {
+        "operationId" : "list",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Role",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "page",
+            "required" : false,
+            "schema" : {
+              "default" : 0,
+              "format" : "int32",
+              "type" : "integer"
+            }
+          },
+          {
+            "in" : "query",
+            "name" : "size",
+            "required" : false,
+            "schema" : {
+              "default" : 20,
+              "format" : "int32",
+              "type" : "integer"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/NotificationPage"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "My notifications in the current organization, newest first, with the unread total",
+        "tags" : [
+          "In-app notifications"
+        ]
+      }
+    },
+    "/notifications/in-app/read" : {
+      "patch" : {
+        "operationId" : "markAllRead",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Role",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : {
+                    "format" : "int32",
+                    "type" : "integer"
+                  },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Mark all my notifications in the current organization as read",
+        "tags" : [
+          "In-app notifications"
+        ]
+      }
+    },
+    "/notifications/in-app/unread-count" : {
+      "get" : {
+        "operationId" : "unreadCount",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Role",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : {
+                    "format" : "int64",
+                    "type" : "integer"
+                  },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "How many of my notifications are unread (polled every 60 seconds by the app)",
+        "tags" : [
+          "In-app notifications"
+        ]
+      }
+    },
+    "/notifications/in-app/{notificationId}/read" : {
+      "patch" : {
+        "operationId" : "markRead",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-Role",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-Tenant-Id",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "notificationId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/NotificationView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Mark one of my notifications as read",
+        "tags" : [
+          "In-app notifications"
+        ]
+      }
+    }
+  }
+}

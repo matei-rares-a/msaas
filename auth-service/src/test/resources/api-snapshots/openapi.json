@@ -1,0 +1,310 @@
+{
+  "components" : {
+    "schemas" : {
+      "AuthResponse" : {
+        "properties" : {
+          "accessToken" : {
+            "type" : "string"
+          },
+          "expiresIn" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "refreshToken" : {
+            "type" : "string"
+          },
+          "tokenType" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ForgotPasswordRequest" : {
+        "properties" : {
+          "email" : {
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "email"
+        ],
+        "type" : "object"
+      },
+      "LoginRequest" : {
+        "properties" : {
+          "email" : {
+            "type" : "string"
+          },
+          "password" : {
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "email",
+          "password"
+        ],
+        "type" : "object"
+      },
+      "RefreshRequest" : {
+        "properties" : {
+          "refreshToken" : {
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "refreshToken"
+        ],
+        "type" : "object"
+      },
+      "RegisterRequest" : {
+        "properties" : {
+          "email" : {
+            "type" : "string"
+          },
+          "password" : {
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "email",
+          "password"
+        ],
+        "type" : "object"
+      },
+      "ResetPasswordRequest" : {
+        "properties" : {
+          "newPassword" : {
+            "type" : "string"
+          },
+          "token" : {
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "newPassword",
+          "token"
+        ],
+        "type" : "object"
+      },
+      "SelectTenantRequest" : {
+        "properties" : {
+          "loginSessionId" : {
+            "type" : "string"
+          },
+          "tenantId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "required" : [
+          "loginSessionId",
+          "tenantId"
+        ],
+        "type" : "object"
+      }
+    }
+  },
+  "info" : {
+    "title" : "OpenAPI definition",
+    "version" : "v0"
+  },
+  "openapi" : "3.0.1",
+  "paths" : {
+    "/auth/account" : {
+      "delete" : {
+        "operationId" : "deleteAccount",
+        "parameters" : [
+          {
+            "in" : "header",
+            "name" : "X-User-Id",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "summary" : "Erase the caller's own global identity (only when in no organization)",
+        "tags" : [
+          "Authentication"
+        ]
+      }
+    },
+    "/auth/forgot-password" : {
+      "post" : {
+        "operationId" : "forgotPassword",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "summary" : "Request password reset",
+        "tags" : [
+          "Authentication"
+        ]
+      }
+    },
+    "/auth/login" : {
+      "post" : {
+        "operationId" : "login",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Login; returns a token directly, or a tenant choice for multi-tenant users",
+        "tags" : [
+          "Authentication"
+        ]
+      }
+    },
+    "/auth/login/tenant" : {
+      "post" : {
+        "operationId" : "selectTenant",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SelectTenantRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AuthResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Exchange a loginSessionId + chosen tenantId for the real token",
+        "tags" : [
+          "Authentication"
+        ]
+      }
+    },
+    "/auth/refresh" : {
+      "post" : {
+        "operationId" : "refresh",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AuthResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Refresh access token",
+        "tags" : [
+          "Authentication"
+        ]
+      }
+    },
+    "/auth/register" : {
+      "post" : {
+        "operationId" : "register",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RegisterRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "summary" : "Register a new user",
+        "tags" : [
+          "Authentication"
+        ]
+      }
+    },
+    "/auth/reset-password" : {
+      "post" : {
+        "operationId" : "resetPassword",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "summary" : "Reset password with token",
+        "tags" : [
+          "Authentication"
+        ]
+      }
+    }
+  },
+  "tags" : [
+    {
+      "description" : "Auth endpoints",
+      "name" : "Authentication"
+    }
+  ]
+}
