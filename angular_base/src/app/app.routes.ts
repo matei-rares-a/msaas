@@ -9,6 +9,8 @@ import { identityGuard, pendingChoiceGuard } from './core/guards/onboarding.guar
 import { SelectTenantComponent } from './features/auth/select-tenant/select-tenant.component';
 import { NoOrganizationComponent } from './features/auth/no-organization/no-organization.component';
 import { AdminComponent } from './pages/admin/admin.component';
+import { adminGuard } from './core/guards/role.guards';
+import { ThemeEditorComponent } from './features/theme/theme-editor.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
@@ -40,6 +42,11 @@ export const routes: Routes = [
     path: 'admin',
     component: AdminComponent,
     canActivate: [AuthGuard]
+  },
+  {
+    path: 'theme',
+    component: ThemeEditorComponent,
+    canActivate: [AuthGuard, adminGuard]
   },
   { path: '**', redirectTo: 'dashboard' }
 ];

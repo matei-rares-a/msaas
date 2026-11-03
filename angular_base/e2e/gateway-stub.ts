@@ -13,6 +13,8 @@ export interface RecordedCall {
   path: string;
   authorization: string | undefined;
   body: any;
+  /** The names of the parts of a multipart request, in order. */
+  parts: string[];
 }
 
 function base64Url(value: string): string {
@@ -29,7 +31,8 @@ export function tokenResponse(tenantId: string, role = 'ADMIN') {
   return { accessToken: tenantToken(tenantId, role), refreshToken: `refresh-${tenantId}`, tokenType: 'Bearer', expiresIn: 900 };
 }
 
-type Handler = (call: RecordedCall) => { status?: number; body?: unknown } | undefined;
+type Answer = { status?: number; body?: unknown; bytes?: Buffer; contentType?: string };
+type Handler = (call: RecordedCall) => Answer | undefined;
 
 /**
  * Answers every call to the gateway with {@code handler} (404 when it returns nothing), answers the browser's CORS
@@ -43,18 +46,22 @@ export async function stubGateway(page: Page, handler: Handler): Promise<Recorde
       await route.fulfill({ status: 204, headers: CORS });
       return;
     }
+    const headers = await request.allHeaders();
+    const contentType = headers['content-type'] ?? '';
+    const text = request.postDataBuffer()?.toString('latin1');
     const call: RecordedCall = {
       method: request.method(),
       path: new URL(request.url()).pathname,
-      authorization: (await request.allHeaders())['authorization'],
-      body: request.postData() ? JSON.parse(request.postData()!) : undefined
+      authorization: headers['authorization'],
+      body: text && contentType.includes('json') ? JSON.parse(text) : undefined,
+      parts: text && contentType.includes('multipart') ? [...text.matchAll(/[; ]name="([^"]+)"/g)].map(match => match[1]) : []
     };
     calls.push(call);
     const answer = handler(call);
     await route.fulfill({
       status: answer ? answer.status ?? 200 : 404,
-      headers: { ...CORS, 'content-type': 'application/json' },
-      body: JSON.stringify(answer?.body ?? {})
+      headers: { ...CORS, 'content-type': answer?.contentType ?? 'application/json' },
+      ...(answer?.bytes ? { body: answer.bytes } : { body: JSON.stringify(answer?.body ?? {}) })
     });
   });
   return calls;

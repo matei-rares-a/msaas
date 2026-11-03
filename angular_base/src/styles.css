@@ -2,6 +2,9 @@
 :root {
   --primary-color: #3b82f6;
   --secondary-color: #8b5cf6;
+  /* set by the tenant's palette (ThemeService); these are what shows when there is none */
+  --accent-color: #f59e0b;
+  --brand-gradient: linear-gradient(135deg, #3b82f6, #8b5cf6);
   --success-color: #10b981;
   --danger-color: #ef4444;
   --warning-color: #f59e0b;

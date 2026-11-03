@@ -76,6 +76,11 @@ export class AuthService {
     this.publishState();
   }
 
+  /** Who is signed in, as the active tenant's token says; null when nobody is. */
+  get currentUser(): User | null {
+    return this.userSubject.value;
+  }
+
   register(request: RegisterRequest): Observable<void> {
     return this.http.post<void>(`${this.apiUrl}/register`, request);
   }

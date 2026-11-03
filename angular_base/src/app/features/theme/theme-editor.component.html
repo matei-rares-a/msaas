@@ -1,0 +1,39 @@
+<div class="theme-editor">
+  <h1>Theme</h1>
+  <p class="hint">Choose the look of your organization. Everyone in it sees the change when they next open the app.</p>
+
+  <div *ngIf="error" class="alert alert-error" data-testid="theme-error">{{ error }}</div>
+  <div *ngIf="message" class="alert alert-ok" data-testid="theme-message">{{ message }}</div>
+
+  <h2>Palette</h2>
+  <p *ngIf="loading">Loading palettes...</p>
+  <div class="palettes">
+    <button
+      type="button"
+      class="palette"
+      *ngFor="let palette of palettes"
+      [attr.data-testid]="'palette-' + palette.id"
+      [class.current]="theme?.paletteId === palette.id"
+      [disabled]="saving"
+      (click)="choose(palette)"
+    >
+      <span class="swatches">
+        <span class="swatch" [style.background-color]="colors(palette).primary"></span>
+        <span class="swatch" [style.background-color]="colors(palette).secondary"></span>
+        <span class="swatch" [style.background-color]="colors(palette).accent"></span>
+      </span>
+      <span class="name">{{ palette.name }}</span>
+      <span class="state" *ngIf="theme?.paletteId === palette.id">Current</span>
+    </button>
+  </div>
+
+  <h2>Logo</h2>
+  <div class="logo-row">
+    <img *ngIf="logo$ | async as logo" [src]="logo" alt="Current logo" class="logo-preview" data-testid="logo-preview" />
+    <span *ngIf="!(logo$ | async)">No logo yet.</span>
+  </div>
+  <label class="upload">
+    PNG or JPG, at most 2 MB
+    <input type="file" accept="image/png,image/jpeg" data-testid="logo-input" [disabled]="saving" (change)="onLogoSelected($event)" />
+  </label>
+</div>
