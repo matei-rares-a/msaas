@@ -6,6 +6,7 @@ import { catchError, distinctUntilChanged, map, switchMap } from 'rxjs/operators
 import { AuthService } from './core/services/auth.service';
 import { ThemeService } from './core/services/theme.service';
 import { NotificationService } from './core/services/notification.service';
+import { AccessService } from './core/services/access.service';
 
 @Component({
   selector: 'app-root',
@@ -18,13 +19,15 @@ export class AppComponent implements OnInit, OnDestroy {
   user$ = this.authService.user$;
   logo$ = this.themeService.logo$;
   unread$ = this.notifications.unread$;
+  permissions$ = this.access.permissions$;
 
   private subscription?: Subscription;
 
   constructor(
     private authService: AuthService,
     private themeService: ThemeService,
-    private notifications: NotificationService
+    private notifications: NotificationService,
+    private access: AccessService
   ) {}
 
   /**

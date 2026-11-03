@@ -2,39 +2,25 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
-export interface Plan {
-  id: string;
-  name: string;
-  price: number;
-  maxUsers: number;
-  features: string[];
-  createdAt: string;
-}
-
 export interface Subscription {
   id: string;
-  organizationId: string;
   planId: string;
-  status: 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED';
+  status: 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'SUSPENDED' | 'CANCELED' | string;
   startDate: string;
   endDate: string | null;
-  createdAt: string;
+  pastDueSince: string | null;
 }
 
 export interface Invoice {
   id: string;
-  organizationId: string;
   subscriptionId: string;
-  amount: number;
-  status: 'PAID' | 'UNPAID';
+  amountEur: number;
+  status: string;
   issuedAt: string;
   paidAt: string | null;
 }
 
-export interface SubscribeRequest {
-  planId: string;
-}
-
+/** The tenant's own billing, from its token: ADMIN and MANAGER read it, only an ADMIN acts on it (REQ-MGR-02). */
 @Injectable({
   providedIn: 'root'
 })
@@ -43,37 +29,15 @@ export class BillingService {
 
   constructor(private http: HttpClient) {}
 
-  getPlans(): Observable<Plan[]> {
-    return this.http.get<Plan[]>(`${this.apiUrl}/plans`);
-  }
-
-  getPlanById(id: string): Observable<Plan> {
-    return this.http.get<Plan>(`${this.apiUrl}/plans/${id}`);
-  }
-
-  subscribe(request: SubscribeRequest): Observable<Subscription> {
-    return this.http.post<Subscription>(`${this.apiUrl}/subscribe`, request);
-  }
-
   getSubscription(): Observable<Subscription> {
     return this.http.get<Subscription>(`${this.apiUrl}/subscription`);
-  }
-
-  cancelSubscription(): Observable<void> {
-    return this.http.post<void>(`${this.apiUrl}/cancel`, {});
   }
 
   getInvoices(): Observable<Invoice[]> {
     return this.http.get<Invoice[]>(`${this.apiUrl}/invoices`);
   }
 
-  getInvoiceById(id: string): Observable<Invoice> {
-    return this.http.get<Invoice>(`${this.apiUrl}/invoices/${id}`);
-  }
-
-  exportInvoicePdf(id: string): Observable<Blob> {
-    return this.http.get(`${this.apiUrl}/invoices/${id}/pdf`, {
-      responseType: 'blob'
-    });
+  cancelSubscription(): Observable<Subscription> {
+    return this.http.post<Subscription>(`${this.apiUrl}/subscriptions/cancel`, {});
   }
 }

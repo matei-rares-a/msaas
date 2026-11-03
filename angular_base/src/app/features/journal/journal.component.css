@@ -1,0 +1,73 @@
+.journal {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  margin-bottom: 16px;
+}
+
+.filters label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-light);
+}
+
+input {
+  padding: 6px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: var(--primary-color);
+  color: #fff;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.entries {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.entries th,
+.entries td {
+  text-align: left;
+  padding: 8px;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: top;
+}
+
+code {
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.paging {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.alert-error {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}

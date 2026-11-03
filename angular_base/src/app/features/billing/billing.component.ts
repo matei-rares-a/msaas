@@ -1,10 +1,13 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
-import { BillingService, Plan, Subscription, Invoice } from '../../core/services/billing.service';
+import { AccessService } from '../../core/services/access.service';
+import { BillingService, Invoice, Subscription } from '../../core/services/billing.service';
 
+/**
+ * Billing of the tenant (REQ-MGR-02). An ADMIN and a MANAGER see the subscription and the invoices; only an ADMIN with
+ * write access is offered an action, and it is cancelling: the plan catalog has no endpoint, so choosing or changing a
+ * plan is not offered here.
+ */
 @Component({
   selector: 'app-billing',
   standalone: true,
@@ -12,132 +15,50 @@ import { BillingService, Plan, Subscription, Invoice } from '../../core/services
   templateUrl: './billing.component.html',
   styleUrls: ['./billing.component.css']
 })
-export class BillingComponent implements OnInit, OnDestroy {
-  plans: Plan[] = [];
+export class BillingComponent implements OnInit {
+  permissions$ = this.access.permissions$;
   subscription: Subscription | null = null;
   invoices: Invoice[] = [];
   loading = true;
   error: string | null = null;
   success: string | null = null;
-  selectingPlanId: string | null = null;
-  organizationId: string | null = null;
 
-  private destroy$ = new Subject<void>();
-
-  constructor(
-    private billingService: BillingService,
-    private route: ActivatedRoute,
-    private router: Router
-  ) {}
+  constructor(private billing: BillingService, private access: AccessService) {}
 
   ngOnInit() {
-    this.organizationId = this.route.snapshot.paramMap.get('id');
-    this.loadData();
-  }
-
-  ngOnDestroy() {
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
-
-  loadData() {
-    this.loading = true;
-    this.billingService.getPlans()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(
-        (plans) => {
-          this.plans = plans;
-          this.loadSubscription();
-        },
-        (error) => {
-          this.error = 'Failed to load billing information';
-          this.loading = false;
+    this.billing.getSubscription().subscribe({
+      next: subscription => (this.subscription = subscription),
+      // a tenant with no subscription yet answers 404: that is a state, not a failure
+      error: error => {
+        if (error.status !== 404) {
+          this.error = 'The subscription could not be loaded.';
         }
-      );
+      }
+    });
+    this.billing.getInvoices().subscribe({
+      next: invoices => {
+        this.invoices = invoices;
+        this.loading = false;
+      },
+      error: () => {
+        this.error = this.error ?? 'The invoices could not be loaded.';
+        this.loading = false;
+      }
+    });
   }
 
-  loadSubscription() {
-    this.billingService.getSubscription()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(
-        (subscription) => {
-          this.subscription = subscription;
-          this.loadInvoices();
-        },
-        (error) => {
-          // Subscription may not exist yet
-          this.loadInvoices();
-        }
-      );
+  cancel() {
+    this.error = null;
+    this.billing.cancelSubscription().subscribe({
+      next: subscription => {
+        this.subscription = subscription;
+        this.success = 'The subscription is cancelled.';
+      },
+      error: error => (this.error = error.error?.message || 'The subscription could not be cancelled.')
+    });
   }
 
-  loadInvoices() {
-    this.billingService.getInvoices()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(
-        (invoices) => {
-          this.invoices = invoices;
-          this.loading = false;
-        },
-        (error) => {
-          this.loading = false;
-        }
-      );
-  }
-
-  subscribe(planId: string) {
-    this.selectingPlanId = planId;
-    this.billingService.subscribe({ planId })
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(
-        (subscription) => {
-          this.subscription = subscription;
-          this.success = 'Successfully subscribed to plan!';
-          this.selectingPlanId = null;
-          setTimeout(() => this.success = null, 5000);
-        },
-        (error) => {
-          this.error = error.error?.message || 'Failed to subscribe';
-          this.selectingPlanId = null;
-        }
-      );
-  }
-
-  cancelSubscription() {
-    if (!confirm('Are you sure you want to cancel your subscription?')) {
-      return;
-    }
-
-    this.billingService.cancelSubscription()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(
-        () => {
-          this.subscription = null;
-          this.success = 'Subscription cancelled';
-          setTimeout(() => this.success = null, 5000);
-        },
-        (error) => {
-          this.error = 'Failed to cancel subscription';
-        }
-      );
-  }
-
-  getStatusClass(status: string): string {
-    switch (status) {
-      case 'ACTIVE':
-        return 'status-active';
-      case 'TRIALING':
-        return 'status-trialing';
-      case 'PAST_DUE':
-        return 'status-past-due';
-      case 'CANCELED':
-        return 'status-canceled';
-      default:
-        return '';
-    }
-  }
-
-  navigateBack() {
-    this.router.navigate(['/dashboard']);
+  statusClass(status: string): string {
+    return `status-${status.toLowerCase().replace(/_/g, '-')}`;
   }
 }

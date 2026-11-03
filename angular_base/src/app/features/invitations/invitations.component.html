@@ -1,0 +1,38 @@
+<div class="invitations">
+  <h1>Invitations</h1>
+
+  <div *ngIf="error" class="alert-error" data-testid="invitations-error">{{ error }}</div>
+  <div *ngIf="message" class="alert-ok" data-testid="invitations-message">{{ message }}</div>
+
+  <ng-container *ngIf="permissions$ | async as permissions">
+    <form *ngIf="permissions.canInvite; else noWrite" [formGroup]="form" (ngSubmit)="invite()" data-testid="invite-form">
+      <label for="inviteEmail">Email</label>
+      <input id="inviteEmail" type="email" formControlName="email" placeholder="colleague@example.com" />
+      <label for="inviteRole">Role</label>
+      <select id="inviteRole" formControlName="role" data-testid="invite-role">
+        <option *ngFor="let role of permissions.invitableRoles" [value]="role">{{ role }}</option>
+      </select>
+      <button type="submit" data-testid="invite-submit">Send invitation</button>
+    </form>
+    <ng-template #noWrite>
+      <p class="hint" data-testid="invite-unavailable">
+        {{ permissions.readOnly ? 'Your access is read-only, so you cannot send invitations.' : 'You cannot send invitations.' }}
+      </p>
+    </ng-template>
+
+    <p *ngIf="loading">Loading...</p>
+    <ul class="list">
+      <li *ngFor="let invitation of invitations" data-testid="invitation">
+        <span>{{ invitation.email }}</span>
+        <span class="role">{{ invitation.role }}</span>
+        <span class="status">{{ invitation.status }}</span>
+        <button
+          type="button"
+          *ngIf="permissions.canInvite && invitation.status === 'PENDING'"
+          data-testid="revoke"
+          (click)="revoke(invitation)"
+        >Revoke</button>
+      </li>
+    </ul>
+  </ng-container>
+</div>

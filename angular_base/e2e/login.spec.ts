@@ -14,7 +14,7 @@ test.describe('REQ-AUTH-01 a user with one organization is signed in at once', (
       if (call.path === '/auth/login') {
         return { body: tokenResponse('tenant-a') };
       }
-      return call.path === '/organizations' ? { body: [] } : undefined;
+      return call.path === '/notifications/in-app' ? { body: { items: [], page: 0, size: 20, totalItems: 0, unreadCount: 0 } } : undefined;
     });
 
     await logIn(page);
@@ -22,7 +22,7 @@ test.describe('REQ-AUTH-01 a user with one organization is signed in at once', (
     await expect(page).toHaveURL(/\/dashboard/);
     expect(await page.evaluate(() => localStorage.getItem('msaas.activeTenant'))).toBe('tenant-a');
     expect(calls.find(call => call.path === '/auth/login')?.authorization).toBeUndefined();
-    expect(calls.find(call => call.path === '/organizations')?.authorization).toMatch(/^Bearer /);
+    expect(calls.find(call => call.path === '/notifications/in-app')?.authorization).toMatch(/^Bearer /);
   });
 
   test('a wrong password shows the reason and stays on the page', async ({ page }) => {
@@ -118,8 +118,8 @@ test.describe('REQ-AUTH-04 each organization keeps its own token', () => {
   test('a page that needs sign-in sends the user to log in and back', async ({ page }) => {
     await stubGateway(page, () => undefined);
 
-    await page.goto('/billing/42');
+    await page.goto('/billing');
 
-    await expect(page).toHaveURL(/\/login\?returnUrl=%2Fbilling%2F42/);
+    await expect(page).toHaveURL(/\/login\?returnUrl=%2Fbilling/);
   });
 });

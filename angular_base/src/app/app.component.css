@@ -40,3 +40,12 @@
   font-size: 12px;
   text-align: center;
 }
+
+.readonly-badge {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--warning-color);
+  color: #111;
+  font-size: 12px;
+}

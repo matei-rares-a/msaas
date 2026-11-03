@@ -1,0 +1,34 @@
+<div class="journal">
+  <h1>Activity journal</h1>
+
+  <form [formGroup]="form" (ngSubmit)="search()" class="filters" data-testid="journal-filters">
+    <label>From <input type="datetime-local" formControlName="from" data-testid="filter-from" /></label>
+    <label>To <input type="datetime-local" formControlName="to" data-testid="filter-to" /></label>
+    <label>Event types <input formControlName="eventTypes" placeholder="MEMBER_ROLE_CHANGED, LOGIN" data-testid="filter-types" /></label>
+    <label>Actor <input formControlName="actorUserId" placeholder="user id" data-testid="filter-actor" /></label>
+    <button type="submit" data-testid="journal-search">Search</button>
+  </form>
+
+  <div *ngIf="error" class="alert-error" data-testid="journal-error">{{ error }}</div>
+  <p *ngIf="loading">Loading...</p>
+
+  <ng-container *ngIf="result as page">
+    <p *ngIf="page.items.length === 0 && !loading" data-testid="journal-empty">No entries match.</p>
+    <table *ngIf="page.items.length > 0" class="entries">
+      <thead><tr><th>When</th><th>Event</th><th>Actor</th><th>Details</th></tr></thead>
+      <tbody>
+        <tr *ngFor="let entry of page.items" data-testid="journal-entry">
+          <td>{{ entry.createdAt | date: 'medium' }}</td>
+          <td>{{ entry.eventType }}</td>
+          <td>{{ entry.actorUserId ? (entry.actorUserId | slice: 0 : 8) : 'system' }}</td>
+          <td><code>{{ entry.metadata }}</code></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="paging" *ngIf="page.totalPages > 1">
+      <button type="button" data-testid="journal-previous" [disabled]="page.page === 0" (click)="previous()">Previous</button>
+      <span data-testid="journal-page">Page {{ page.page + 1 }} of {{ page.totalPages }} ({{ page.totalItems }} entries)</span>
+      <button type="button" data-testid="journal-next" [disabled]="page.page + 1 >= page.totalPages" (click)="next()">Next</button>
+    </div>
+  </ng-container>
+</div>
