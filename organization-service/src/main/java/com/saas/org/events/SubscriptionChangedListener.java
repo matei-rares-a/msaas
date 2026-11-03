@@ -2,6 +2,8 @@ package com.saas.org.events;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.saas.org.cache.CacheRegions;
+import com.saas.org.cache.TenantCache;
 import com.saas.org.entity.Tenant;
 import com.saas.org.event.SubscriptionChangedPayload;
 import com.saas.org.repository.TenantRepository;
@@ -31,13 +33,15 @@ public class SubscriptionChangedListener {
     private final ProcessedEventStore processedEventStore;
     private final ObjectMapper objectMapper;
     private final TransactionTemplate transactionTemplate;
+    private final TenantCache cache;
 
     public SubscriptionChangedListener(TenantRepository tenantRepository, ProcessedEventStore processedEventStore,
-            ObjectMapper objectMapper, PlatformTransactionManager transactionManager) {
+            ObjectMapper objectMapper, PlatformTransactionManager transactionManager, TenantCache cache) {
         this.tenantRepository = tenantRepository;
         this.processedEventStore = processedEventStore;
         this.objectMapper = objectMapper;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.cache = cache;
     }
 
     @KafkaListener(topics = "billing.events", groupId = "org-service")
@@ -47,6 +51,10 @@ public class SubscriptionChangedListener {
         if (!"SUBSCRIPTION_CHANGED".equals(envelope.getEventType())) {
             return; // billing.events may carry other event types later (forward-compatible, not an error)
         }
+
+        // the cached write-access answer is stale the moment billing says the subscription changed (REQ-SCALE-01);
+        // removing it is harmless when the event is a duplicate or the tenant is unknown, so it comes first
+        cache.evict(CacheRegions.ACCESS_STATUS, envelope.getTenantId(), null);
 
         EventConsumerSupport.runWithTenantFromEnvelope(envelope, () -> transactionTemplate.executeWithoutResult(status -> {
             if (!processedEventStore.markProcessed(envelope.getEventId(), envelope.getTenantId())) {

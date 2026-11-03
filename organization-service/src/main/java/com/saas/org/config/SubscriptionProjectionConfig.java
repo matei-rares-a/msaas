@@ -1,6 +1,7 @@
 package com.saas.org.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.saas.org.cache.TenantCache;
 import com.saas.org.events.SubscriptionChangedListener;
 import com.saas.org.repository.TenantRepository;
 import com.saas.shared.events.consumer.KafkaDeadLetterSupport;
@@ -29,8 +30,8 @@ public class SubscriptionProjectionConfig {
 
     @Bean
     public SubscriptionChangedListener subscriptionChangedListener(TenantRepository tenantRepository,
-            DataSource dataSource, ObjectMapper objectMapper, PlatformTransactionManager transactionManager) {
-        return new SubscriptionChangedListener(tenantRepository, new ProcessedEventStore(dataSource), objectMapper, transactionManager);
+            DataSource dataSource, ObjectMapper objectMapper, PlatformTransactionManager transactionManager, TenantCache cache) {
+        return new SubscriptionChangedListener(tenantRepository, new ProcessedEventStore(dataSource), objectMapper, transactionManager, cache);
     }
 
     /** Dedicated producer, independent of saas.outbox.relay.enabled (that one is for the relay only):

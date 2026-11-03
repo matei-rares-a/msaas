@@ -174,6 +174,7 @@ services:
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
       BILLING_SERVICE_BASE_URL: http://billing-service:8083
       OBJECT_STORAGE_LOCAL_ROOT: /data/object-storage
+      REDIS_HOST: redis
     volumes:
       - org-object-storage:/data/object-storage
     depends_on:
@@ -182,6 +183,8 @@ services:
       kafka:
         condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8082/actuator/health"]

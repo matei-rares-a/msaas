@@ -1,5 +1,6 @@
 package com.saas.org.service;
 
+import com.saas.org.cache.MembershipAccessCache;
 import com.saas.org.dto.AdminDemotionRequestResponse;
 import com.saas.org.dto.MemberRoleResponse;
 import com.saas.org.dto.OrganizationResponse;
@@ -44,10 +45,12 @@ public class OrganizationService {
     private final OutboxWriter outboxWriter;
     private final Clock clock;
     private final TransactionTemplate transactionTemplate;
+    private final MembershipAccessCache memberAccess;
 
     public OrganizationService(TenantRepository tenantRepository, MembershipRepository membershipRepository,
             AdminDemotionRequestRepository demotionRequestRepository, TenantSettingsRepository settingsRepository,
-            ThemeService themeService, OutboxWriter outboxWriter, Clock clock, PlatformTransactionManager transactionManager) {
+            ThemeService themeService, OutboxWriter outboxWriter, Clock clock, PlatformTransactionManager transactionManager,
+            MembershipAccessCache memberAccess) {
         this.tenantRepository = tenantRepository;
         this.membershipRepository = membershipRepository;
         this.demotionRequestRepository = demotionRequestRepository;
@@ -56,6 +59,7 @@ public class OrganizationService {
         this.outboxWriter = outboxWriter;
         this.clock = clock;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.memberAccess = memberAccess;
     }
 
     /** The creator becomes ADMIN, with write access, of the brand-new tenant. */
@@ -121,7 +125,7 @@ public class OrganizationService {
      * requires the target's acceptance instead of applying immediately (REQ-ROLE-04).
      */
     public RoleChangeOutcome updateMemberRole(UUID tenantId, UUID callerUserId, UUID targetUserId, Membership.Role newRole) {
-        return TenantContext.callWith(tenantId, () -> transactionTemplate.execute(status -> {
+        RoleChangeOutcome outcome = TenantContext.callWith(tenantId, () -> transactionTemplate.execute(status -> {
             Membership caller = membershipRepository.findByUserId(callerUserId)
                     .orElseThrow(() -> new SecurityException("not a member of this organization"));
             if (caller.isReadOnly() || caller.getRole() != Membership.Role.ADMIN) {
@@ -157,11 +161,13 @@ public class OrganizationService {
                     tenantId, callerUserId, targetUserId, previousRole.name(), newRole.name()));
             return RoleChangeOutcome.applied(new MemberRoleResponse(target.getUserId(), target.getRole().name()));
         }));
+        memberAccess.evict(tenantId, targetUserId); // the cached role is the old one now (REQ-SCALE-01)
+        return outcome;
     }
 
     /** Only the targeted admin can accept their own demotion (REQ-ROLE-04). */
     public MemberRoleResponse acceptAdminDemotion(UUID tenantId, UUID requestId, UUID callerUserId) {
-        return TenantContext.callWith(tenantId, () -> transactionTemplate.execute(status -> {
+        MemberRoleResponse response = TenantContext.callWith(tenantId, () -> transactionTemplate.execute(status -> {
             AdminDemotionRequest request = requirePendingRequest(requestId, callerUserId);
 
             Membership target = membershipRepository.findByUserId(request.getTargetUserId())
@@ -177,6 +183,8 @@ public class OrganizationService {
 
             return new MemberRoleResponse(target.getUserId(), target.getRole().name());
         }));
+        memberAccess.evict(tenantId, callerUserId); // the caller is the targeted admin
+        return response;
     }
 
     /** Only the targeted admin can reject their own demotion; nothing changes besides the request status. */

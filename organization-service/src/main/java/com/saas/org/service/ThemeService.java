@@ -1,5 +1,8 @@
 package com.saas.org.service;
 
+import com.saas.org.cache.CacheRegions;
+import com.saas.org.cache.MembershipAccessCache;
+import com.saas.org.cache.TenantCache;
 import com.saas.org.dto.PaletteView;
 import com.saas.org.dto.ThemeResponse;
 import com.saas.org.entity.Membership;
@@ -35,16 +38,20 @@ public class ThemeService {
     private final OutboxWriter outboxWriter;
     private final TransactionTemplate transactionTemplate;
     private final String defaultPaletteId;
+    private final MembershipAccessCache memberAccess;
+    private final TenantCache cache;
 
     public ThemeService(TenantSettingsRepository settingsRepository, MembershipRepository membershipRepository,
             PaletteCatalogReader paletteCatalog, OutboxWriter outboxWriter, PlatformTransactionManager transactionManager,
-            @Value("${saas.theme.default-palette-id}") String defaultPaletteId) {
+            @Value("${saas.theme.default-palette-id}") String defaultPaletteId, MembershipAccessCache memberAccess, TenantCache cache) {
         this.settingsRepository = settingsRepository;
         this.membershipRepository = membershipRepository;
         this.paletteCatalog = paletteCatalog;
         this.outboxWriter = outboxWriter;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.defaultPaletteId = defaultPaletteId;
+        this.memberAccess = memberAccess;
+        this.cache = cache;
     }
 
     /** The settings row every new tenant starts with (REQ-PERS-05); saved by the caller, in its own transaction. */
@@ -57,12 +64,23 @@ public class ThemeService {
         return settings;
     }
 
-    /** Any member reads the theme; a tenant without a settings row yet gets the default one. */
+    /**
+     * Any member reads the theme; a tenant without a settings row yet gets the default one. Both the membership
+     * and the theme come from Redis when they can (REQ-SCALE-01); {@link #updatePalette} and the logo change remove the theme.
+     */
     public ThemeResponse getTheme(UUID tenantId, UUID callerUserId) {
-        TenantSettings settings = TenantContext.callWith(tenantId, () -> transactionTemplate.execute(status -> {
-            requireMember(callerUserId);
-            return settingsRepository.findFirstByOrderByCreatedAtAsc().orElse(null);
-        }));
+        requireMemberCached(tenantId, callerUserId);
+        return cache.get(CacheRegions.THEME, tenantId, null, ThemeResponse.class, cache.ttl(), () -> loadTheme(tenantId));
+    }
+
+    /** Called by whoever changes the settings document, after the change is committed. */
+    public void evictTheme(UUID tenantId) {
+        cache.evict(CacheRegions.THEME, tenantId, null);
+    }
+
+    private ThemeResponse loadTheme(UUID tenantId) {
+        TenantSettings settings = TenantContext.callWith(tenantId, () -> transactionTemplate.execute(status ->
+                settingsRepository.findFirstByOrderByCreatedAtAsc().orElse(null)));
         String paletteId = settings != null && settings.paletteId() != null ? settings.paletteId() : defaultPaletteId;
         PaletteView palette = paletteCatalog.findAny(paletteId).or(() -> paletteCatalog.findAny(defaultPaletteId)).orElse(null);
         return new ThemeResponse(paletteId, palette, settings == null ? null : settings.logoUrl());
@@ -70,7 +88,7 @@ public class ThemeService {
 
     /** The palettes an ADMIN can currently pick from, for any member to see. */
     public List<PaletteView> listPalettes(UUID tenantId, UUID callerUserId) {
-        TenantContext.callWith(tenantId, () -> transactionTemplate.execute(status -> requireMember(callerUserId)));
+        requireMemberCached(tenantId, callerUserId);
         return paletteCatalog.listActive();
     }
 
@@ -93,7 +111,12 @@ public class ThemeService {
                     new ThemeChangedPayload(tenantId, callerUserId, palette.id())), OutboxDestination.KAFKA, "org.events");
             return null;
         }));
+        evictTheme(tenantId);
         return getTheme(tenantId, callerUserId);
+    }
+
+    private void requireMemberCached(UUID tenantId, UUID userId) {
+        memberAccess.find(tenantId, userId).orElseThrow(() -> new SecurityException("not a member of this organization"));
     }
 
     private Membership requireMember(UUID userId) {

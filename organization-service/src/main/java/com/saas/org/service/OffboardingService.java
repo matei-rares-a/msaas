@@ -1,5 +1,6 @@
 package com.saas.org.service;
 
+import com.saas.org.cache.MembershipAccessCache;
 import com.saas.org.entity.Invitation;
 import com.saas.org.entity.Membership;
 import com.saas.org.event.MemberOffboardedPayload;
@@ -42,12 +43,13 @@ public class OffboardingService {
     private final LunchParticipantRepository lunchParticipantRepository;
     private final OutboxWriter outboxWriter;
     private final TransactionTemplate transactionTemplate;
+    private final MembershipAccessCache memberAccess;
 
     public OffboardingService(MembershipRepository membershipRepository, InvitationRepository invitationRepository,
             AdminDemotionRequestRepository demotionRequestRepository, LeaveRequestRepository leaveRequestRepository,
             LeaveBalanceOverrideRepository leaveBalanceOverrideRepository, LunchParticipantRepository lunchParticipantRepository,
             OutboxWriter outboxWriter,
-            PlatformTransactionManager transactionManager) {
+            PlatformTransactionManager transactionManager, MembershipAccessCache memberAccess) {
         this.membershipRepository = membershipRepository;
         this.invitationRepository = invitationRepository;
         this.demotionRequestRepository = demotionRequestRepository;
@@ -56,6 +58,7 @@ public class OffboardingService {
         this.lunchParticipantRepository = lunchParticipantRepository;
         this.outboxWriter = outboxWriter;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.memberAccess = memberAccess;
     }
 
     /**
@@ -95,5 +98,6 @@ public class OffboardingService {
                     new MemberOffboardedPayload(tenantId, targetUserId)), OutboxDestination.KAFKA, "org.events");
             return null;
         }));
+        memberAccess.evict(tenantId, targetUserId); // the removed member must not keep being served from the cache (REQ-SCALE-01)
     }
 }

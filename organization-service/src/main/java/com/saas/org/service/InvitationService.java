@@ -1,6 +1,7 @@
 package com.saas.org.service;
 
 import com.saas.org.command.SendInvitationEmailCommand;
+import com.saas.org.cache.MembershipAccessCache;
 import com.saas.org.dto.AcceptInvitationResponse;
 import com.saas.org.dto.InvitationResponse;
 import com.saas.org.entity.Invitation;
@@ -45,11 +46,12 @@ public class InvitationService {
     private final Clock clock;
     private final TransactionTemplate transactionTemplate;
     private final int defaultExpiryDays;
+    private final MembershipAccessCache memberAccess;
 
     public InvitationService(TenantRepository tenantRepository, MembershipRepository membershipRepository,
             InvitationRepository invitationRepository, InvitationTokenLookup invitationTokenLookup,
             OutboxWriter outboxWriter, Clock clock, PlatformTransactionManager transactionManager,
-            @Value("${saas.invitation.default-expiry-days}") int defaultExpiryDays) {
+            @Value("${saas.invitation.default-expiry-days}") int defaultExpiryDays, MembershipAccessCache memberAccess) {
         this.tenantRepository = tenantRepository;
         this.membershipRepository = membershipRepository;
         this.invitationRepository = invitationRepository;
@@ -58,6 +60,7 @@ public class InvitationService {
         this.clock = clock;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.defaultExpiryDays = defaultExpiryDays;
+        this.memberAccess = memberAccess;
     }
 
     /** ADMIN invites any role; MANAGER only USER; USER never (REQ-ROLE-02, REQ-ROLE-05, REQ-MGR-01).
@@ -147,7 +150,7 @@ public class InvitationService {
      * read/write runs inside {@code TenantContext}, RLS-protected. */
     public AcceptInvitationResponse acceptInvitation(String token, UUID acceptingUserId) {
         UUID tenantId = tenantIdForToken(token);
-        return TenantContext.callWith(tenantId, () -> transactionTemplate.execute(status -> {
+        AcceptInvitationResponse response = TenantContext.callWith(tenantId, () -> transactionTemplate.execute(status -> {
             Invitation invitation = invitationRepository.findByToken(token)
                     .orElseThrow(() -> new IllegalArgumentException("invalid invitation token"));
             if (invitation.getStatus() != Invitation.Status.PENDING) {
@@ -181,6 +184,8 @@ public class InvitationService {
 
             return new AcceptInvitationResponse(tenantId, invitation.getRole().name());
         }));
+        memberAccess.evict(tenantId, acceptingUserId);
+        return response;
     }
 
     /** ADMIN with write access only (same guard as {@link #revokeInvitation}). */

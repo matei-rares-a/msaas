@@ -89,6 +89,7 @@ public class LogoService {
             storage.delete(key); // never leave an orphan behind a failed update
             throw e;
         }
+        themeService.evictTheme(tenantId); // the cached theme still has the old logo url (REQ-SCALE-01)
         if (previousKey != null && !previousKey.equals(key)) {
             storage.delete(previousKey);
         }

@@ -42,6 +42,13 @@ spring:
     port: 5672
     username: ${RABBITMQ_USER}
     password: ${RABBITMQ_PASSWORD}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+      # a slow or dead Redis must cost milliseconds, not a stuck request: the cache falls back to the database
+      timeout: 500ms
+      connect-timeout: 1s
 
 server:
   port: 8082
@@ -114,6 +121,12 @@ saas:
   # tenants.invitation_expiry_days (PATCH /organizations/{tenantId}/invitation-expiry)
   invitation:
     default-expiry-days: ${INVITATION_DEFAULT_EXPIRY_DAYS:7}
+  # Redis cache (P10.1, REQ-SCALE-01): theme, member roles and the subscription's write-access status. Entries are removed
+  # by the code or event that changes them and also expire on their own; the TTLs are defaults, not requirements.
+  cache:
+    enabled: ${CACHE_ENABLED:true}
+    ttl: ${CACHE_TTL:PT5M}
+    access-status-ttl: ${CACHE_ACCESS_STATUS_TTL:PT1M}
 
 # Synchronous write-access check (P6.4, REQ-BILL-04): if unreachable, fails open to ACTIVE so a
 # billing-service outage does not lock out the rest of the platform.
