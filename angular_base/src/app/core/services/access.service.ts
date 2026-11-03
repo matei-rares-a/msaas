@@ -21,11 +21,24 @@ export interface Permissions {
   /** An ADMIN invites with any role, a MANAGER only with USER (REQ-MGR-01). */
   invitableRoles: Role[];
   canEditTheme: boolean;
+  /** Any member without the read-only flag may ask for leave and join the lunch round (REQ-LEAVE-01, REQ-LUNCH-02). */
+  canWrite: boolean;
+  /** Only an ADMIN with write access switches the business modules (REQ-MOD-01). */
+  canManageModules: boolean;
+  /** MANAGER and ADMIN with write access decide leave requests (REQ-LEAVE-05). */
+  canApproveLeave: boolean;
+  /** The leave policy, the allowances and the free days are the ADMIN's (REQ-LEAVE-02, REQ-LEAVE-03). */
+  canSetLeavePolicy: boolean;
+  /** MANAGER and ADMIN with write access configure and cancel the lunch round (REQ-LUNCH-01, REQ-LUNCH-02). */
+  canConfigureLunch: boolean;
+  /** MANAGER and ADMIN see every lunch group; a participant sees their own (REQ-LUNCH-04). */
+  canSeeAllLunchGroups: boolean;
 }
 
 const NOBODY: Permissions = {
   role: null, readOnly: false, canSeeBilling: false, canChangeBilling: false, canSeeJournal: false, canInvite: false,
-  invitableRoles: [], canEditTheme: false
+  invitableRoles: [], canEditTheme: false, canWrite: false, canManageModules: false, canApproveLeave: false,
+  canSetLeavePolicy: false, canConfigureLunch: false, canSeeAllLunchGroups: false
 };
 
 export function permissionsOf(user: Pick<User, 'role' | 'readOnly'> | null): Permissions {
@@ -46,7 +59,13 @@ export function permissionsOf(user: Pick<User, 'role' | 'readOnly'> | null): Per
     canSeeJournal: staff,
     canInvite: staff && canWrite,
     invitableRoles: staff && canWrite ? (role === 'ADMIN' ? ['USER', 'MANAGER', 'ADMIN'] : ['USER']) : [],
-    canEditTheme: role === 'ADMIN' && canWrite
+    canEditTheme: role === 'ADMIN' && canWrite,
+    canWrite,
+    canManageModules: role === 'ADMIN' && canWrite,
+    canApproveLeave: staff && canWrite,
+    canSetLeavePolicy: role === 'ADMIN' && canWrite,
+    canConfigureLunch: staff && canWrite,
+    canSeeAllLunchGroups: staff
   };
 }
 

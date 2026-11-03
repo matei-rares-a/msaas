@@ -1,0 +1,69 @@
+<div class="leave" *ngIf="permissions$ | async as permissions">
+  <h1>Leave</h1>
+  <nav class="sub">
+    <a routerLink="/leave/approvals" *ngIf="permissions.canApproveLeave" data-testid="link-approvals">Requests to decide</a>
+    <a routerLink="/leave/policy" *ngIf="permissions.canSetLeavePolicy" data-testid="link-policy">Policy</a>
+  </nav>
+
+  <div *ngIf="error" class="alert-error" data-testid="leave-error">{{ error }}</div>
+  <div *ngIf="message" class="alert-ok" data-testid="leave-message">{{ message }}</div>
+
+  <section class="balance" *ngIf="balance" data-testid="balance">
+    <h2>Your balance for {{ balance.year }}</h2>
+    <dl>
+      <dt>Allowed</dt><dd data-testid="balance-allocated">{{ balance.allocated }}</dd>
+      <dt>Approved</dt><dd data-testid="balance-approved">{{ balance.approved }}</dd>
+      <dt>Waiting</dt><dd data-testid="balance-pending">{{ balance.pending }}</dd>
+      <dt>Available</dt><dd data-testid="balance-available">{{ balance.available }}</dd>
+    </dl>
+    <p class="hint">Only working days count: weekends and the days off of your organization are left out.</p>
+  </section>
+
+  <section>
+    <h2>Ask for leave</h2>
+    <form *ngIf="permissions.canWrite; else readonly" [formGroup]="form" (ngSubmit)="submit()" data-testid="leave-form">
+      <label for="leaveType">Type</label>
+      <select id="leaveType" formControlName="type" data-testid="leave-type">
+        <option value="ODIHNA">Annual leave</option>
+        <option value="FARA_PLATA">Unpaid leave</option>
+      </select>
+      <label for="leaveStart">First day</label>
+      <input id="leaveStart" type="date" formControlName="startDate" data-testid="leave-start" />
+      <label for="leaveEnd">Last day</label>
+      <input id="leaveEnd" type="date" formControlName="endDate" data-testid="leave-end" />
+      <label for="leaveReason">Reason (only the people who decide see it)</label>
+      <textarea id="leaveReason" formControlName="reason" maxlength="500" data-testid="leave-reason"></textarea>
+      <button type="submit" data-testid="leave-submit">Send request</button>
+    </form>
+    <ng-template #readonly>
+      <p class="hint" data-testid="leave-readonly">Your access is read-only, so you cannot ask for leave.</p>
+    </ng-template>
+  </section>
+
+  <section>
+    <h2>Your requests</h2>
+    <p *ngIf="loading">Loading...</p>
+    <p *ngIf="!loading && requests.length === 0" data-testid="no-requests">You have no requests.</p>
+    <ul class="list">
+      <li *ngFor="let request of requests" data-testid="request">
+        <span>{{ request.startDate }} &ndash; {{ request.endDate }}</span>
+        <span>{{ request.days }} days</span>
+        <span class="status" [class]="'status-' + request.status.toLowerCase()" data-testid="request-status">{{ request.status }}</span>
+        <span class="hint" *ngIf="request.decisionComment">{{ request.decisionComment }}</span>
+        <button type="button" *ngIf="permissions.canWrite && canCancel(request)" data-testid="cancel-request" (click)="cancel(request)">Cancel</button>
+      </li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Team calendar</h2>
+    <p class="hint">Who is away and when. The type and the reason are not shown.</p>
+    <p *ngIf="calendar.length === 0" data-testid="no-calendar">Nobody is away in this period.</p>
+    <ul class="list">
+      <li *ngFor="let entry of calendar" data-testid="calendar-entry">
+        <span>{{ isMine(entry) ? 'You' : shortId(entry.userId) }}</span>
+        <span>{{ entry.startDate }} &ndash; {{ entry.endDate }}</span>
+      </li>
+    </ul>
+  </section>
+</div>

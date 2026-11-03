@@ -74,3 +74,51 @@ describe('REQ-MGR-01 who may be invited with which role', () => {
     expect(as('MANAGER').invitableRoles).toEqual(['USER']);
   });
 });
+
+describe('REQ-MOD-01 only an ADMIN with write access switches the business modules', () => {
+  it('offers the module settings to an ADMIN who can write and to nobody else', () => {
+    expect(as('ADMIN').canManageModules).toBeTrue();
+    expect(as('ADMIN', true).canManageModules).toBeFalse();
+    expect(as('MANAGER').canManageModules).toBeFalse();
+    expect(as('USER').canManageModules).toBeFalse();
+  });
+});
+
+describe('REQ-LEAVE-05 MANAGER and ADMIN decide leave, when they can write', () => {
+  it('offers the decisions to them and to nobody else, and takes them from a read-only approver', () => {
+    expect(as('MANAGER').canApproveLeave).toBeTrue();
+    expect(as('ADMIN').canApproveLeave).toBeTrue();
+    expect(as('USER').canApproveLeave).toBeFalse();
+    expect(as('MANAGER', true).canApproveLeave).toBeFalse();
+    expect(as('ADMIN', true).canApproveLeave).toBeFalse();
+  });
+});
+
+describe('REQ-LEAVE-01 every member who can write asks for leave for themselves', () => {
+  it('offers the request to any role, and not to a read-only member', () => {
+    for (const role of ['ADMIN', 'MANAGER', 'USER']) {
+      expect(as(role).canWrite).withContext(role).toBeTrue();
+      expect(as(role, true).canWrite).withContext(role + ' read-only').toBeFalse();
+    }
+  });
+});
+
+describe('REQ-LEAVE-03 the leave policy and the allowances are the ADMIN\'s', () => {
+  it('offers them to an ADMIN who can write, not to a MANAGER', () => {
+    expect(as('ADMIN').canSetLeavePolicy).toBeTrue();
+    expect(as('ADMIN', true).canSetLeavePolicy).toBeFalse();
+    expect(as('MANAGER').canSetLeavePolicy).toBeFalse();
+    expect(as('USER').canSetLeavePolicy).toBeFalse();
+  });
+});
+
+describe('REQ-LUNCH-01 MANAGER and ADMIN configure the lunch roulette', () => {
+  it('offers the settings to them when they can write, and the groups of everyone to them even when they cannot', () => {
+    expect(as('MANAGER').canConfigureLunch).toBeTrue();
+    expect(as('ADMIN').canConfigureLunch).toBeTrue();
+    expect(as('USER').canConfigureLunch).toBeFalse();
+    expect(as('MANAGER', true).canConfigureLunch).toBeFalse();
+    expect(as('MANAGER', true).canSeeAllLunchGroups).toBeTrue();
+    expect(as('USER').canSeeAllLunchGroups).toBeFalse();
+  });
+});

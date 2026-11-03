@@ -1,0 +1,30 @@
+<div class="leave">
+  <h1>Requests to decide</h1>
+  <nav class="sub"><a routerLink="/leave">Back to leave</a></nav>
+
+  <div *ngIf="error" class="alert-error" data-testid="approvals-error">{{ error }}</div>
+  <div *ngIf="message" class="alert-ok" data-testid="approvals-message">{{ message }}</div>
+  <p *ngIf="loading">Loading...</p>
+  <p *ngIf="!loading && requests.length === 0" data-testid="no-pending">Nothing is waiting for a decision.</p>
+
+  <ul class="list">
+    <li *ngFor="let request of requests" data-testid="pending-request" class="pending">
+      <div>
+        <strong>{{ shortId(request.userId) }}</strong>
+        <span>{{ request.startDate }} &ndash; {{ request.endDate }} ({{ request.days }} days, {{ request.type === 'ODIHNA' ? 'annual' : 'unpaid' }})</span>
+        <p class="hint" *ngIf="request.reason" data-testid="request-reason">{{ request.reason }}</p>
+      </div>
+      <ng-container *ngIf="!isOwn(request); else own">
+        <input
+          [attr.data-testid]="'comment-' + request.id"
+          placeholder="Comment (optional)"
+          [(ngModel)]="comments[request.id]"
+          name="comment-{{ request.id }}"
+        />
+        <button type="button" data-testid="approve" (click)="approve(request)">Approve</button>
+        <button type="button" data-testid="reject" (click)="reject(request)">Reject</button>
+      </ng-container>
+      <ng-template #own><span class="hint" data-testid="own-request">Your own request is decided by someone else.</span></ng-template>
+    </li>
+  </ul>
+</div>

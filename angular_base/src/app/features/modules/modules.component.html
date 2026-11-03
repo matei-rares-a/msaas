@@ -1,0 +1,28 @@
+<div class="modules">
+  <h1>Modules</h1>
+  <p class="hint">Modules are off until you turn them on. Turning one off hides it from everyone but keeps its data.</p>
+
+  <div *ngIf="error" class="alert-error" data-testid="modules-error">{{ error }}</div>
+  <div *ngIf="message" class="alert-ok" data-testid="modules-message">{{ message }}</div>
+
+  <div class="row" *ngFor="let row of rows">
+    <div>
+      <strong>{{ row.label }}</strong>
+      <p>{{ row.description }}</p>
+    </div>
+    <button
+      type="button"
+      [attr.data-testid]="'toggle-' + row.name"
+      [attr.aria-pressed]="enabled(row.name)"
+      [disabled]="busy || !state"
+      (click)="toggle(row)"
+    >{{ enabled(row.name) ? 'On' : 'Off' }}</button>
+  </div>
+
+  <h2>Time zone</h2>
+  <p class="hint">Dates and deadlines of the modules follow it.</p>
+  <form (ngSubmit)="saveTimezone()">
+    <input name="timezone" [(ngModel)]="timezone" placeholder="Europe/Bucharest" data-testid="timezone" />
+    <button type="submit" data-testid="save-timezone" [disabled]="busy || !timezone.trim()">Save</button>
+  </form>
+</div>

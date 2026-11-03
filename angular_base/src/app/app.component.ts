@@ -7,6 +7,7 @@ import { AuthService } from './core/services/auth.service';
 import { ThemeService } from './core/services/theme.service';
 import { NotificationService } from './core/services/notification.service';
 import { AccessService } from './core/services/access.service';
+import { LEAVE_MODULE, LUNCH_MODULE, ModulesService } from './core/services/modules.service';
 
 @Component({
   selector: 'app-root',
@@ -20,6 +21,8 @@ export class AppComponent implements OnInit, OnDestroy {
   logo$ = this.themeService.logo$;
   unread$ = this.notifications.unread$;
   permissions$ = this.access.permissions$;
+  leaveOn$ = this.modules.enabled$(LEAVE_MODULE);
+  lunchOn$ = this.modules.enabled$(LUNCH_MODULE);
 
   private subscription?: Subscription;
 
@@ -27,14 +30,15 @@ export class AppComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private themeService: ThemeService,
     private notifications: NotificationService,
-    private access: AccessService
+    private access: AccessService,
+    private modules: ModulesService
   ) {}
 
   /**
    * The theme comes with the tenant (REQ-PERS-06): when the app opens for a tenant, and whenever the active tenant
    * changes, its own theme is read from its endpoint and applied; with nobody signed in the default look is back.
    * A theme that cannot be read leaves the default look and breaks nothing else. The notifications follow the same
-   * tenant (REQ-NOTIF-04): loaded when the app opens for it, the unread count asked again every 60 seconds, and all of
+   * tenant (REQ-NOTIF-04), and so do the module settings (REQ-MOD-01), which decide which module links exist: loaded when the app opens for it, the unread count asked again every 60 seconds, and all of
    * it dropped when the tenant changes or nobody is signed in.
    */
   ngOnInit() {
@@ -46,9 +50,11 @@ export class AppComponent implements OnInit, OnDestroy {
           if (!tenantId) {
             this.themeService.clear();
             this.notifications.stop();
+            this.modules.clear();
             return of(null);
           }
           this.notifications.start();
+          this.modules.load(tenantId).subscribe();
           return this.themeService.loadFor(tenantId).pipe(catchError(() => of(null)));
         })
       )

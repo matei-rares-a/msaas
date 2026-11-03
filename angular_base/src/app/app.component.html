@@ -8,7 +8,10 @@
     </a>
     <a *ngIf="permissions.canSeeBilling" routerLink="/billing" routerLinkActive="active" data-testid="nav-billing">Billing</a>
     <a *ngIf="permissions.canSeeBilling" routerLink="/invitations" routerLinkActive="active" data-testid="nav-invitations">Invitations</a>
+    <a *ngIf="leaveOn$ | async" routerLink="/leave" routerLinkActive="active" data-testid="nav-leave">Leave</a>
+    <a *ngIf="lunchOn$ | async" routerLink="/lunch" routerLinkActive="active" data-testid="nav-lunch">Lunch</a>
     <a *ngIf="permissions.canSeeJournal" routerLink="/journal" routerLinkActive="active" data-testid="nav-journal">Journal</a>
+    <a *ngIf="permissions.canManageModules" routerLink="/modules" routerLinkActive="active" data-testid="nav-modules">Modules</a>
     <a *ngIf="permissions.canEditTheme" routerLink="/theme" routerLinkActive="active" data-testid="nav-theme">Theme</a>
     <span class="readonly-badge" *ngIf="permissions.readOnly" data-testid="nav-readonly">read-only</span>
   </ng-container>

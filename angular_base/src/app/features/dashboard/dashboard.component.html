@@ -15,6 +15,9 @@
       <a class="tile" routerLink="/billing" *ngIf="permissions.canSeeBilling" data-testid="tile-billing">Billing</a>
       <a class="tile" routerLink="/invitations" *ngIf="permissions.canSeeBilling" data-testid="tile-invitations">Invitations</a>
       <a class="tile" routerLink="/journal" *ngIf="permissions.canSeeJournal" data-testid="tile-journal">Activity journal</a>
+      <a class="tile" routerLink="/leave" *ngIf="leaveOn$ | async" data-testid="tile-leave">Leave</a>
+      <a class="tile" routerLink="/lunch" *ngIf="lunchOn$ | async" data-testid="tile-lunch">Lunch roulette</a>
+      <a class="tile" routerLink="/modules" *ngIf="permissions.canManageModules" data-testid="tile-modules">Modules</a>
       <a class="tile" routerLink="/theme" *ngIf="permissions.canEditTheme" data-testid="tile-theme">Theme</a>
     </div>
   </ng-container>

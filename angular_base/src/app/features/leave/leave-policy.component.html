@@ -1,0 +1,42 @@
+<div class="leave">
+  <h1>Leave policy</h1>
+  <nav class="sub"><a routerLink="/leave">Back to leave</a></nav>
+
+  <div *ngIf="error" class="alert-error" data-testid="policy-error">{{ error }}</div>
+  <div *ngIf="message" class="alert-ok" data-testid="policy-message">{{ message }}</div>
+
+  <section>
+    <h2>Yearly allowance</h2>
+    <p class="hint">Working days of annual leave each member has, unless they have an allowance of their own.</p>
+    <form (ngSubmit)="savePolicy()">
+      <input type="number" min="0" name="allowance" [(ngModel)]="allowance" data-testid="default-allowance" />
+      <button type="submit" data-testid="save-policy">Save</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Allowance of one member</h2>
+    <form (ngSubmit)="saveOverride()">
+      <input name="member" placeholder="Member id" [(ngModel)]="overrideUserId" data-testid="override-user" />
+      <input type="number" min="0" name="overrideAllowance" [(ngModel)]="overrideAllowance" data-testid="override-allowance" />
+      <button type="submit" data-testid="save-override">Save</button>
+      <button type="button" data-testid="clear-override" (click)="clearOverride()">Back to default</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Days off in {{ year }}</h2>
+    <p class="hint">Not counted as leave.</p>
+    <ul class="list">
+      <li *ngFor="let holiday of holidays" data-testid="holiday">
+        <span>{{ holiday.date }}</span><span>{{ holiday.name }}</span>
+        <button type="button" data-testid="remove-holiday" (click)="removeHoliday(holiday)">Remove</button>
+      </li>
+    </ul>
+    <form (ngSubmit)="addHoliday()">
+      <input type="date" name="holidayDate" [(ngModel)]="holidayDate" data-testid="holiday-date" />
+      <input name="holidayName" placeholder="Name" [(ngModel)]="holidayName" data-testid="holiday-name" />
+      <button type="submit" data-testid="add-holiday">Add</button>
+    </form>
+  </section>
+</div>

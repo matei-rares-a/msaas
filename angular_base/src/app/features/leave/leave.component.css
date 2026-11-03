@@ -1,0 +1,92 @@
+.leave {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.sub {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+form {
+  display: grid;
+  gap: 8px;
+  max-width: 420px;
+}
+
+input,
+select,
+textarea {
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: var(--primary-color);
+  color: #fff;
+  cursor: pointer;
+}
+
+dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+}
+
+dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+}
+
+.list li {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.hint {
+  color: var(--text-light);
+}
+
+.status-pending {
+  color: var(--warning-color);
+}
+
+.status-approved {
+  color: var(--success-color);
+}
+
+.status-rejected,
+.status-cancelled {
+  color: var(--text-light);
+}
+
+.alert-error,
+.alert-ok {
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.alert-error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.alert-ok {
+  background: #dcfce7;
+  color: #166534;
+}

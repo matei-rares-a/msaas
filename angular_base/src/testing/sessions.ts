@@ -33,3 +33,11 @@ export function storeActiveSession(tenantId: string, expiresAt = Date.now() + 60
   localStorage.setItem('msaas.sessions', JSON.stringify(sessions));
   localStorage.setItem('msaas.activeTenant', tenantId);
 }
+
+/** Signs a user of the given role in to tenant `t` the way a login would, for component tests that read who they are from the token. */
+export function signInAs(role: string, readOnly = false, userId = 'u', tenantId = 't'): void {
+  localStorage.clear();
+  const token = fakeJwt({ sub: userId, tenantId, tenantName: 'T', displayName: 'd', role, readOnly });
+  localStorage.setItem('msaas.sessions', JSON.stringify({ [tenantId]: { accessToken: token, refreshToken: 'r', expiresAt: Date.now() + 60_000 } }));
+  localStorage.setItem('msaas.activeTenant', tenantId);
+}

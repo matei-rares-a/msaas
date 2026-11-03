@@ -15,6 +15,7 @@ export interface RecordedCall {
   body: any;
   /** The names of the parts of a multipart request, in order. */
   parts: string[];
+  search: URLSearchParams;
 }
 
 function base64Url(value: string): string {
@@ -52,6 +53,7 @@ export async function stubGateway(page: Page, handler: Handler): Promise<Recorde
     const call: RecordedCall = {
       method: request.method(),
       path: new URL(request.url()).pathname,
+      search: new URL(request.url()).searchParams,
       authorization: headers['authorization'],
       body: text && contentType.includes('json') ? JSON.parse(text) : undefined,
       parts: text && contentType.includes('multipart') ? [...text.matchAll(/[; ]name="([^"]+)"/g)].map(match => match[1]) : []

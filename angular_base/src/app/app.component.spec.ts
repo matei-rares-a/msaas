@@ -8,8 +8,11 @@ import { ThemeService } from './core/services/theme.service';
 import { authResponse } from '../testing/sessions';
 
 const variable = (name: string) => document.documentElement.style.getPropertyValue(name);
-const answerNotifications = (http: HttpTestingController, unreadCount = 0) =>
+const answerNotifications = (http: HttpTestingController, unreadCount = 0) => {
   http.expectOne(r => r.url === 'http://localhost:8080/notifications/in-app').flush({ items: [], page: 0, size: 20, totalItems: 0, unreadCount });
+  // the module settings are read for the same tenant, whichever it is
+  http.expectOne(r => /\/organizations\/[^/]+\/modules$/.test(r.url)).flush({ modules: { LEAVE: false, LUNCH_ROULETTE: false }, timezone: 'Europe/Bucharest' });
+};
 const theme = (primary: string) => ({
   paletteId: 'p', palette: { id: 'p', name: 'P', kind: 'COLOR', definition: { primary, secondary: '#111111', accent: '#222222' } }, logoUrl: null
 });

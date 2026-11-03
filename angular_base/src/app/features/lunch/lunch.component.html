@@ -1,0 +1,56 @@
+<div class="lunch" *ngIf="permissions$ | async as permissions">
+  <h1>Lunch roulette</h1>
+
+  <div *ngIf="error" class="alert-error" data-testid="lunch-error">{{ error }}</div>
+  <div *ngIf="message" class="alert-ok" data-testid="lunch-message">{{ message }}</div>
+  <p *ngIf="loading">Loading...</p>
+
+  <section *ngIf="round" data-testid="round">
+    <h2>Week of {{ round.weekStart }}</h2>
+    <p>
+      <span class="status" [class]="'status-' + round.status.toLowerCase()" data-testid="round-status">{{ round.status }}</span>
+      <span data-testid="round-count">{{ round.participantCount }} joined</span>
+    </p>
+    <p class="hint" *ngIf="isOpen">Joining closes on {{ round.deadlineAt | date: 'medium' }}.</p>
+    <p class="hint" *ngIf="round.status === 'CANCELLED'" data-testid="round-cancelled">This round was cancelled.</p>
+
+    <ng-container *ngIf="isOpen">
+      <button type="button" *ngIf="permissions.canWrite && !round.enrolled" data-testid="enroll" (click)="enroll()">Join this week</button>
+      <button type="button" *ngIf="permissions.canWrite && round.enrolled" data-testid="withdraw" (click)="withdraw()">Withdraw</button>
+      <span class="hint" *ngIf="round.enrolled" data-testid="enrolled">You are in.</span>
+      <p class="hint" *ngIf="!permissions.canWrite" data-testid="lunch-readonly">Your access is read-only, so you cannot join.</p>
+      <button type="button" class="secondary" *ngIf="permissions.canConfigureLunch && round.id" data-testid="cancel-round" (click)="cancelRound()">Cancel this round</button>
+    </ng-container>
+  </section>
+
+  <section *ngIf="detail && formed" data-testid="groups">
+    <p class="hint" data-testid="formed-week">Round of the week of {{ formed.weekStart }}</p>
+    <h2 *ngIf="detail.myGroup.length > 0">Your group</h2>
+    <ul class="list" *ngIf="detail.myGroup.length > 0" data-testid="my-group">
+      <li *ngFor="let id of detail.myGroup">{{ isMe(id) ? 'You' : shortId(id) }}</li>
+    </ul>
+    <ng-container *ngIf="permissions.canSeeAllLunchGroups">
+      <h2>All groups</h2>
+      <div class="group" *ngFor="let group of detail.groups; let i = index" data-testid="group">
+        <strong>Group {{ i + 1 }}</strong>
+        <span *ngFor="let id of group">{{ isMe(id) ? 'You' : shortId(id) }}</span>
+      </div>
+    </ng-container>
+  </section>
+
+  <section *ngIf="permissions.canConfigureLunch" data-testid="config">
+    <h2>Settings</h2>
+    <form [formGroup]="form" (ngSubmit)="saveConfig()">
+      <label for="lunchDay">Day</label>
+      <select id="lunchDay" formControlName="day" data-testid="config-day">
+        <option *ngFor="let day of weekdays" [value]="day">{{ day }}</option>
+      </select>
+      <label for="lunchCutoff">Joining closes at (time of the organization, HH:mm)</label>
+      <input id="lunchCutoff" formControlName="cutoff" data-testid="config-cutoff" />
+      <label for="lunchSize">Group size (2 to 4)</label>
+      <input id="lunchSize" type="number" min="2" max="4" formControlName="groupSize" data-testid="config-size" />
+      <button type="submit" data-testid="save-config">Save settings</button>
+    </form>
+    <p class="hint" *ngIf="config">Time zone: {{ config.timezone }}</p>
+  </section>
+</div>
