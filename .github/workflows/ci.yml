@@ -47,6 +47,8 @@ jobs:
           node-version: '22'
       - name: Script self-test
         run: node --test scripts/verify/check-traceability.test.mjs
+      - name: README endpoints exist
+        run: node --test scripts/verify/readme-endpoints.test.mjs
       - name: Check every due REQ has a test
         run: node scripts/verify/check-traceability.mjs
 

@@ -36,8 +36,15 @@ npm run build
 npm run watch
 ```
 
+## Tests
+
+- `npm run test:ci`: unit tests (headless Chrome; set `CHROME_BIN` if Chrome is not found, see `node scripts/env/ensure-dev-env.mjs --check` at the repository root)
+- `npm run e2e`: Playwright browser tests against a stubbed gateway
+
 ## Quick Command Summary
 
 - `npm start`: start dev server
 - `npm run build`: production build
 - `npm run watch`: build in watch mode
+- `npm run test:ci`: unit tests
+- `npm run e2e`: browser tests

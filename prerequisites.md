@@ -54,6 +54,17 @@ node scripts/infra/local-stack.mjs --down   # opreste si sterge volumele
 
 Testele de integrare **nu** au nevoie de acest pas: isi pornesc singure containerele prin Testcontainers.
 
+## 5. Suita E2E (toata platforma pe Docker Compose)
+
+```bash
+node scripts/infra/e2e-stack.mjs --all    # construieste jar-urile, ridica stiva, ruleaza testele, o opreste
+node scripts/infra/e2e-stack.mjs --up --skip-build   # doar ridica stiva (gateway pe 127.0.0.1:18080, Postgres pe 127.0.0.1:15432)
+node scripts/infra/e2e-stack.mjs --test    # ruleaza testele pe stiva pornita
+node scripts/infra/e2e-stack.mjs --down
+```
+
+Un test de lunch dureaza ~2,5 minute; intreaga suita, cateva minute dupa build.
+
 ## Cand e nevoie de Docker
 
 | Operatie | Docker |
@@ -62,4 +73,4 @@ Testele de integrare **nu** au nevoie de acest pas: isi pornesc singure containe
 | `mvnw verify -DskipITs`, compilare | nu |
 | build si teste Angular | nu |
 | scriptul de trasabilitate | nu |
-| `scripts/infra/local-stack.mjs` | da |
+| `scripts/infra/local-stack.mjs`, `scripts/infra/e2e-stack.mjs` | da |
