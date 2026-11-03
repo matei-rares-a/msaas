@@ -26,8 +26,8 @@ export const PROJECT = 'msaas-e2e';
 export const GATEWAY_PORT = 18080;
 export const POSTGRES_PORT = 15432;
 
-const SERVICES = ['api-gateway', 'auth-service', 'organization-service', 'billing-service', 'notification-service'];
-const INFRASTRUCTURE = ['postgres', 'pgbouncer', 'kafka', 'rabbitmq', 'redis'];
+export const SERVICES = ['api-gateway', 'auth-service', 'organization-service', 'billing-service', 'notification-service'];
+export const INFRASTRUCTURE = ['postgres', 'pgbouncer', 'kafka', 'rabbitmq', 'redis'];
 
 /**
  * The compose override for the end-to-end run, as YAML text: what is published, and what differs from a deployment. The rate
@@ -55,7 +55,7 @@ export function buildOverride() {
   ]);
   return `services:\n${[...blocks].map(([name, lines]) => `  ${name}:\n${lines.join('\n')}`).join('\n')}\n`;
 }
-function run(command, args, options = {}) {
+export function run(command, args, options = {}) {
   console.log(`> ${command} ${args.join(' ')}`);
   return spawnSync(command, args, { stdio: 'inherit', cwd: repoRoot, shell: platform === 'win32' && command.endsWith('.cmd'), ...options }).status ?? 1;
 }
@@ -66,11 +66,11 @@ function composeArgs() {
   return ['compose', '-p', PROJECT, '-f', join(repoRoot, 'docker-compose.yml'), '-f', override];
 }
 
-function maven() {
+export function maven() {
   return platform === 'win32' ? 'mvnw.cmd' : './mvnw';
 }
 
-function buildJars() {
+export function buildJars() {
   // clean and no test compilation: the jars are all that is needed, and a Java language server in an editor may be writing to target/classes
   return run(maven(), ['-B', '-ntp', '-Dmaven.test.skip=true', 'clean', 'package', '-pl', SERVICES.join(','), '-am']);
 }

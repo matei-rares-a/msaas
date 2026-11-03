@@ -93,7 +93,7 @@ jobs:
         with:
           node-version: '22'
       - name: Script self-test
-        run: node --test scripts/infra/e2e-stack.test.mjs
+        run: node --test scripts/infra/e2e-stack.test.mjs scripts/infra/demo-stack.test.mjs
       # builds the jars, starts the stack, runs the tests, stops the stack
       - name: E2E suite
         run: node scripts/infra/e2e-stack.mjs --all
