@@ -5,12 +5,17 @@ import { DashboardComponent } from './features/dashboard/dashboard.component';
 import { OrganizationComponent } from './features/organization/organization.component';
 import { BillingComponent } from './features/billing/billing.component';
 import { AuthGuard } from './core/guards/auth.guard';
+import { identityGuard, pendingChoiceGuard } from './core/guards/onboarding.guards';
+import { SelectTenantComponent } from './features/auth/select-tenant/select-tenant.component';
+import { NoOrganizationComponent } from './features/auth/no-organization/no-organization.component';
 import { AdminComponent } from './pages/admin/admin.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
+  { path: 'select-tenant', component: SelectTenantComponent, canActivate: [pendingChoiceGuard] },
+  { path: 'no-organization', component: NoOrganizationComponent, canActivate: [identityGuard] },
   { 
     path: 'dashboard', 
     component: DashboardComponent,

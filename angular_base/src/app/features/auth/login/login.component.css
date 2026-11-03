@@ -37,6 +37,15 @@
   margin-bottom: 20px;
 }
 
+.alert-info {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
 .form-group {
   margin-bottom: 20px;
 }

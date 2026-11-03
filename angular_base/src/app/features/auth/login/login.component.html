@@ -3,6 +3,10 @@
     <h1>Welcome Back</h1>
     <p class="subtitle">Log in to access your SaaS platform</p>
 
+    <div *ngIf="notice" class="alert alert-info" data-testid="login-notice">
+      {{ notice }}
+    </div>
+
     <div *ngIf="error" class="alert alert-error">
       {{ error }}
     </div>

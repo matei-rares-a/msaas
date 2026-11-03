@@ -8,9 +8,9 @@
 
     <!-- User Info -->
     <div class="user-info" *ngIf="user">
-      <div class="user-avatar">{{ user.email.charAt(0).toUpperCase() }}</div>
+      <div class="user-avatar">{{ user.displayName.charAt(0).toUpperCase() }}</div>
       <div class="user-details">
-        <p class="user-email">{{ user.email }}</p>
+        <p class="user-email">{{ user.displayName }}</p>
         <p class="user-role">{{ user.role }}</p>
       </div>
     </div>

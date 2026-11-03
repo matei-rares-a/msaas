@@ -67,3 +67,11 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run test:ci
+      # browser tests against a stubbed gateway; they use the Chrome the runner already has
+      - run: npm run e2e
+      - name: Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: angular_base/test-results/

@@ -1,0 +1,40 @@
+<div class="login-container">
+  <div class="login-card">
+    <h1>You are not in an organization yet</h1>
+    <p class="subtitle">Create one, or join one you were invited to.</p>
+
+    <div *ngIf="error" class="alert alert-error" data-testid="onboarding-error">{{ error }}</div>
+
+    <form [formGroup]="createForm" (ngSubmit)="createOrganization()" data-testid="create-organization-form">
+      <div class="form-group">
+        <label for="organizationName">Create an organization</label>
+        <input
+          id="organizationName"
+          class="form-control"
+          formControlName="name"
+          placeholder="Organization name"
+        />
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" [disabled]="loading">Create organization</button>
+    </form>
+
+    <hr />
+
+    <form [formGroup]="acceptForm" (ngSubmit)="acceptInvitation()" data-testid="accept-invitation-form">
+      <div class="form-group">
+        <label for="invitationToken">Accept an invitation</label>
+        <input
+          id="invitationToken"
+          class="form-control"
+          formControlName="token"
+          placeholder="Invitation code"
+        />
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" [disabled]="loading">Accept invitation</button>
+    </form>
+
+    <div class="footer-links">
+      <p><a routerLink="/login">Use another account</a></p>
+    </div>
+  </div>
+</div>

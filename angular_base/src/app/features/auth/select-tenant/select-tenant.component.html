@@ -1,0 +1,26 @@
+<div class="login-container">
+  <div class="login-card">
+    <h1>Choose an organization</h1>
+    <p class="subtitle">You belong to more than one. You can sign in to one at a time.</p>
+
+    <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+
+    <ul class="tenant-list" style="list-style: none; padding: 0; margin: 0;">
+      <li *ngFor="let tenant of tenants" style="margin-bottom: 8px;">
+        <button
+          type="button"
+          class="btn btn-primary btn-block"
+          data-testid="tenant-option"
+          [disabled]="loading"
+          (click)="choose(tenant)"
+        >
+          Organization {{ shortId(tenant) }} &middot; {{ tenant.role }}
+        </button>
+      </li>
+    </ul>
+
+    <div class="footer-links">
+      <p><a routerLink="/login">Use another account</a></p>
+    </div>
+  </div>
+</div>

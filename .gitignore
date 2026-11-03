@@ -40,3 +40,7 @@ dist/
 .agents/
 ### Local object storage (P8.2) ###
 data/
+
+# Playwright output (angular_base)
+test-results/
+playwright-report/

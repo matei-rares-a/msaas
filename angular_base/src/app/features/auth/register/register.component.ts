@@ -59,7 +59,8 @@ export class RegisterComponent implements OnInit {
 
     this.authService.register({ email, password }).subscribe(
       () => {
-        this.router.navigate(['/dashboard']);
+        // registering creates the account only: no token, no organization; the user logs in next
+        this.router.navigate(['/login'], { queryParams: { notice: 'registered' } });
       },
       (error) => {
         this.error = error.error?.message || 'Registration failed. Please try again.';
