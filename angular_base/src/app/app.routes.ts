@@ -10,6 +10,7 @@ import { SelectTenantComponent } from './features/auth/select-tenant/select-tena
 import { NoOrganizationComponent } from './features/auth/no-organization/no-organization.component';
 import { AdminComponent } from './pages/admin/admin.component';
 import { adminGuard } from './core/guards/role.guards';
+import { NotificationsComponent } from './features/notifications/notifications.component';
 import { ThemeEditorComponent } from './features/theme/theme-editor.component';
 
 export const routes: Routes = [
@@ -41,6 +42,11 @@ export const routes: Routes = [
   {
     path: 'admin',
     component: AdminComponent,
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'notifications',
+    component: NotificationsComponent,
     canActivate: [AuthGuard]
   },
   {

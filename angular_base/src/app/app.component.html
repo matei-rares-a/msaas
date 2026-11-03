@@ -3,6 +3,9 @@
   <span class="tenant-name" data-testid="tenant-name">{{ user.tenantName }}</span>
   <a routerLink="/dashboard" routerLinkActive="active">Dashboard</a>
   <a routerLink="/admin" routerLinkActive="active">Admin</a>
+  <a routerLink="/notifications" routerLinkActive="active" data-testid="nav-notifications">
+    Notifications<span class="badge" data-testid="notification-badge" *ngIf="unread$ | async as unread">{{ unread }}</span>
+  </a>
   <a
     *ngIf="user.role === 'ADMIN' && !user.readOnly"
     routerLink="/theme"

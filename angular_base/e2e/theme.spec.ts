@@ -1,20 +1,11 @@
 import { Page, expect, test } from '@playwright/test';
-import { stubGateway, tenantToken } from './gateway-stub';
+import { stubGateway } from './gateway-stub';
+import { signedInAs } from './session';
 
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
 
 const forest = { id: 'forest', name: 'Forest', kind: 'COLOR', definition: { primary: '#15803D', secondary: '#3F3F46', accent: '#EAB308' } };
 const ocean = { id: 'ocean', name: 'Ocean', kind: 'GRADIENT', definition: { primary: '#0369A1', secondary: '#134E4A', accent: '#F472B6', gradient: ['#0EA5E9', '#14B8A6'] } };
-
-/** Opens the app as someone already signed in to tenant-a, the way a returning visitor would be. */
-async function signedInAs(page: Page, role: string, readOnly = false) {
-  const claims = { sub: 'user-1', tenantId: 'tenant-a', tenantName: 'Acme', displayName: 'a@test.local', role, readOnly };
-  const token = [Buffer.from('{"alg":"HS256"}').toString('base64url'), Buffer.from(JSON.stringify(claims)).toString('base64url'), 'sig'].join('.');
-  await page.addInitScript(([accessToken]) => {
-    localStorage.setItem('msaas.sessions', JSON.stringify({ 'tenant-a': { accessToken, refreshToken: 'r', expiresAt: Date.now() + 600_000 } }));
-    localStorage.setItem('msaas.activeTenant', 'tenant-a');
-  }, [token]);
-}
 
 const cssVariable = (page: Page, name: string) =>
   page.evaluate(variable => getComputedStyle(document.documentElement).getPropertyValue(variable).trim(), name);

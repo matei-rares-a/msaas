@@ -8,6 +8,8 @@ import { ThemeService } from './core/services/theme.service';
 import { authResponse } from '../testing/sessions';
 
 const variable = (name: string) => document.documentElement.style.getPropertyValue(name);
+const answerNotifications = (http: HttpTestingController, unreadCount = 0) =>
+  http.expectOne(r => r.url === 'http://localhost:8080/notifications/in-app').flush({ items: [], page: 0, size: 20, totalItems: 0, unreadCount });
 const theme = (primary: string) => ({
   paletteId: 'p', palette: { id: 'p', name: 'P', kind: 'COLOR', definition: { primary, secondary: '#111111', accent: '#222222' } }, logoUrl: null
 });
@@ -42,6 +44,7 @@ describe('REQ-PERS-06 the app applies the theme of the tenant it is opened for',
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     http.expectOne('http://localhost:8080/organizations/tenant-a/theme').flush(theme('#15803D'));
+    answerNotifications(http);
 
     expect(variable('--primary-color')).toBe('#15803D');
     http.verify();
@@ -52,9 +55,11 @@ describe('REQ-PERS-06 the app applies the theme of the tenant it is opened for',
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     http.expectOne('http://localhost:8080/organizations/tenant-a/theme').flush(theme('#15803D'));
+    answerNotifications(http);
 
     signIn('tenant-b');
     http.expectOne('http://localhost:8080/organizations/tenant-b/theme').flush(theme('#0369A1'));
+    answerNotifications(http);
     expect(variable('--primary-color')).toBe('#0369A1');
 
     auth.logout();
@@ -67,6 +72,7 @@ describe('REQ-PERS-06 the app applies the theme of the tenant it is opened for',
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
 
+    answerNotifications(http);
     http.expectOne('http://localhost:8080/organizations/tenant-a/theme').flush({}, { status: 500, statusText: 'Server Error' });
     fixture.detectChanges();
 
@@ -80,12 +86,14 @@ describe('REQ-PERS-06 the app applies the theme of the tenant it is opened for',
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     http.expectOne('http://localhost:8080/organizations/tenant-a/theme').flush(theme('#15803D'));
+    answerNotifications(http);
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('[data-testid=nav-theme]')).not.toBeNull();
 
     auth.login({ email: 'a@test.local', password: 'password-12345' }).subscribe();
     http.expectOne('http://localhost:8080/auth/login').flush(authResponse('tenant-c', 'user-1', 'USER'));
     http.expectOne('http://localhost:8080/organizations/tenant-c/theme').flush(theme('#0369A1'));
+    answerNotifications(http);
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('[data-testid=nav-theme]')).toBeNull();

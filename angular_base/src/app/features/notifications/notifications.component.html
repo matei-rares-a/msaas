@@ -1,0 +1,34 @@
+<div class="notifications">
+  <div class="header">
+    <h1>Notifications</h1>
+    <button
+      type="button"
+      class="btn-link"
+      data-testid="mark-all-read"
+      [disabled]="(unread$ | async) === 0"
+      (click)="markAllRead()"
+    >
+      Mark all as read ({{ unread$ | async }})
+    </button>
+  </div>
+
+  <div *ngIf="error" class="alert-error" data-testid="notifications-error">{{ error }}</div>
+  <p *ngIf="loading">Loading...</p>
+
+  <ul class="list" *ngIf="items$ | async as items">
+    <li *ngIf="!loading && items.length === 0" data-testid="notifications-empty">You have no notifications.</li>
+    <li
+      *ngFor="let item of items; trackBy: trackById"
+      class="item"
+      [class.unread]="!item.read"
+      [class.warning]="item.level === 'WARNING'"
+      data-testid="notification"
+      (click)="open(item)"
+    >
+      <span class="title">{{ item.title }}</span>
+      <span class="message">{{ item.message }}</span>
+      <span class="when">{{ item.createdAt | date: 'medium' }}</span>
+      <span class="dot" *ngIf="!item.read" aria-label="unread"></span>
+    </li>
+  </ul>
+</div>

@@ -28,3 +28,15 @@
   font-weight: 600;
   margin-right: 8px;
 }
+
+.badge {
+  display: inline-block;
+  min-width: 18px;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: var(--accent-color);
+  color: #111;
+  font-size: 12px;
+  text-align: center;
+}
