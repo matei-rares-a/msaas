@@ -166,11 +166,13 @@ class InAppNotificationRulesTest {
         for (String type : InAppNotificationRules.HANDLED_EVENT_TYPES) {
             // every handled type, given a complete payload, must produce something for someone
             var out = rules.notificationsFor(type, tenant, json("{\"targetUserId\":\"" + UUID.randomUUID() + "\",\"userId\":\""
-                    + UUID.randomUUID() + "\",\"status\":\"PAST_DUE\",\"trialEndsAt\":\"2026-11-16T00:00:00Z\",\"newRole\":\"USER\"}"));
+                    + UUID.randomUUID() + "\",\"status\":\"PAST_DUE\",\"trialEndsAt\":\"2026-11-16T00:00:00Z\",\"newRole\":\"USER\",\"requesterUserId\":\""
+                    + UUID.randomUUID() + "\",\"approverUserIds\":[\"" + UUID.randomUUID() + "\"],\"startDate\":\"2026-12-01\",\"endDate\":\"2026-12-02\"}"));
             assertThat(out).as(type).isNotEmpty();
         }
         assertThat(InAppNotificationRules.HANDLED_EVENT_TYPES).containsExactlyInAnyOrder("MEMBER_ROLE_CHANGED",
-                "ADMIN_DEMOTION_REQUESTED", "INVITATION_ACCEPTED", "SUBSCRIPTION_CHANGED", "TRIAL_EXPIRING");
+                "ADMIN_DEMOTION_REQUESTED", "INVITATION_ACCEPTED", "SUBSCRIPTION_CHANGED", "TRIAL_EXPIRING", "LEAVE_REQUESTED",
+                "LEAVE_APPROVED", "LEAVE_REJECTED", "LEAVE_CANCELLED");
     }
 
     @ParameterizedTest(name = "{0}")
@@ -198,5 +200,124 @@ class InAppNotificationRulesTest {
         all.addAll(rules.notificationsFor("TRIAL_EXPIRING", tenant, json("{\"trialEndsAt\":\"2026-11-16T00:00:00Z\"}")));
 
         assertThat(all).isNotEmpty().allSatisfy(n -> assertThat(n.title() + " " + n.message()).doesNotContain("@").doesNotContain(target.toString()));
+    }
+
+    // ---- leave requests (REQ-LEAVE-07) ----
+
+    @Test
+    @Tag("REQ-LEAVE-07")
+    void aNewLeaveRequestGoesToTheOtherApproversNamedInTheEventAndNotToTheRequester() throws Exception {
+        UUID requester = UUID.randomUUID();
+        UUID approverA = UUID.randomUUID();
+        UUID approverB = UUID.randomUUID();
+
+        var out = rules.notificationsFor("LEAVE_REQUESTED", tenant, json("{\"requestId\":\"" + UUID.randomUUID() + "\",\"requesterUserId\":\"" + requester
+                + "\",\"approverUserIds\":[\"" + approverA + "\",\"" + requester + "\",\"" + approverB + "\",\"" + approverA
+                + "\"],\"startDate\":\"2026-12-01\",\"endDate\":\"2026-12-05\"}"));
+
+        assertThat(out).extracting(NewNotification::userId).containsExactlyInAnyOrder(approverA, approverB);
+        assertThat(out).allSatisfy(n -> {
+            assertThat(n.eventType()).isEqualTo("LEAVE_REQUESTED");
+            assertThat(n.title()).isEqualTo("New leave request");
+            assertThat(n.message()).isEqualTo("A leave request for 2026-12-01 to 2026-12-05 is waiting for a decision.");
+            assertThat(n.level()).isEqualTo("INFO");
+        });
+        assertThat(asked).as("the event names who to tell; nobody is looked up").isEmpty();
+    }
+
+    @Test
+    @Tag("REQ-LEAVE-07")
+    void aLeaveRequestWithNoOtherApproverNotifiesNobody() throws Exception {
+        UUID requester = UUID.randomUUID();
+
+        assertThat(rules.notificationsFor("LEAVE_REQUESTED", tenant, json("{\"requesterUserId\":\"" + requester + "\",\"approverUserIds\":[],"
+                + "\"startDate\":\"2026-12-01\",\"endDate\":\"2026-12-05\"}"))).isEmpty();
+        assertThat(rules.notificationsFor("LEAVE_REQUESTED", tenant, json("{\"requesterUserId\":\"" + requester + "\",\"approverUserIds\":[\""
+                + requester + "\"],\"startDate\":\"2026-12-01\",\"endDate\":\"2026-12-05\"}"))).isEmpty();
+    }
+
+    @Test
+    @Tag("REQ-LEAVE-07")
+    void anApprovalAndARejectionGoToTheRequesterWithWhatWasDecided() throws Exception {
+        UUID requester = UUID.randomUUID();
+        String payload = "{\"requestId\":\"" + UUID.randomUUID() + "\",\"actorUserId\":\"" + UUID.randomUUID() + "\",\"requesterUserId\":\"" + requester
+                + "\",\"leaveType\":\"ODIHNA\",\"startDate\":\"2026-12-01\",\"endDate\":\"2026-12-05\",\"days\":5,\"previousStatus\":\"PENDING\"}";
+
+        var approved = rules.notificationsFor("LEAVE_APPROVED", tenant, json(payload));
+        var rejected = rules.notificationsFor("LEAVE_REJECTED", tenant, json(payload));
+
+        assertThat(approved).hasSize(1);
+        assertThat(approved.get(0).userId()).isEqualTo(requester);
+        assertThat(approved.get(0).eventType()).isEqualTo("LEAVE_APPROVED");
+        assertThat(approved.get(0).title()).isEqualTo("Leave request approved");
+        assertThat(approved.get(0).message()).isEqualTo("Your leave request for 2026-12-01 to 2026-12-05 was approved.");
+        assertThat(approved.get(0).level()).isEqualTo("INFO");
+        assertThat(rejected).hasSize(1);
+        assertThat(rejected.get(0).userId()).isEqualTo(requester);
+        assertThat(rejected.get(0).eventType()).isEqualTo("LEAVE_REJECTED");
+        assertThat(rejected.get(0).message()).isEqualTo("Your leave request for 2026-12-01 to 2026-12-05 was rejected.");
+        assertThat(rejected.get(0).level()).isEqualTo("WARNING");
+        assertThat(asked).isEmpty();
+    }
+
+    @Test
+    @Tag("REQ-LEAVE-07")
+    void anApproversCancellationOfApprovedLeaveGoesToTheRequesterButTheirOwnDoesNot() throws Exception {
+        UUID requester = UUID.randomUUID();
+        UUID approver = UUID.randomUUID();
+        String byApprover = "{\"actorUserId\":\"" + approver + "\",\"requesterUserId\":\"" + requester + "\",\"startDate\":\"2026-12-01\",\"endDate\":\"2026-12-05\"}";
+        String bySelf = "{\"actorUserId\":\"" + requester + "\",\"requesterUserId\":\"" + requester + "\",\"startDate\":\"2026-12-01\",\"endDate\":\"2026-12-05\"}";
+
+        var told = rules.notificationsFor("LEAVE_CANCELLED", tenant, json(byApprover));
+
+        assertThat(told).hasSize(1);
+        assertThat(told.get(0).userId()).isEqualTo(requester);
+        assertThat(told.get(0).title()).isEqualTo("Leave cancelled");
+        assertThat(told.get(0).message()).isEqualTo("Your approved leave for 2026-12-01 to 2026-12-05 was cancelled by an approver.");
+        assertThat(told.get(0).level()).isEqualTo("WARNING");
+        assertThat(rules.notificationsFor("LEAVE_CANCELLED", tenant, json(bySelf))).isEmpty();
+    }
+
+    @Test
+    @Tag("REQ-LEAVE-07")
+    void anAutoApprovalNotifiesNobodyBecauseTheRequesterIsTheOnlyApprover() throws Exception {
+        assertThat(rules.notificationsFor("LEAVE_AUTO_APPROVED", tenant, json("{\"requesterUserId\":\"" + UUID.randomUUID() + "\"}"))).isEmpty();
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = {
+            "LEAVE_REQUESTED|{\"requesterUserId\":\"00000000-0000-0000-0000-000000000001\",\"startDate\":\"2026-12-01\",\"endDate\":\"2026-12-05\"}",
+            "LEAVE_REQUESTED|{\"requesterUserId\":\"00000000-0000-0000-0000-000000000001\",\"approverUserIds\":\"x\",\"startDate\":\"2026-12-01\",\"endDate\":\"2026-12-05\"}",
+            "LEAVE_REQUESTED|{\"requesterUserId\":\"00000000-0000-0000-0000-000000000001\",\"approverUserIds\":[\"not-an-id\"],\"startDate\":\"2026-12-01\",\"endDate\":\"2026-12-05\"}",
+            "LEAVE_REQUESTED|{\"approverUserIds\":[],\"startDate\":\"2026-12-01\",\"endDate\":\"2026-12-05\"}",
+            "LEAVE_REQUESTED|{\"requesterUserId\":\"00000000-0000-0000-0000-000000000001\",\"approverUserIds\":[],\"startDate\":\"2026-12-01\"}",
+            "LEAVE_APPROVED|{\"startDate\":\"2026-12-01\",\"endDate\":\"2026-12-05\"}",
+            "LEAVE_APPROVED|{\"requesterUserId\":\"00000000-0000-0000-0000-000000000001\",\"startDate\":\"<script>\",\"endDate\":\"2026-12-05\"}",
+            "LEAVE_REJECTED|{\"requesterUserId\":\"00000000-0000-0000-0000-000000000001\",\"startDate\":\"2026-12-01\",\"endDate\":\"2026-13-45\"}",
+            "LEAVE_CANCELLED|{\"actorUserId\":\"00000000-0000-0000-0000-000000000002\",\"startDate\":\"2026-12-01\",\"endDate\":\"2026-12-05\"}"})
+    @Tag("REQ-EVT-07")
+    void aLeaveEventMissingWhatItMustHaveIsRefusedSoItIsRetriedAndDeadLettered(String eventAndPayload) {
+        String[] parts = eventAndPayload.split("\\|", 2);
+
+        assertThatThrownBy(() -> rules.notificationsFor(parts[0], tenant, json(parts[1]))).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @Tag("REQ-LEAVE-07")
+    @Tag("REQ-EVT-02")
+    void aLeaveNotificationNeverEchoesAReasonACommentOrATypeNorAnyIdOrAddress() throws Exception {
+        UUID requester = UUID.randomUUID();
+        UUID approver = UUID.randomUUID();
+        String extras = ",\"reason\":\"Private reason\",\"comment\":\"Private comment\",\"leaveType\":\"ODIHNA\",\"email\":\"someone@example.com\"";
+        List<NewNotification> all = new ArrayList<>();
+        all.addAll(rules.notificationsFor("LEAVE_REQUESTED", tenant, json("{\"requesterUserId\":\"" + requester + "\",\"approverUserIds\":[\"" + approver
+                + "\"],\"startDate\":\"2026-12-01\",\"endDate\":\"2026-12-05\"" + extras + "}")));
+        all.addAll(rules.notificationsFor("LEAVE_APPROVED", tenant, json("{\"requesterUserId\":\"" + requester + "\",\"actorUserId\":\"" + approver
+                + "\",\"startDate\":\"2026-12-01\",\"endDate\":\"2026-12-05\"" + extras + "}")));
+        all.addAll(rules.notificationsFor("LEAVE_CANCELLED", tenant, json("{\"requesterUserId\":\"" + requester + "\",\"actorUserId\":\"" + approver
+                + "\",\"startDate\":\"2026-12-01\",\"endDate\":\"2026-12-05\"" + extras + "}")));
+
+        assertThat(all).hasSize(3).allSatisfy(n -> assertThat(n.title() + " " + n.message()).doesNotContain("Private").doesNotContain("ODIHNA")
+                .doesNotContain("@").doesNotContain(requester.toString()).doesNotContain(approver.toString()));
     }
 }

@@ -93,6 +93,13 @@ class ActivityLogListenerIT implements PostgresTestContainer, KafkaTestContainer
         logo.put("actorUserId", ACTOR);
         logo.put("paletteId", null);
         samples.put("LOGO_CHANGED", logo);
+        samples.put("MODULE_CHANGED", Map.of("tenantId", tenantId, "actorUserId", ACTOR, "module", "LEAVE", "enabled", true));
+        for (String leaveEvent : List.of("LEAVE_APPROVED", "LEAVE_REJECTED", "LEAVE_AUTO_APPROVED", "LEAVE_CANCELLED")) {
+            samples.put(leaveEvent, Map.of("tenantId", tenantId, "requestId", REQUEST, "actorUserId", ACTOR, "requesterUserId", TARGET,
+                    "leaveType", "ODIHNA", "startDate", "2026-12-01", "endDate", "2026-12-05", "days", 5, "previousStatus", "PENDING"));
+        }
+        samples.put("LEAVE_POLICY_CHANGED", Map.of("tenantId", tenantId, "actorUserId", ACTOR, "change", "BALANCE_OVERRIDE",
+                "targetUserId", TARGET, "allowance", 30));
         return samples;
     }
 
@@ -151,7 +158,7 @@ class ActivityLogListenerIT implements PostgresTestContainer, KafkaTestContainer
 
     @ParameterizedTest(name = "{0} never reaches a tenant journal")
     @ValueSource(strings = {"PASSWORD_RESET_REQUESTED", "PASSWORD_CHANGED", "SEND_PASSWORD_RESET_EMAIL", "USER_REGISTERED",
-            "MEMBER_OFFBOARDED", "SEND_INVITATION_EMAIL", "SOMETHING_CREATED", "login", ""})
+            "MEMBER_OFFBOARDED", "SEND_INVITATION_EMAIL", "SOMETHING_CREATED", "login", "", "LEAVE_REQUESTED"})
     @Tag("REQ-PWD-08")
     @Tag("REQ-MON-01")
     void eventsThatAreNotAuditedActionsAreIgnoredEvenWithATenant(String eventType) throws Exception {

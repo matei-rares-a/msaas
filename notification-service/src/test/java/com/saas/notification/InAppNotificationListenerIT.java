@@ -246,6 +246,60 @@ class InAppNotificationListenerIT implements PostgresTestContainer {
                 Integer.class, tenant)).isZero();
     }
 
+    // ---- leave requests (REQ-LEAVE-07) ----
+
+    @Test
+    @Tag("REQ-LEAVE-07")
+    @Tag("REQ-NOTIF-03")
+    void aNewLeaveRequestNotifiesTheApproversNamedInTheEventOnlyWithoutAskingOrganizationService() throws Exception {
+        UUID requester = UUID.randomUUID();
+        UUID approverOne = UUID.randomUUID();
+        UUID approverTwo = UUID.randomUUID();
+
+        deliver("LEAVE_REQUESTED", tenant, Map.of("tenantId", tenant, "requestId", UUID.randomUUID(), "requesterUserId", requester,
+                "approverUserIds", List.of(approverOne, approverTwo), "startDate", "2026-12-01", "endDate", "2026-12-05"));
+
+        assertThat(recipients(tenant)).containsExactlyInAnyOrder(approverOne, approverTwo);
+        assertThat(notificationsIn(tenant)).allSatisfy(row -> assertThat(row).containsEntry("event_type", "LEAVE_REQUESTED").containsEntry("level", "INFO"));
+        assertThat(org.requests()).isEmpty();
+    }
+
+    @Test
+    @Tag("REQ-LEAVE-07")
+    @Tag("REQ-NOTIF-03")
+    void aDecisionNotifiesTheRequesterAndOnlyAnApproversCancellationDoes() throws Exception {
+        UUID requester = UUID.randomUUID();
+        Map<String, Object> byApprover = Map.of("tenantId", tenant, "requestId", UUID.randomUUID(), "actorUserId", admin, "requesterUserId", requester,
+                "leaveType", "ODIHNA", "startDate", "2026-12-01", "endDate", "2026-12-05", "days", 5, "previousStatus", "APPROVED");
+        Map<String, Object> bySelf = Map.of("tenantId", tenant, "requestId", UUID.randomUUID(), "actorUserId", requester, "requesterUserId", requester,
+                "leaveType", "ODIHNA", "startDate", "2026-12-08", "endDate", "2026-12-09", "days", 2, "previousStatus", "APPROVED");
+
+        deliver("LEAVE_APPROVED", tenant, byApprover);
+        deliver("LEAVE_REJECTED", tenant, byApprover);
+        deliver("LEAVE_CANCELLED", tenant, byApprover);
+        deliver("LEAVE_CANCELLED", tenant, bySelf);
+        deliver("LEAVE_AUTO_APPROVED", tenant, bySelf);
+
+        var rows = notificationsIn(tenant);
+        assertThat(rows).extracting(row -> row.get("event_type")).containsExactlyInAnyOrder("LEAVE_APPROVED", "LEAVE_REJECTED", "LEAVE_CANCELLED");
+        assertThat(recipients(tenant)).containsOnly(requester);
+        assertThat(rows).noneMatch(row -> row.get("message").toString().contains("2026-12-08"));
+    }
+
+    @Test
+    @Tag("REQ-LEAVE-07")
+    @Tag("REQ-EVT-05")
+    void aLeaveEventDeliveredTwiceNotifiesOnce() throws Exception {
+        UUID approver = UUID.randomUUID();
+        String event = envelope("LEAVE_REQUESTED", tenant, UUID.randomUUID(), Map.of("tenantId", tenant, "requesterUserId", UUID.randomUUID(),
+                "approverUserIds", List.of(approver), "startDate", "2026-12-01", "endDate", "2026-12-05"));
+
+        listener.onEvent(event);
+        listener.onEvent(event);
+
+        assertThat(recipients(tenant)).containsExactly(approver);
+    }
+
     // ---- wiring (the topics and the group the consumer reads with) ----
 
     @Autowired

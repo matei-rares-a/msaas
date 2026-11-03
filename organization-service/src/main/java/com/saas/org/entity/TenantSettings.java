@@ -30,6 +30,8 @@ public class TenantSettings extends TenantScopedEntity {
 
     public static final String PALETTE_ID = "paletteId";
     public static final String LOGO_URL = "logoUrl";
+    public static final String DEFAULT_TIMEZONE = "Europe/Bucharest";
+    public static final int DEFAULT_LEAVE_ALLOWANCE = 21;
 
     @Id
     private UUID id;
@@ -43,6 +45,19 @@ public class TenantSettings extends TenantScopedEntity {
     @Column(nullable = false, columnDefinition = "jsonb")
     private Map<String, Object> featureFlagsJson = new LinkedHashMap<>();
 
+    /** Which business modules the ADMIN switched on: module name -> boolean; a missing module is off (REQ-MOD-01). */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = false, columnDefinition = "jsonb")
+    private Map<String, Object> modulesJson = new LinkedHashMap<>();
+
+    /** The tenant's time zone, chosen by the ADMIN, for calendar dates and cut-off times (REQ-MOD-01). */
+    @Column(nullable = false)
+    private String timezone = DEFAULT_TIMEZONE;
+
+    /** Yearly rest-leave days for every member without an override (REQ-LEAVE-03). */
+    @Column(nullable = false)
+    private int leaveDefaultAllowance = DEFAULT_LEAVE_ALLOWANCE;
+
     @CreationTimestamp
     private Instant createdAt;
 
@@ -52,6 +67,10 @@ public class TenantSettings extends TenantScopedEntity {
     public String paletteId() {
         Object value = themeJson.get(PALETTE_ID);
         return value instanceof String s ? s : null;
+    }
+
+    public boolean moduleEnabled(String module) {
+        return Boolean.TRUE.equals(modulesJson.get(module));
     }
 
     public String logoUrl() {

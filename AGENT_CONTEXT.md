@@ -131,16 +131,25 @@ La fiecare prompt:
 ## 5. Status la data acestui fisier (2026-11-02)
 
 Fazele 0-7 sunt complete si commise (`P7.1` a fost implementat de alt agent, Kiro, si corectat in
-`P7.1 (deviere)`). Faza 8 (Personalizare) e completa si `P9.1 Scrierea in jurnal` e facut. P9.2 (citirea jurnalului prin GraphQL), P9.3 (export CSV), P9.4 (email-uri) si P9.5 (notificari in-app) sunt facute. Pasul curent
-(primul nebifat din plan) este **P9.6 Modulul cereri de concediu** (org-service, schema `org`): activarea modulelor per tenant din
-`tenant_settings` (doar ADMIN, implicit dezactivat) + fus orar al tenantului; cereri, zile lucratoare, sold, zile libere,
-tranzitii de stare, aprobare cu regula anti-auto-aprobare, calendarul echipei, evenimente Kafka doar cu ID-uri, notificari si
-intrari in jurnal, stergere la offboarding. REQ: MOD-01, LEAVE-01..08, MON-01, NOTIF-03. Pentru notificari: o regula noua in
-`InAppNotificationRules` (+ tipul in `HANDLED_EVENT_TYPES`) si un test in `InAppNotificationListenerIT`; pentru jurnal: o linie in
-`ActivityEventCatalog`. Cele doua sunt independente.
+`P7.1 (deviere)`). Faza 8 (Personalizare) e completa si `P9.1 Scrierea in jurnal` e facut. P9.2-P9.6 sunt facute (jurnal GraphQL, export CSV, email-uri, notificari in-app, modulul de concediu). Pasul curent (primul nebifat din
+plan) este **P9.7 Modulul lunch roulette** (org-service): configurare, runde saptamanale cu inscriere per runda, job la ora limita in
+fusul orar al tenantului (cu `Clock`), grupare aleatoare cu `Random` injectabil, evitarea perechilor recente, notificari, retentie 90 de
+zile, stergere la offboarding. REQ: MOD-01, LUNCH-01..05, NOTIF-03. Modulul se adauga ca al doilea element din `ModuleService.MODULES`
+(`LUNCH_ROULETTE`); `ModuleService.requireEnabled`, `TenantWriteGuard`, fusul orar din `TenantSettings` si modelul din pachetul
+`com.saas.org.leave` (entitati, repository-uri, serviciu, controller, DTO-uri, exceptii 404) sunt gata de refolosit. Lunch nu apare in jurnal.
+Regimul de gratie/suspendare pentru ACTIUNILE AUTOMATE (jobul de grupare) nu are inca implementare: `TenantWriteGuard` e folosit doar in
+controllere; jobul trebuie sa intrebe `TenantAccessStatusClient` si sa anuleze runda.
 
 Ce exista deja si e relevant mai departe:
-- **Notificari in-app (P9.5)**: pachetul `inapp` din notification-service. Regulile (eveniment -> destinatar -> text) sunt toate in
+- **Modulul de concediu (P9.6)**: pachetul `com.saas.org.leave` (+ `ModuleService`, `ModuleController`, `TenantWriteGuard`, evenimentele `Leave*Payload`/`ModuleChangedPayload`
+  in `com.saas.org.event`). Un modul nou = o valoare in `ModuleService.MODULES` + verificarea `modules.requireEnabled(NUME)` la inceputul fiecarei metode de
+  serviciu (dupa `requireMember`, inainte de verificarea rolului: modulul oprit e 404, nu 403). Scrierile cheama `TenantWriteGuard.requireWritable` in controller.
+  "Astazi" se citeste intotdeauna din `Clock` in fusul tenantului (`LeaveService.today`). Soldul nu se stocheaza: se calculeaza din cereri. Blocarea
+  `findByUserIdForUpdate` pe randul de membership serializeaza cererile aceluiasi membru (testat cu 4 fire). Un IT nou pentru org cu RLS real foloseste
+  containerul cu topologie (`LeaveModuleIT` e sablonul: stub billing, `MutableClock` pe luni 2026-03-02, helperul `inTenantSession` care reseteaza
+  `app.tenant_id` pe conexiunea din pool - altfel `RlsAssertions` vede randurile ramase pe conexiune). Datele din JSON-ul de cerere sunt stricte
+  (`@JsonFormat(pattern="yyyy-MM-dd")`): altfel Jackson taie ora si accepta "jumatati de zi". Evenimentele de concediu tin datele ca siruri ISO; pentru
+  `Instant` din outbox vezi nota de la P9.5. Notificarile de concediu nu cer lista de membri: `LEAVE_REQUESTED` poarta id-urile aprobatorilor.- **Notificari in-app (P9.5)**: pachetul `inapp` din notification-service. Regulile (eveniment -> destinatar -> text) sunt toate in
   `InAppNotificationRules`; destinatarii "ADMIN/MANAGER" se cer la momentul evenimentului de la org-service
   (`GET /internal/tenants/{id}/members?roles=`, `MemberDirectory`), nu dintr-o copie locala a rolurilor. Evenimente fara rol in payload
   (`TRIAL_EXPIRING`, `SUBSCRIPTION_CHANGED`) vin de la billing; `SubscriptionChangedPayload` are `previousStatus` ca sa se vada

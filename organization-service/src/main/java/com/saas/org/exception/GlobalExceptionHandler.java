@@ -6,7 +6,10 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import com.saas.org.leave.LeaveRequestNotFoundException;
+import com.saas.org.leave.ModuleDisabledException;
 import com.saas.org.service.LogoTooLargeException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -68,6 +71,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(errorBody("a file part named 'file' is required"));
     }
 
+    /** A module that is off, or a request the caller may not see, does not exist for them (REQ-MOD-01, REQ-LEAVE-06). */
+    @ExceptionHandler({ModuleDisabledException.class, LeaveRequestNotFoundException.class})
+    public ResponseEntity<Map<String, Object>> handleNotFound(RuntimeException ex) {
+        return ResponseEntity.status(404).body(errorBody(ex.getMessage()));
+    }
+
+    /** A path or query value that is not the type it must be (an id, a date, an enum constant) is a caller error. */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String, Object>> handleBadParameter(MethodArgumentTypeMismatchException ex) {
+        return ResponseEntity.badRequest().body(errorBody("invalid value for " + ex.getName()));
+    }
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
         // Spring's own client errors (no such route 404, wrong method 405, unsupported media type 415, ...)

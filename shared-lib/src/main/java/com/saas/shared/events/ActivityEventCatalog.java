@@ -24,6 +24,10 @@ public final class ActivityEventCatalog {
     public record Entry(String actorField, List<String> metadataFields) {
     }
 
+    /** What the journal keeps of a decision on a leave request: ids, type, dates, days - never the reason or the comment. */
+    private static final List<String> LEAVE_METADATA =
+            List.of("requestId", "requesterUserId", "leaveType", "startDate", "endDate", "days", "previousStatus");
+
     private static final Map<String, Entry> ENTRIES = new LinkedHashMap<>();
 
     static {
@@ -39,6 +43,12 @@ public final class ActivityEventCatalog {
         ENTRIES.put("SUBSCRIPTION_CHANGED", new Entry("actorUserId", List.of("planId", "maxUsers", "status")));
         ENTRIES.put("THEME_CHANGED", new Entry("actorUserId", List.of("paletteId")));
         ENTRIES.put("LOGO_CHANGED", new Entry("actorUserId", List.of()));
+        ENTRIES.put("MODULE_CHANGED", new Entry("actorUserId", List.of("module", "enabled")));
+        ENTRIES.put("LEAVE_APPROVED", new Entry("actorUserId", LEAVE_METADATA));
+        ENTRIES.put("LEAVE_REJECTED", new Entry("actorUserId", LEAVE_METADATA));
+        ENTRIES.put("LEAVE_AUTO_APPROVED", new Entry("actorUserId", LEAVE_METADATA));
+        ENTRIES.put("LEAVE_CANCELLED", new Entry("actorUserId", LEAVE_METADATA));
+        ENTRIES.put("LEAVE_POLICY_CHANGED", new Entry("actorUserId", List.of("change", "targetUserId", "allowance", "holidayDate")));
     }
 
     private ActivityEventCatalog() {

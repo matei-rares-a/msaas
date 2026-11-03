@@ -25,7 +25,10 @@ import java.util.regex.Pattern;
  *   <li>{@code ADMIN_DEMOTION_REQUESTED} - to the admin asked to accept being demoted;</li>
  *   <li>{@code INVITATION_ACCEPTED} - to the admins and managers, except the user who just joined;</li>
  *   <li>{@code SUBSCRIPTION_CHANGED} to PAST_DUE - to the admins and managers, only when it was not already PAST_DUE;</li>
- *   <li>{@code TRIAL_EXPIRING} - to the admins and managers.</li>
+ *   <li>{@code TRIAL_EXPIRING} - to the admins and managers;</li>
+ *   <li>{@code LEAVE_REQUESTED} - to the other approvers, whose ids are in the event (not the requester);</li>
+ *   <li>{@code LEAVE_APPROVED} and {@code LEAVE_REJECTED} - to the requester;</li>
+ *   <li>{@code LEAVE_CANCELLED} - to the requester, when an approver cancelled their approved leave (not when they did).</li>
  * </ul>
  */
 public class InAppNotificationRules {
@@ -37,7 +40,8 @@ public class InAppNotificationRules {
     private static final Pattern ROLE = Pattern.compile("^[A-Z_]{1,30}$");
 
     public static final Set<String> HANDLED_EVENT_TYPES = Set.of("MEMBER_ROLE_CHANGED", "ADMIN_DEMOTION_REQUESTED",
-            "INVITATION_ACCEPTED", "SUBSCRIPTION_CHANGED", "TRIAL_EXPIRING");
+            "INVITATION_ACCEPTED", "SUBSCRIPTION_CHANGED", "TRIAL_EXPIRING", "LEAVE_REQUESTED", "LEAVE_APPROVED", "LEAVE_REJECTED",
+            "LEAVE_CANCELLED");
 
     private final MemberDirectory directory;
     private final ObjectMapper objectMapper;
@@ -55,6 +59,10 @@ public class InAppNotificationRules {
             case "INVITATION_ACCEPTED" -> invitationAccepted(tenantId, payload);
             case "SUBSCRIPTION_CHANGED" -> subscriptionChanged(tenantId, payload);
             case "TRIAL_EXPIRING" -> trialExpiring(tenantId, payload);
+            case "LEAVE_REQUESTED" -> leaveRequested(payload);
+            case "LEAVE_APPROVED" -> leaveDecision(payload, "approved", "Leave request approved", LEVEL_INFO);
+            case "LEAVE_REJECTED" -> leaveDecision(payload, "rejected", "Leave request rejected", LEVEL_WARNING);
+            case "LEAVE_CANCELLED" -> leaveCancelled(payload);
             default -> List.of();
         };
     }
@@ -98,6 +106,64 @@ public class InAppNotificationRules {
                         + ". Choose a plan to keep using the service.", LEVEL_WARNING);
     }
 
+    private List<NewNotification> leaveRequested(JsonNode payload) {
+        UUID requester = uuid(payload, "requesterUserId");
+        JsonNode approvers = payload.get("approverUserIds");
+        if (approvers == null || !approvers.isArray()) {
+            throw new IllegalArgumentException("the event has no approverUserIds");
+        }
+        String message = "A leave request for " + dates(payload) + " is waiting for a decision.";
+        Set<UUID> recipients = new LinkedHashSet<>();
+        for (JsonNode approver : approvers) {
+            recipients.add(id(approver, "approverUserIds"));
+        }
+        recipients.remove(requester);
+        List<NewNotification> notifications = new ArrayList<>();
+        for (UUID recipient : recipients) {
+            notifications.add(new NewNotification(recipient, "LEAVE_REQUESTED", "New leave request", message, LEVEL_INFO));
+        }
+        return notifications;
+    }
+
+    private List<NewNotification> leaveDecision(JsonNode payload, String outcome, String title, String level) {
+        return List.of(new NewNotification(uuid(payload, "requesterUserId"), eventTypeOf(outcome), title,
+                "Your leave request for " + dates(payload) + " was " + outcome + ".", level));
+    }
+
+    private List<NewNotification> leaveCancelled(JsonNode payload) {
+        UUID requester = uuid(payload, "requesterUserId");
+        if (requester.equals(optionalUuid(payload, "actorUserId"))) {
+            return List.of(); // cancelling your own leave is not news to you
+        }
+        return List.of(new NewNotification(requester, "LEAVE_CANCELLED", "Leave cancelled",
+                "Your approved leave for " + dates(payload) + " was cancelled by an approver.", LEVEL_WARNING));
+    }
+
+    private static String eventTypeOf(String outcome) {
+        return "approved".equals(outcome) ? "LEAVE_APPROVED" : "LEAVE_REJECTED";
+    }
+
+    /** "2026-12-01 to 2026-12-05"; the dates must look like dates, so nothing else a producer sends is echoed. */
+    private static String dates(JsonNode payload) {
+        return date(payload, "startDate") + " to " + date(payload, "endDate");
+    }
+
+    private static String date(JsonNode payload, String field) {
+        String value = payload.path(field).asText(null);
+        try {
+            return java.time.LocalDate.parse(value).toString();
+        } catch (RuntimeException e) {
+            throw new IllegalArgumentException(field + " is not a date");
+        }
+    }
+
+    private static UUID id(JsonNode node, String field) {
+        try {
+            return UUID.fromString(node.asText());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(field + " holds something that is not an id");
+        }
+    }
     private List<NewNotification> forApprovers(UUID tenantId, UUID except, String eventType, String title, String message, String level) {
         Set<UUID> recipients = new LinkedHashSet<>(directory.memberIdsWithRoles(tenantId, APPROVER_ROLES));
         recipients.remove(except);
