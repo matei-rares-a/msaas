@@ -11,6 +11,7 @@ import com.saas.shared.events.EventEnvelope;
 import com.saas.shared.outbox.OutboxDestination;
 import com.saas.shared.outbox.OutboxWriter;
 import com.saas.shared.tenancy.TenantContext;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -33,21 +34,27 @@ public class ModuleService {
     /** The leave-request module (REQ-LEAVE-01..08). */
     public static final String LEAVE = "LEAVE";
 
+    /** The weekly lunch roulette (REQ-LUNCH-01..05). */
+    public static final String LUNCH_ROULETTE = "LUNCH_ROULETTE";
+
     /** Every module this version has; only an ADMIN can switch them. */
-    public static final List<String> MODULES = List.of(LEAVE);
+    public static final List<String> MODULES = List.of(LEAVE, LUNCH_ROULETTE);
 
     private final TenantSettingsRepository settingsRepository;
     private final MembershipRepository membershipRepository;
     private final ThemeService themeService;
     private final OutboxWriter outboxWriter;
+    private final ObjectProvider<TenantSettingsListener> listeners;
     private final TransactionTemplate transactionTemplate;
 
     public ModuleService(TenantSettingsRepository settingsRepository, MembershipRepository membershipRepository,
-            ThemeService themeService, OutboxWriter outboxWriter, PlatformTransactionManager transactionManager) {
+            ThemeService themeService, OutboxWriter outboxWriter, ObjectProvider<TenantSettingsListener> listeners,
+            PlatformTransactionManager transactionManager) {
         this.settingsRepository = settingsRepository;
         this.membershipRepository = membershipRepository;
         this.themeService = themeService;
         this.outboxWriter = outboxWriter;
+        this.listeners = listeners;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
@@ -88,6 +95,7 @@ public class ModuleService {
             TenantSettings settings = settings();
             settings.setTimezone(zone);
             settingsRepository.save(settings);
+            listeners.orderedStream().forEach(listener -> listener.timezoneChanged(settings));
             return view(settings);
         }));
     }

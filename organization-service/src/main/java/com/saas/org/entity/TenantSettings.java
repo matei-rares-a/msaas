@@ -13,6 +13,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
+import java.time.LocalTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -32,6 +33,9 @@ public class TenantSettings extends TenantScopedEntity {
     public static final String LOGO_URL = "logoUrl";
     public static final String DEFAULT_TIMEZONE = "Europe/Bucharest";
     public static final int DEFAULT_LEAVE_ALLOWANCE = 21;
+    public static final String DEFAULT_LUNCH_DAY = "THURSDAY";
+    public static final LocalTime DEFAULT_LUNCH_CUTOFF = LocalTime.of(11, 0);
+    public static final int DEFAULT_LUNCH_GROUP_SIZE = 2;
 
     @Id
     private UUID id;
@@ -57,6 +61,16 @@ public class TenantSettings extends TenantScopedEntity {
     /** Yearly rest-leave days for every member without an override (REQ-LEAVE-03). */
     @Column(nullable = false)
     private int leaveDefaultAllowance = DEFAULT_LEAVE_ALLOWANCE;
+
+    /** Lunch roulette (REQ-LUNCH-01): the weekday of the cut-off, the cut-off time in {@link #timezone}, and the group size. */
+    @Column(nullable = false)
+    private String lunchDay = DEFAULT_LUNCH_DAY;
+
+    @Column(nullable = false)
+    private LocalTime lunchCutoff = DEFAULT_LUNCH_CUTOFF;
+
+    @Column(nullable = false)
+    private int lunchGroupSize = DEFAULT_LUNCH_GROUP_SIZE;
 
     @CreationTimestamp
     private Instant createdAt;

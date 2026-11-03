@@ -167,12 +167,13 @@ class InAppNotificationRulesTest {
             // every handled type, given a complete payload, must produce something for someone
             var out = rules.notificationsFor(type, tenant, json("{\"targetUserId\":\"" + UUID.randomUUID() + "\",\"userId\":\""
                     + UUID.randomUUID() + "\",\"status\":\"PAST_DUE\",\"trialEndsAt\":\"2026-11-16T00:00:00Z\",\"newRole\":\"USER\",\"requesterUserId\":\""
-                    + UUID.randomUUID() + "\",\"approverUserIds\":[\"" + UUID.randomUUID() + "\"],\"startDate\":\"2026-12-01\",\"endDate\":\"2026-12-02\"}"));
-            assertThat(out).as(type).isNotEmpty();
-        }
-        assertThat(InAppNotificationRules.HANDLED_EVENT_TYPES).containsExactlyInAnyOrder("MEMBER_ROLE_CHANGED",
-                "ADMIN_DEMOTION_REQUESTED", "INVITATION_ACCEPTED", "SUBSCRIPTION_CHANGED", "TRIAL_EXPIRING", "LEAVE_REQUESTED",
-                "LEAVE_APPROVED", "LEAVE_REJECTED", "LEAVE_CANCELLED");
+                    + UUID.randomUUID() + "\",\"approverUserIds\":[\""                     + UUID.randomUUID() + "\"],\"startDate\":\"2026-12-01\",\"endDate\":\"2026-12-02\",\"weekStart\":\"2026-12-07\",\"groups\":[[\""
+                                        + UUID.randomUUID() + "\",\"" + UUID.randomUUID() + "\"]],\"participantUserIds\":[\"" + UUID.randomUUID() + "\"]}"));
+                                assertThat(out).as(type).isNotEmpty();
+                            }
+                            assertThat(InAppNotificationRules.HANDLED_EVENT_TYPES).containsExactlyInAnyOrder("MEMBER_ROLE_CHANGED",
+                                    "ADMIN_DEMOTION_REQUESTED", "INVITATION_ACCEPTED", "SUBSCRIPTION_CHANGED", "TRIAL_EXPIRING", "LEAVE_REQUESTED",
+                                    "LEAVE_APPROVED", "LEAVE_REJECTED", "LEAVE_CANCELLED", "LUNCH_GROUPS_FORMED", "LUNCH_ROUND_CANCELLED");
     }
 
     @ParameterizedTest(name = "{0}")
@@ -319,5 +320,71 @@ class InAppNotificationRulesTest {
 
         assertThat(all).hasSize(3).allSatisfy(n -> assertThat(n.title() + " " + n.message()).doesNotContain("Private").doesNotContain("ODIHNA")
                 .doesNotContain("@").doesNotContain(requester.toString()).doesNotContain(approver.toString()));
+    }
+
+    // ---- lunch roulette (REQ-LUNCH-05) ----
+
+    @Test
+    @Tag("REQ-LUNCH-05")
+    void formedGroupsTellEachMemberOnceHowBigTheirGroupIs() throws Exception {
+        UUID a = UUID.randomUUID();
+        UUID b = UUID.randomUUID();
+        UUID c = UUID.randomUUID();
+        UUID d = UUID.randomUUID();
+        UUID e = UUID.randomUUID();
+
+        var out = rules.notificationsFor("LUNCH_GROUPS_FORMED", tenant, json("{\"roundId\":\"" + UUID.randomUUID() + "\",\"weekStart\":\"2026-12-07\","
+                + "\"groups\":[[\"" + a + "\",\"" + b + "\"],[\"" + c + "\",\"" + d + "\",\"" + e + "\",\"" + a + "\"]]}"));
+
+        assertThat(out).extracting(NewNotification::userId).containsExactlyInAnyOrder(a, b, c, d, e);
+        assertThat(out).allSatisfy(n -> {
+            assertThat(n.eventType()).isEqualTo("LUNCH_GROUPS_FORMED");
+            assertThat(n.title()).isEqualTo("Your lunch group is ready");
+            assertThat(n.level()).isEqualTo("INFO");
+            assertThat(n.message()).doesNotContain("@").doesNotContain(a.toString()).doesNotContain(b.toString());
+        });
+        assertThat(out.stream().filter(n -> n.userId().equals(a)).findFirst().orElseThrow().message())
+                .isEqualTo("Your lunch group for the week of 2026-12-07 is ready: you will have lunch with 1 other person. Open the lunch page to see who.");
+        assertThat(out.stream().filter(n -> n.userId().equals(c)).findFirst().orElseThrow().message())
+                .contains("with 3 other people");
+        assertThat(asked).isEmpty();
+    }
+
+    @Test
+    @Tag("REQ-LUNCH-05")
+    void aCancelledRoundTellsEveryParticipantNamedInTheEventOnce() throws Exception {
+        UUID a = UUID.randomUUID();
+        UUID b = UUID.randomUUID();
+
+        var out = rules.notificationsFor("LUNCH_ROUND_CANCELLED", tenant, json("{\"roundId\":\"" + UUID.randomUUID() + "\",\"weekStart\":\"2026-12-07\","
+                + "\"reason\":\"BY_APPROVER\",\"participantUserIds\":[\"" + a + "\",\"" + b + "\",\"" + a + "\"]}"));
+
+        assertThat(out).extracting(NewNotification::userId).containsExactlyInAnyOrder(a, b);
+        assertThat(out).allSatisfy(n -> {
+            assertThat(n.eventType()).isEqualTo("LUNCH_ROUND_CANCELLED");
+            assertThat(n.title()).isEqualTo("Lunch round cancelled");
+            assertThat(n.message()).isEqualTo("The lunch round for the week of 2026-12-07 was cancelled.");
+            assertThat(n.level()).isEqualTo("WARNING");
+        });
+        assertThat(asked).isEmpty();
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = {
+            "LUNCH_GROUPS_FORMED|{\"groups\":[[\"00000000-0000-0000-0000-000000000001\"]]}",
+            "LUNCH_GROUPS_FORMED|{\"weekStart\":\"2026-12-07\"}",
+            "LUNCH_GROUPS_FORMED|{\"weekStart\":\"2026-12-07\",\"groups\":\"x\"}",
+            "LUNCH_GROUPS_FORMED|{\"weekStart\":\"2026-12-07\",\"groups\":[\"x\"]}",
+            "LUNCH_GROUPS_FORMED|{\"weekStart\":\"2026-12-07\",\"groups\":[[\"not-an-id\"]]}",
+            "LUNCH_GROUPS_FORMED|{\"weekStart\":\"<script>\",\"groups\":[[\"00000000-0000-0000-0000-000000000001\"]]}",
+            "LUNCH_ROUND_CANCELLED|{\"participantUserIds\":[\"00000000-0000-0000-0000-000000000001\"]}",
+            "LUNCH_ROUND_CANCELLED|{\"weekStart\":\"2026-12-07\"}",
+            "LUNCH_ROUND_CANCELLED|{\"weekStart\":\"2026-12-07\",\"participantUserIds\":\"x\"}",
+            "LUNCH_ROUND_CANCELLED|{\"weekStart\":\"2026-12-07\",\"participantUserIds\":[\"not-an-id\"]}"})
+    @Tag("REQ-EVT-07")
+    void aLunchEventMissingWhatItMustHaveIsRefusedSoItIsRetriedAndDeadLettered(String eventAndPayload) {
+        String[] parts = eventAndPayload.split("\\|", 2);
+
+        assertThatThrownBy(() -> rules.notificationsFor(parts[0], tenant, json(parts[1]))).isInstanceOf(IllegalArgumentException.class);
     }
 }

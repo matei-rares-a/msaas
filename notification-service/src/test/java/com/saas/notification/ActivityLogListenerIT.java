@@ -158,7 +158,8 @@ class ActivityLogListenerIT implements PostgresTestContainer, KafkaTestContainer
 
     @ParameterizedTest(name = "{0} never reaches a tenant journal")
     @ValueSource(strings = {"PASSWORD_RESET_REQUESTED", "PASSWORD_CHANGED", "SEND_PASSWORD_RESET_EMAIL", "USER_REGISTERED",
-            "MEMBER_OFFBOARDED", "SEND_INVITATION_EMAIL", "SOMETHING_CREATED", "login", "", "LEAVE_REQUESTED"})
+            "MEMBER_OFFBOARDED", "SEND_INVITATION_EMAIL", "SOMETHING_CREATED", "login", "", "LEAVE_REQUESTED",
+            "LUNCH_GROUPS_FORMED", "LUNCH_ROUND_CANCELLED"})
     @Tag("REQ-PWD-08")
     @Tag("REQ-MON-01")
     void eventsThatAreNotAuditedActionsAreIgnoredEvenWithATenant(String eventType) throws Exception {

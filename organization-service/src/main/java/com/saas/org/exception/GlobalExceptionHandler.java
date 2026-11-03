@@ -8,6 +8,7 @@ import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import com.saas.org.leave.LeaveRequestNotFoundException;
 import com.saas.org.leave.ModuleDisabledException;
+import com.saas.org.lunch.LunchRoundNotFoundException;
 import com.saas.org.service.LogoTooLargeException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -72,7 +73,7 @@ public class GlobalExceptionHandler {
     }
 
     /** A module that is off, or a request the caller may not see, does not exist for them (REQ-MOD-01, REQ-LEAVE-06). */
-    @ExceptionHandler({ModuleDisabledException.class, LeaveRequestNotFoundException.class})
+    @ExceptionHandler({ModuleDisabledException.class, LeaveRequestNotFoundException.class, LunchRoundNotFoundException.class})
     public ResponseEntity<Map<String, Object>> handleNotFound(RuntimeException ex) {
         return ResponseEntity.status(404).body(errorBody(ex.getMessage()));
     }

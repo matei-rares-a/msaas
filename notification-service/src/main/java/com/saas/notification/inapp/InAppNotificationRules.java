@@ -28,7 +28,10 @@ import java.util.regex.Pattern;
  *   <li>{@code TRIAL_EXPIRING} - to the admins and managers;</li>
  *   <li>{@code LEAVE_REQUESTED} - to the other approvers, whose ids are in the event (not the requester);</li>
  *   <li>{@code LEAVE_APPROVED} and {@code LEAVE_REJECTED} - to the requester;</li>
- *   <li>{@code LEAVE_CANCELLED} - to the requester, when an approver cancelled their approved leave (not when they did).</li>
+ *   <li>{@code LEAVE_CANCELLED} - to the requester, when an approver cancelled their approved leave (not when they did);</li>
+ *   <li>{@code LUNCH_GROUPS_FORMED} - to every member of every group, telling them how big their group is (the names are read
+ *       from the service when the group is shown, never copied into a notification);</li>
+ *   <li>{@code LUNCH_ROUND_CANCELLED} - to the participants named in the event.</li>
  * </ul>
  */
 public class InAppNotificationRules {
@@ -41,7 +44,7 @@ public class InAppNotificationRules {
 
     public static final Set<String> HANDLED_EVENT_TYPES = Set.of("MEMBER_ROLE_CHANGED", "ADMIN_DEMOTION_REQUESTED",
             "INVITATION_ACCEPTED", "SUBSCRIPTION_CHANGED", "TRIAL_EXPIRING", "LEAVE_REQUESTED", "LEAVE_APPROVED", "LEAVE_REJECTED",
-            "LEAVE_CANCELLED");
+            "LEAVE_CANCELLED", "LUNCH_GROUPS_FORMED", "LUNCH_ROUND_CANCELLED");
 
     private final MemberDirectory directory;
     private final ObjectMapper objectMapper;
@@ -63,6 +66,8 @@ public class InAppNotificationRules {
             case "LEAVE_APPROVED" -> leaveDecision(payload, "approved", "Leave request approved", LEVEL_INFO);
             case "LEAVE_REJECTED" -> leaveDecision(payload, "rejected", "Leave request rejected", LEVEL_WARNING);
             case "LEAVE_CANCELLED" -> leaveCancelled(payload);
+            case "LUNCH_GROUPS_FORMED" -> lunchGroupsFormed(payload);
+            case "LUNCH_ROUND_CANCELLED" -> lunchRoundCancelled(payload);
             default -> List.of();
         };
     }
@@ -137,6 +142,48 @@ public class InAppNotificationRules {
         }
         return List.of(new NewNotification(requester, "LEAVE_CANCELLED", "Leave cancelled",
                 "Your approved leave for " + dates(payload) + " was cancelled by an approver.", LEVEL_WARNING));
+    }
+
+    private List<NewNotification> lunchGroupsFormed(JsonNode payload) {
+        String week = date(payload, "weekStart");
+        JsonNode groups = payload.get("groups");
+        if (groups == null || !groups.isArray()) {
+            throw new IllegalArgumentException("the event has no groups");
+        }
+        Set<UUID> told = new LinkedHashSet<>();
+        List<NewNotification> notifications = new ArrayList<>();
+        for (JsonNode group : groups) {
+            if (!group.isArray()) {
+                throw new IllegalArgumentException("a group is not a list of ids");
+            }
+            for (JsonNode member : group) {
+                UUID user = id(member, "groups");
+                if (told.add(user)) {
+                    notifications.add(new NewNotification(user, "LUNCH_GROUPS_FORMED", "Your lunch group is ready",
+                            "Your lunch group for the week of " + week + " is ready: you will have lunch with " + (group.size() - 1)
+                                    + (group.size() == 2 ? " other person" : " other people") + ". Open the lunch page to see who.", LEVEL_INFO));
+                }
+            }
+        }
+        return notifications;
+    }
+
+    private List<NewNotification> lunchRoundCancelled(JsonNode payload) {
+        String week = date(payload, "weekStart");
+        JsonNode participants = payload.get("participantUserIds");
+        if (participants == null || !participants.isArray()) {
+            throw new IllegalArgumentException("the event has no participantUserIds");
+        }
+        Set<UUID> recipients = new LinkedHashSet<>();
+        for (JsonNode participant : participants) {
+            recipients.add(id(participant, "participantUserIds"));
+        }
+        List<NewNotification> notifications = new ArrayList<>();
+        for (UUID recipient : recipients) {
+            notifications.add(new NewNotification(recipient, "LUNCH_ROUND_CANCELLED", "Lunch round cancelled",
+                    "The lunch round for the week of " + week + " was cancelled.", LEVEL_WARNING));
+        }
+        return notifications;
     }
 
     private static String eventTypeOf(String outcome) {

@@ -300,6 +300,27 @@ class InAppNotificationListenerIT implements PostgresTestContainer {
         assertThat(recipients(tenant)).containsExactly(approver);
     }
 
+    // ---- lunch roulette (REQ-LUNCH-05) ----
+
+    @Test
+    @Tag("REQ-LUNCH-05")
+    @Tag("REQ-NOTIF-03")
+    void formedGroupsAndACancelledRoundNotifyTheParticipantsNamedInTheEventsWithoutAskingOrganizationService() throws Exception {
+        UUID a = UUID.randomUUID();
+        UUID b = UUID.randomUUID();
+        UUID c = UUID.randomUUID();
+
+        deliver("LUNCH_GROUPS_FORMED", tenant, Map.of("tenantId", tenant, "roundId", UUID.randomUUID(), "weekStart", "2026-12-07",
+                "groups", List.of(List.of(a, b))));
+        deliver("LUNCH_ROUND_CANCELLED", tenant, Map.of("tenantId", tenant, "roundId", UUID.randomUUID(), "weekStart", "2026-12-14",
+                "reason", "BY_APPROVER", "participantUserIds", List.of(c)));
+
+        assertThat(recipients(tenant)).containsExactlyInAnyOrder(a, b, c);
+        assertThat(notificationsIn(tenant)).extracting(row -> row.get("event_type"))
+                .containsExactlyInAnyOrder("LUNCH_GROUPS_FORMED", "LUNCH_GROUPS_FORMED", "LUNCH_ROUND_CANCELLED");
+        assertThat(org.requests()).isEmpty();
+    }
+
     // ---- wiring (the topics and the group the consumer reads with) ----
 
     @Autowired

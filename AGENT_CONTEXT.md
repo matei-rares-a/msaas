@@ -128,19 +128,14 @@ La fiecare prompt:
     garantat de aceeasi conexiune fizica decat cu `SingleConnectionDataSource` sau
     `hikari.maximum-pool-size=1`).
 
-## 5. Status la data acestui fisier (2026-11-02)
+## 5. Status la data acestui fisier (2026-11-03)
 
-Fazele 0-7 sunt complete si commise (`P7.1` a fost implementat de alt agent, Kiro, si corectat in
-`P7.1 (deviere)`). Faza 8 (Personalizare) e completa si `P9.1 Scrierea in jurnal` e facut. P9.2-P9.6 sunt facute (jurnal GraphQL, export CSV, email-uri, notificari in-app, modulul de concediu). Pasul curent (primul nebifat din
-plan) este **P9.7 Modulul lunch roulette** (org-service): configurare, runde saptamanale cu inscriere per runda, job la ora limita in
-fusul orar al tenantului (cu `Clock`), grupare aleatoare cu `Random` injectabil, evitarea perechilor recente, notificari, retentie 90 de
-zile, stergere la offboarding. REQ: MOD-01, LUNCH-01..05, NOTIF-03. Modulul se adauga ca al doilea element din `ModuleService.MODULES`
-(`LUNCH_ROULETTE`); `ModuleService.requireEnabled`, `TenantWriteGuard`, fusul orar din `TenantSettings` si modelul din pachetul
-`com.saas.org.leave` (entitati, repository-uri, serviciu, controller, DTO-uri, exceptii 404) sunt gata de refolosit. Lunch nu apare in jurnal.
-Regimul de gratie/suspendare pentru ACTIUNILE AUTOMATE (jobul de grupare) nu are inca implementare: `TenantWriteGuard` e folosit doar in
-controllere; jobul trebuie sa intrebe `TenantAccessStatusClient` si sa anuleze runda.
+Fazele 0-9 sunt complete si commise (P7.1 a fost implementat de alt agent, Kiro, si corectat in
+P7.1 (deviere)). Faza 9 (Jurnal, notificari, module) e completa: jurnal GraphQL, export CSV, email-uri, notificari in-app, modulul de concediu si lunch roulette. Pasul curent (primul nebifat din
+plan) este **P10.1 Cache Redis**; urmeaza P10.2 (rate limiting), P10.3 (compatibilitate API) si Faza 11 (frontend Angular). Citeste pasul in plan inainte de a incepe.
 
 Ce exista deja si e relevant mai departe:
+- **Lunch roulette (P9.7)**: pachetul `com.saas.org.lunch` (`LunchService`, `LunchController`, `LunchJobs`, `LunchGrouper`, `LunchSchedule`), migrarea `V12`. O runda per saptamana (luni in fusul tenantului), creata la prima inscriere/anulare (`insertIfAbsent` + blocare de rand); citirile nu scriu. Jobul `LunchJobs.formDueRounds` gaseste tenantii prin rolul `org_auth_reader` (`LunchRoundFinder`) si inchide fiecare runda intr-o tranzactie de tenant; intreaba `TenantAccessStatusClient` o data per tenant (gratie/suspendare -> `TENANT_RESTRICTED`, deci regimul de gratie e aplicat si actiunilor automate). Retentia (90 zile) ruleaza tot per tenant, sub RLS. Evenimentele `LUNCH_*` poarta doar id-uri, nu sunt in jurnal. Un IT nou foloseste sablonul `LunchRouletteIT` (container cu topologie, `MutableClock`, `Random` `@Primary` cu seed, cron-uri dezactivate cu `-`).
 - **Modulul de concediu (P9.6)**: pachetul `com.saas.org.leave` (+ `ModuleService`, `ModuleController`, `TenantWriteGuard`, evenimentele `Leave*Payload`/`ModuleChangedPayload`
   in `com.saas.org.event`). Un modul nou = o valoare in `ModuleService.MODULES` + verificarea `modules.requireEnabled(NUME)` la inceputul fiecarei metode de
   serviciu (dupa `requireMember`, inainte de verificarea rolului: modulul oprit e 404, nu 403). Scrierile cheama `TenantWriteGuard.requireWritable` in controller.
