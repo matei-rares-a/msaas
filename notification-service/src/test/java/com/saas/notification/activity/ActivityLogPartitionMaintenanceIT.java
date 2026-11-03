@@ -88,11 +88,18 @@ class ActivityLogPartitionMaintenanceIT implements PostgresTestContainer {
         UUID oldId = insertRow(tenantId, clock.instant().minus(Duration.ofMinutes(20)));
         UUID recentId = insertRow(tenantId, clock.instant().minus(Duration.ofMinutes(1)));
 
+        // the table is shared with the other test classes of the service, which leave their own old rows in it: what must hold is that
+        // nothing older than the cutoff is left and that not one newer row went with them
+        java.sql.Timestamp cutoff = java.sql.Timestamp.from(clock.instant().minus(Duration.ofMinutes(10)));
+        int newerBefore = count("created_at >= ?", cutoff);
+
         int deleted = maintenance.deleteRowsOlderThan(Duration.ofMinutes(10));
 
-        assertThat(deleted).isEqualTo(1);
+        assertThat(deleted).isGreaterThanOrEqualTo(1);
         assertThat(rowExists(oldId)).isFalse();
         assertThat(rowExists(recentId)).isTrue();
+        assertThat(count("created_at < ?", cutoff)).as("rows older than the cutoff that are left").isZero();
+        assertThat(count("created_at >= ?", cutoff)).as("rows newer than the cutoff").isEqualTo(newerBefore);
     }
 
     private void createPartition(YearMonth month) {
@@ -108,6 +115,11 @@ class ActivityLogPartitionMaintenanceIT implements PostgresTestContainer {
         jdbc.update("INSERT INTO notif.activity_log (id, tenant_id, event_type, created_at) VALUES (?, ?, 'TEST_EVENT', ?)",
                 id, tenantId, java.sql.Timestamp.from(createdAt));
         return id;
+    }
+
+    private int count(String condition, java.sql.Timestamp cutoff) {
+        Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM notif.activity_log WHERE " + condition, Integer.class, cutoff);
+        return count == null ? 0 : count;
     }
 
     private boolean rowExists(UUID id) {

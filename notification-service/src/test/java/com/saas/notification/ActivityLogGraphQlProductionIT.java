@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.saas.notification.activity.ActivityLogPartitionMaintenance;
 import com.saas.testsupport.containers.PostgresTestContainer;
+import graphql.introspection.Introspection;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -55,9 +57,17 @@ class ActivityLogGraphQlProductionIT implements PostgresTestContainer {
 
     @BeforeEach
     void freshTenant() {
+        // the switch is JVM wide and is made when a context starts, so a context for another profile that started after this one
+        // (or before it, and cached) would otherwise decide what this class tests
+        Introspection.enabledJvmWide(false);
         partitions.ensureUpcomingPartitions();
         tenantId = UUID.randomUUID();
         JournalFixtures.insert(jdbc, tenantId, "LOGIN", UUID.randomUUID(), "{}", JournalFixtures.MONTH_START.plus(Duration.ofHours(1)));
+    }
+
+    @AfterEach
+    void leaveIntrospectionOnForTheClassesThatFollow() {
+        Introspection.enabledJvmWide(true);
     }
 
     @Test

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.saas.notification.activity.ActivityLogPartitionMaintenance;
 import com.saas.testsupport.containers.PostgresTestContainer;
+import graphql.introspection.Introspection;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -61,6 +62,9 @@ class ActivityLogGraphQlIT implements PostgresTestContainer {
 
     @BeforeEach
     void freshTenant() {
+        // starting a context under the prod profile switches introspection off for the whole JVM (graphql-java keeps it in a static), and
+        // this class's context is cached and reused: whether it was on or off here depended on the order the test classes ran in
+        Introspection.enabledJvmWide(true);
         partitions.ensureUpcomingPartitions();
         tenantId = UUID.randomUUID();
         admin = UUID.randomUUID();
