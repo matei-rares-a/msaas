@@ -12,14 +12,14 @@ Totul se face prin scripturile din `scripts/`, grupate dupa scop. Sunt scrise in
 ## 1. O singura data, pe o masina noua
 
 ```powershell
-pwsh scripts/env/install-prerequisites.ps1   # Windows
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\env\install-prerequisites.ps1   # Windows (Windows PowerShell 5.1 sau PowerShell 7)
 ```
 
 ```bash
 bash scripts/env/install-prerequisites.sh    # Linux, macOS
 ```
 
-Instaleaza Docker, JDK 21, Maven si Node.js. Sunt singurele scripturi dependente de platforma, pentru
+Instaleaza Docker (Desktop pe Windows/macOS, Engine pe Linux), JDK 21 si Node.js 22 (Maven nu: `mvnw` si-l aduce singur). Cu `-Setup` (Windows) / `--setup` (Linux, macOS) continua cu `node scripts/env/setup.mjs`: preflight, mediu, build, platforma, date demo, interfata. Daca tocmai a instalat Docker, iese cu codul 10 (restart / prima pornire / logout), apoi reiei aceeasi comanda. Ghid complet pentru o masina goala: [TLDR.md](TLDR.md). Sunt singurele scripturi dependente de platforma, pentru
 ca instaleaza chiar Node, pe care ruleaza restul. Dupa instalare, deschide un terminal nou.
 
 ## 2. La inceputul fiecarei sesiuni de lucru (si dupa fiecare repornire)

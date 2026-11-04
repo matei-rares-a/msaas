@@ -1,43 +1,65 @@
-# TLDR - cum folosesti aplicatia
+# TLDR - de la repo clonat la aplicatia pornita (masina fara nimic instalat)
 
 Platforma SaaS multi-tenant: fiecare organizatie isi vede doar datele ei. Backend Spring Boot (gateway + 4 servicii), frontend Angular.
-Detalii: [README.md](README.md) (arhitectura), [prerequisites.md](prerequisites.md) (mediu, comenzi), [REQUIREMENTS.md](REQUIREMENTS.md) (cerinte).
+Detalii: [README.md](README.md) (arhitectura), [prerequisites.md](prerequisites.md) (comenzi de dezvoltare), [REQUIREMENTS.md](REQUIREMENTS.md) (cerinte).
 
-## 1. Pornire
+## 0. Ce iti trebuie
 
-Ai nevoie de: Windows/Linux/macOS cu **Docker Desktop**, **JDK 21**, **Maven wrapper** (inclus), **Node 22** si fisierul **`.env`** din radacina (secretele de dezvoltare, vine cu clona; fara el scripturile se opresc). Pe o masina noua instalezi tot o singura data cu `pwsh scripts/env/install-prerequisites.ps1` (Windows) sau `bash scripts/env/install-prerequisites.sh` (Linux, macOS), apoi deschizi un terminal nou.
+| | |
+|---|---|
+| Sistem | Windows 10 (22H2) / 11, Linux (Ubuntu/Debian/Fedora) sau macOS |
+| Memorie | minim 8 GB RAM, recomandat 16 GB (cele 10 containere folosesc ~3 GB; Docker Desktop are nevoie de cel putin 5 GB) |
+| Disc | ~15 GB liberi (imaginile Docker, jar-urile, `node_modules`, depozitul Maven) |
+| Internet | da, la prima rulare descarca ~3-4 GB (Maven, npm, imaginile Docker); in spatele unui proxy, configureaza-l pentru Maven, npm si Docker Desktop |
+| Drepturi | un cont care poate instala programe (Windows: o fereastra UAC pentru Docker Desktop; Linux: `sudo`) |
+| Virtualizare | Windows: Intel VT-x / AMD-V activat in BIOS/UEFI (Docker Desktop nu porneste fara); intr-o masina virtuala, virtualizare imbricata |
+| Deja instalat | doar **git**, cu care ai clonat |
+| Porturi libere | **8080** (gateway) si **4200** (interfata); nimic altceva nu e publicat, deci un Postgres local pe 5432 nu deranjeaza |
 
-Toate comenzile se dau din radacina proiectului, in doua terminale: unul pentru platforma, unul pentru interfata.
+Se instaleaza (scriptul o face): **Docker** (Desktop pe Windows si macOS, Engine pe Linux), **JDK 21** (alta versiune nu merge: build-ul o refuza), **Node.js 22**. Maven nu se instaleaza: `mvnw` din repo isi aduce singur Maven. Fisierul `.env` (secretele de dezvoltare, publice intentionat) vine cu clona.
 
-### A. Prima data (sau dupa `--down --purge`, sau dupa ce schimbi cod)
+## 1. O singura comanda
 
+Din radacina repo-ului clonat:
+
+**Windows** (PowerShell; nu e nevoie de "Run as administrator"):
 ```powershell
-# terminal 1 - radacina proiectului
-node scripts/env/ensure-dev-env.mjs                 # pregateste mediul: porneste Docker si asteapta, JDK 21, imagini, npm ci
-node scripts/infra/demo-stack.mjs --up              # construieste jar-urile (~3-4 min) si ridica platforma (~1 min)
-node scripts/infra/demo-stack.mjs --seed            # creeaza conturile si datele demo (~1-2 min); la sfarsit afiseaza conturile si codul de invitatie
-
-# terminal 2
-cd angular_base
-npm start                                           # interfata: http://localhost:4200 (prima compilare ~30 s)
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\env\install-prerequisites.ps1 -Setup
 ```
+(`-ExecutionPolicy Bypass` e nevoie pentru ca Windows blocheaza implicit scripturile; valabil doar pentru aceasta rulare.)
 
-### B. De fiecare data cand repornesti calculatorul (datele demo raman)
-
-```powershell
-node scripts/env/ensure-dev-env.mjs                 # porneste Docker Desktop
-node scripts/infra/demo-stack.mjs --up --skip-build # ridica platforma din jar-urile existente (construieste doar daca lipsesc)
-cd angular_base; npm start
+**Linux / macOS**:
+```bash
+bash scripts/env/install-prerequisites.sh --setup
 ```
+(`--yes` il lasa sa instaleze fara sa intrebe, util fara terminal interactiv; `--dry-run` doar arata ce ar rula.)
 
-Nu mai rulezi `--seed`; il rulezi doar daca ai sters datele (`--purge`). Rularea lui in plus nu strica nimic.
+### Ce se intampla, in ordine
 
-### C. Cand esti gata de folosit
+1. Verifica ce ai deja (Docker, JDK 21, Node 22) si instaleaza ce lipseste.
+2. **Daca a instalat Docker, se opreste cu codul 10** si iti spune ce urmeaza; asa trebuie:
+   - Windows: restart daca cere installerul (activeaza WSL 2), apoi deschide **Docker Desktop** o data, accepta termenii si asteapta pana scrie ca ruleaza; Docker Desktop e gratuit pentru uz personal, educational si firme mici, iar pentru firme mari cere licenta platita.
+   - Linux: iesi din sesiune si intra la loc (intri in grupul `docker`).
+   - macOS: `open -a Docker` o data, accepta termenii.
+   Apoi rulezi **aceeasi comanda** din nou; de data asta continua.
+3. `scripts/env/setup.mjs`: verifica masina (memorie, disc, porturi, internet, containere in conflict), pregateste mediul (`JAVA_HOME`, `npm ci`), construieste jar-urile, ridica platforma, creeaza conturile demo si porneste interfata.
+4. La sfarsit scrie `READY. Platform: http://localhost:8080  Interface: http://localhost:4200` si lasa interfata pornita in terminal (Ctrl+C o opreste, platforma ramane).
 
-- `docker ps` arata **10 containere** `(healthy)`; `http://localhost:4200` raspunde; gateway-ul e pe `http://localhost:8080`.
-- Dupa o pornire la rece primele login-uri pot dura cateva zeci de secunde (aplicatiile Java se incalzesc); apoi merg normal.
-- Nimic altceva nu e publicat pe masina (nici Postgres, nici brokerii), deci un Postgres local pe 5432 nu intra in conflict. Portul **8080** si **4200** trebuie sa fie libere.
-## 2. Conturi demo
+Prima rulare completa dureaza ~15-30 de minute (descarcari + build ~3-5 min + pornire ~1 min + date demo ~1-2 min). Apoi deschizi **http://localhost:4200** si te loghezi (sectiunea 3).
+
+Se poate relua oricand, fara efecte rele: fiecare pas nu face nimic daca e deja facut. Doar verificare, fara sa schimbe nimic: `node scripts/env/setup.mjs --check`. Optiuni: `--no-ui` (nu porneste interfata), `--skip-build` (refoloseste jar-urile), `--dev` (pregateste si pentru teste: imaginile testelor de integrare si un browser pentru testele Angular).
+
+## 2. Instalare manuala (daca scriptul nu merge pe masina ta)
+
+| Ce | De unde | Verificare |
+|---|---|---|
+| Docker | Windows/macOS: https://www.docker.com/products/docker-desktop/ ; Linux: https://docs.docker.com/engine/install/ | `docker info` fara eroare |
+| JDK 21 | https://adoptium.net/temurin/releases/?version=21 (Windows: MSI, bifeaza "Set JAVA_HOME"; Linux/macOS: arhiva dezarhivata in `~/.local/jdks`) | `java -version` arata `21.x` |
+| Node.js 22 | https://nodejs.org/en/download | `node -v` arata `v22.x` (20.11+ merge) |
+
+Apoi, intr-un terminal nou, din radacina: `node scripts/env/setup.mjs`.
+
+## 3. Conturi demo
 
 Parola tuturor: **`Demo-Passphrase-2026`**
 
@@ -47,18 +69,18 @@ Parola tuturor: **`Demo-Passphrase-2026`**
 | `bob@demo.test` | Acme Corp | MANAGER | billing doar citire, invita doar USER, jurnal, aproba concedii, configureaza lunch |
 | `carol@demo.test`, `dave@demo.test` | Acme Corp | USER | cere concediu, se inscrie la lunch, notificari; fara billing si jurnal |
 | `erin@demo.test` | Globex | ADMIN | a doua organizatie (tema Sunset, plan Starter); datele nu se amesteca cu Acme |
-| `frank@demo.test` | - | fara organizatie | ecran "fara organizatie": creeaza una sau accepta o invitatie cu codul din `--seed` |
+| `frank@demo.test` | - | fara organizatie | ecran "fara organizatie": creeaza una sau accepta o invitatie cu codul afisat de `--seed` |
 
 Un cont nou: `/register` (parola de minim 12 caractere), apoi creezi o organizatie (devii ADMIN) sau accepti o invitatie.
 
-## 3. Ecrane (dupa login, in bara de sus)
+## 4. Ecrane (dupa login, in bara de sus)
 
 `/dashboard` (acasa) | `/notifications` | `/billing` (ADMIN scrie, MANAGER citeste) | `/invitations` | `/journal` (ADMIN, MANAGER) |
 `/leave` (cererea mea, sold, calendar) | `/leave/approvals` (MANAGER, ADMIN) | `/leave/policy` (ADMIN) | `/lunch` | `/modules` (ADMIN) | `/theme` (ADMIN)
 
 Ce nu vezi cu rolul tau nu apare in meniu, iar serverul refuza oricum cererea (403).
 
-## 4. Ce merita incercat
+## 5. Ce merita incercat
 
 1. **Concediu**: carol -> `/leave` cere zile; alice sau bob -> `/leave/approvals` aproba; carol primeste notificare in `/notifications`.
 2. **Mai multe organizatii**: alice se logheaza si alege Acme sau Globex; in fiecare vede doar datele organizatiei alese.
@@ -69,34 +91,55 @@ Ce nu vezi cu rolul tau nu apare in meniu, iar serverul refuza oricum cererea (4
 6. **Lunch roulette**: `/lunch` - inscriere in runda saptamanii; grupurile se formeaza la ora limita (MANAGER/ADMIN o configureaza).
 7. **Jurnal**: `/journal` arata evenimentele organizatiei (login-uri, invitatii, schimbari de modul).
 
-## 5. Oprire
+## 6. Zilnic
 
 ```powershell
-node scripts/infra/demo-stack.mjs --down            # opreste, datele raman
-node scripts/infra/demo-stack.mjs --down --purge    # opreste si sterge datele (apoi --up si --seed)
+# repornire dupa ce ai oprit calculatorul (datele demo raman)
+node scripts/env/ensure-dev-env.mjs                    # porneste Docker Desktop si asteapta
+node scripts/infra/demo-stack.mjs --up --skip-build    # ridica platforma din jar-urile existente (construieste doar daca lipsesc)
+cd angular_base; npm start                             # interfata, http://localhost:4200
+
+# oprire
+node scripts/infra/demo-stack.mjs --down               # opreste, datele raman (Ctrl+C opreste interfata)
+node scripts/infra/demo-stack.mjs --down --purge       # opreste si sterge datele (apoi --up si --seed)
 ```
 
-Opreste `npm start` cu Ctrl+C.
+Dupa `git pull` cu schimbari de cod: `node scripts/infra/demo-stack.mjs --up` (fara `--skip-build`) reconstruieste jar-urile. Datele demo se recreeaza cu `--seed` (repetabil, fara duplicate).
 
-## 6. Daca ceva nu merge
+Gata de folosit = `docker ps` arata **10 containere** `(healthy)`. Dupa o pornire la rece primele login-uri pot dura cateva zeci de secunde (aplicatiile Java se incalzesc).
+
+## 7. Daca ceva nu merge
 
 | Simptom | Cauza / remediu |
 |---|---|
-| `failed to connect to the docker API` | Docker Desktop nu ruleaza: `node scripts/env/ensure-dev-env.mjs` |
-| login-ul da eroare de retea in browser | stiva nu e pornita (`docker ps` trebuie sa arate 10 containere sanatoase) sau `--up` nu a terminat; dupa pornire la rece mai asteapta putin |
-| logheaza, dar nu exista conturile | datele lipsesc (ai facut `--purge` sau e prima pornire): `node scripts/infra/demo-stack.mjs --seed` |
-| `There is no .env with the development secrets` | lipseste `.env` din radacina; e in git, deci `git checkout -- .env` il readuce |
-| `npm start` nu gaseste pachetele | `node scripts/env/ensure-dev-env.mjs` (face `npm ci`) sau `cd angular_base; npm ci` |
-| `port 8080 already in use` | alta aplicatie pe 8080; frontend-ul are adresa fixata, deci o opresti pe cealalta |
-| numele de containere `saas-*` exista deja | alta stiva ruleaza (E2E, `local-stack.mjs`): `--down` pe ea; nu merg doua deodata |
+| `running scripts is disabled on this system` | porneste scriptul cu `-ExecutionPolicy Bypass`, exact ca in sectiunea 1 |
+| scriptul iese cu codul 10 | nu e eroare: Docker tocmai s-a instalat; fa pasii din sectiunea 1 (restart / Docker Desktop o data / logout), apoi aceeasi comanda |
+| `winget is not available` | instaleaza "App Installer" din Microsoft Store, sau foloseste sectiunea 2 |
+| `Virtualization: NOT enabled` | activeaza Intel VT-x / AMD-V (SVM) in BIOS/UEFI; Docker Desktop nu porneste fara |
+| Docker Desktop nu porneste / `Docker did not start` | l-ai deschis si ai acceptat termenii? Asteapta pana scrie ca ruleaza; pe Windows verifica ca WSL 2 e activ (`wsl --status`) |
+| `permission denied ... docker.sock` (Linux) | nu esti inca in grupul `docker`: iesi din sesiune si intri la loc |
+| `failed to connect to the docker API` | Docker nu ruleaza: `node scripts/env/ensure-dev-env.mjs` |
+| `NOT READY ... Port 8080/4200` | alta aplicatie le foloseste; adresa gateway-ului e fixata in interfata, deci opreste cealalta aplicatie |
+| `containers with fixed names that belong to another stack` | ruleaza alta stiva (`e2e-stack.mjs`, `local-stack.mjs`): `--down` pe ea; nu merg doua deodata |
+| build-ul refuza versiunea de Java / `no JDK 21 found` | numai Java 21 e acceptat; `node scripts/env/ensure-dev-env.mjs` seteaza `JAVA_HOME` (terminal nou dupa aceea) |
+| `JDK 21 is not available from this system's packages` (Linux) | Temurin 21 de la adoptium.net, dezarhivat in `~/.local/jdks`, apoi reia scriptul |
+| `Internet: no answer from ...` | e doar avertisment; in spatele unui proxy configureaza-l pentru Maven, npm, Docker Desktop |
+| login-ul da eroare de retea in browser | platforma nu e pornita (`docker ps`: 10 containere sanatoase) sau `--up` nu a terminat |
+| logheaza, dar nu exista conturile | `node scripts/infra/demo-stack.mjs --seed` |
+| `There is no .env with the development secrets` | `git checkout -- .env` |
+| `npm start` nu gaseste pachetele | `node scripts/env/ensure-dev-env.mjs` (face `npm ci`) |
 | 429 Too Many Requests | limita de cereri (10/s per user); asteapta o secunda |
-| lipseste `.env` | contine secretele de dezvoltare, publice intentionat; fara el scripturile se opresc |
 
-## 7. Teste si verificari (pentru dezvoltare)
+Daca nu iti dai seama: `node scripts/env/setup.mjs --check` spune exact ce lipseste, iar `docker compose -p msaas-demo logs <serviciu>` arata logul unui serviciu (`auth-service`, `organization-service`, `billing-service`, `notification-service`, `api-gateway`).
+
+## 8. Teste si verificari (pentru dezvoltare)
 
 ```powershell
-./mvnw -B -ntp clean verify                       # tot backend-ul, cere Docker (~10 minute)
+node scripts/env/setup.mjs --dev --no-ui               # pregateste si pentru teste (imaginile testelor, browser pentru Angular)
+./mvnw -B -ntp clean verify                            # tot backend-ul, cere Docker (~10 minute)
 cd angular_base; npm run build; npm run test:ci; npm run e2e
-node scripts/verify/check-traceability.mjs        # fiecare cerinta are test
-node scripts/infra/e2e-stack.mjs --all            # 21 de teste pe toata platforma, pe o stiva separata
+node scripts/verify/check-traceability.mjs             # fiecare cerinta are test
+node scripts/infra/e2e-stack.mjs --all                 # 21 de teste pe toata platforma, pe o stiva separata
 ```
+
+Nu uita: stiva demo, cea E2E si `local-stack.mjs` folosesc aceleasi nume de containere si nu ruleaza deodata.

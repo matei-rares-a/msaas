@@ -10,18 +10,21 @@
  *
  *   node scripts/env/ensure-dev-env.mjs
  *   node scripts/env/ensure-dev-env.mjs --check    report only, exit 1 when not ready
+ *   --skip-images --skip-browser --skip-frontend    leave out what only the tests need (images, CHROME_BIN) or the UI needs (npm ci)
  */
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { createConnection } from 'node:net';
 import { join } from 'node:path';
 import { argv, env, exit, platform } from 'node:process';
 import { readEnvFile, repoRoot } from '../lib/env-file.mjs';
+import { findJdk21 } from '../lib/jdk.mjs';
 
 const options = {
   check: argv.includes('--check'),
   skipImages: argv.includes('--skip-images'),
   skipFrontend: argv.includes('--skip-frontend'),
+  skipBrowser: argv.includes('--skip-browser'),
   dockerTimeoutMs: 240_000,
 };
 
@@ -98,39 +101,6 @@ function persistedEnvVariable(name) {
   return result.ok ? result.output.split(/\s{2,}/).pop()?.trim() : undefined;
 }
 
-function findJdk21() {
-  const roots = [
-    join(env.LOCALAPPDATA ?? '', 'jdks'),
-    'C:\\Program Files\\Eclipse Adoptium',
-    'C:\\Program Files\\Java',
-    '/usr/lib/jvm',
-    '/Library/Java/JavaVirtualMachines',
-    join(env.HOME ?? '', '.sdkman/candidates/java'),
-  ].filter((candidate) => candidate && existsSync(candidate));
-
-  const candidates = [env.JAVA_HOME].filter(Boolean);
-  for (const root of roots) {
-    for (const entry of readdirSync(root, { withFileTypes: true })) {
-      if (entry.isDirectory() || entry.isSymbolicLink()) {
-        const home = join(root, entry.name);
-        candidates.push(home, join(home, 'Contents/Home'));
-      }
-    }
-  }
-
-  for (const home of candidates) {
-    const java = join(home, 'bin', platform === 'win32' ? 'java.exe' : 'java');
-    if (!existsSync(java)) {
-      continue;
-    }
-    const result = spawnSync(java, ['-version'], { encoding: 'utf8' });
-    if (/version "21\./.test(`${result.stdout}${result.stderr}`)) {
-      return home;
-    }
-  }
-  return null;
-}
-
 function findBrowser() {
   const candidates = {
     win32: [
@@ -191,7 +161,7 @@ function isPortInUse(port) {
 
 step('JDK 21 (JAVA_HOME)');
 const javaHome = persistedEnvVariable('JAVA_HOME');
-const jdk21 = findJdk21();
+const jdk21 = findJdk21(env, platform);
 if (!jdk21) {
   missing('no JDK 21 found - run scripts/env/install-prerequisites');
 } else if (javaHome === jdk21) {
@@ -251,7 +221,9 @@ if (options.skipImages) {
 step('Chromium for the Angular tests (CHROME_BIN)');
 const browser = findBrowser();
 const chromeBin = persistedEnvVariable('CHROME_BIN');
-if (!browser) {
+if (options.skipBrowser) {
+  note('skipped (--skip-browser): only the Angular tests need it, not running the application');
+} else if (!browser) {
   missing('no Chrome, Chromium or Edge found - Angular tests cannot run headless');
 } else if (chromeBin && existsSync(chromeBin)) {
   ok(`CHROME_BIN = ${chromeBin}`);

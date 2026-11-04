@@ -279,6 +279,10 @@ Reguli de proces (sectiunea 0, regulile 10-12 din plan): sufixele de commit sunt
 ## 7. Comenzi utile
 
 ```powershell
+# Masina noua: bash scripts/env/install-prerequisites.sh --setup | powershell -NoProfile -ExecutionPolicy Bypass -File scripts\env\install-prerequisites.ps1 -Setup
+# De la clona la platforma cu date demo si interfata (--check, --no-ui, --skip-build, --dev): ghid in TLDR.md
+node scripts/env/setup.mjs
+
 # Mediu (Docker, JDK, imagini) - inainte de orice test de integrare
 node scripts/env/ensure-dev-env.mjs --check   # doar raporteaza
 node scripts/env/ensure-dev-env.mjs           # porneste Docker daca lipseste
@@ -304,7 +308,7 @@ node scripts/infra/demo-stack.mjs --seed
 node scripts/infra/demo-stack.mjs --down [--purge]
 
 # Teste ale scripturilor
-node --test scripts/verify/check-traceability.test.mjs scripts/verify/readme-endpoints.test.mjs scripts/infra/e2e-stack.test.mjs scripts/infra/demo-stack.test.mjs
+node --test scripts/verify/check-traceability.test.mjs scripts/verify/readme-endpoints.test.mjs scripts/infra/e2e-stack.test.mjs scripts/infra/demo-stack.test.mjs scripts/env/setup.test.mjs
 ```
 
 ## 8. Ce sa faci cu acest fisier

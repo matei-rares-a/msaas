@@ -60,7 +60,8 @@ Workspace-ul urmeaza un plan de implementare obligatoriu. Surse de adevar:
 
 ## Mediu local
 - Pregatirea mediului se face cu scripturi, nu cu pasi manuali. `scripts/` e grupat dupa scop si scris in Node (`.mjs`), ca sa ruleze pe orice masina; secretele se citesc din `.env`, nu se scriu in scripturi.
-  - `scripts/env/install-prerequisites.ps1` (Windows) / `.sh` (Linux, macOS) - o singura data, pe o masina noua (Docker, JDK 21, Maven, Node). Singurele scripturi dependente de platforma, pentru ca instaleaza chiar Node.
+  - `scripts/env/install-prerequisites.ps1` (Windows) / `.sh` (Linux, macOS) - o singura data, pe o masina noua (Docker, JDK 21, Node 22; Maven nu, `mvnw` si-l aduce singur); cu `-Setup` / `--setup` continua cu `setup.mjs`. Singurele scripturi dependente de platforma, pentru ca instaleaza chiar Node. Al doilea fisier `.ps1` trebuie sa ramana ASCII.
+  - `node scripts/env/setup.mjs` - de la repo clonat la platforma pornita cu date demo si interfata (preflight, `ensure-dev-env`, build, `demo-stack`); `--check` nu modifica nimic. Ghidul pentru un om pe o masina goala e [TLDR.md](../TLDR.md); promptul reutilizabil pentru un agent, [PROMPT_SETUP_TLDR.md](../PROMPT_SETUP_TLDR.md).
   - `node scripts/env/ensure-dev-env.mjs` - **inainte de orice test de integrare**: `JAVA_HOME` (JDK 21), porneste Docker si asteapta, descarca imaginile cu reincercari, `CHROME_BIN`, `npm ci`, verifica cheile din `.env`. `--check` doar raporteaza.
   - `node scripts/infra/local-stack.mjs --up|--down` - stiva din docker-compose pentru verificari manuale, in proiect separat si fara porturi publicate.
   - `node scripts/infra/e2e-stack.mjs --all` - suita E2E (modulul `e2e-tests`, profilul Maven `e2e`) pe toata platforma din compose, in proiect separat (`--up` / `--test` / `--down`, `--skip-build`).

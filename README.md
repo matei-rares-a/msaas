@@ -7,7 +7,8 @@ Sursele de adevar:
 - [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) - cum si in ce ordine (catalogul REQ, pasii, jurnalul de progres);
 - [AGENT_CONTEXT.md](AGENT_CONTEXT.md) - rezumat pentru preluarea lucrului;
 - [prerequisites.md](prerequisites.md) - pregatirea mediului local si comenzile de build/test;
-- [TLDR.md](TLDR.md) - cum pornesti si folosesti aplicatia, cu conturi demo.
+- [TLDR.md](TLDR.md) - de la repo clonat pe o masina goala la aplicatia pornita, cu conturi demo;
+- [PROMPT_SETUP_TLDR.md](PROMPT_SETUP_TLDR.md) - promptul reutilizabil prin care un agent face un TLDR si un script de setup pentru orice repo.
 
 Acest fisier e doar o privire de ansamblu; la orice diferenta, cerintele si planul au prioritate.
 
@@ -58,7 +59,8 @@ Cererile de pe rutele `/internal/**` nu ajung prin gateway.
 Totul se pregateste cu scripturi (vezi [prerequisites.md](prerequisites.md)); JDK 21 e obligatoriu.
 
 ```bash
-node scripts/env/ensure-dev-env.mjs        # mediul local (Docker, JDK 21, npm ci)
+node scripts/env/setup.mjs                 # de la clona la platforma pornita cu date demo (masina cu uneltele instalate; vezi TLDR.md)
+node scripts/env/ensure-dev-env.mjs        # doar mediul local (Docker, JDK 21, npm ci)
 ./mvnw -B -ntp clean verify                # build + toate testele (cere Docker)
 cd angular_base && npm run build && npm run test:ci && npm run e2e
 node scripts/verify/check-traceability.mjs # fiecare cerinta datorata are test
