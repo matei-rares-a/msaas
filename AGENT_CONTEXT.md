@@ -37,11 +37,11 @@ La fiecare prompt:
 
 - **Module Maven** (root `msaas-parent`, Boot 3.2.5, Java 21): `test-support`, `shared-lib`, `api-gateway`
   (reactiv, Spring Cloud Gateway), `auth-service`, `organization-service`, `billing-service`,
-  `notification-service`. Build: `.\mvnw.cmd -B -ntp verify` din radacina (sau `-pl <modul> -am` pentru un
+  `notification-service`, plus `e2e-tests` (doar cu profilul `-Pe2e`, nu intra in `mvnw verify`). Build: `.\mvnw.cmd -B -ntp verify` din radacina (sau `-pl <modul> -am` pentru un
   singur modul + dependintele lui).
 - **Baze de date**: PgBouncer (transaction pooling) in fata Postgres. `saas_global` (schema `auth` -
   identitati/refresh-reset tokens; schema `global` - catalog planuri `global.plans`, maparea
-  `tenant_id -> shard_id`, viitor catalog palete P8.1). `saas_shard_1` (schema per serviciu: `org`,
+  `tenant_id -> shard_id`, catalogul de palete `global.palettes`). `saas_shard_1` (schema per serviciu: `org`,
   `billing`, `notif`). Un rol DB LOGIN per serviciu (`auth_svc`, `org_svc`, `billing_svc`, `notif_svc`),
   plus roluri BYPASSRLS punctuale pentru citiri cross-tenant (`outbox_relay`, `org_auth_reader`,
   `billing_job_reader`). Fiecare tabel tenant-scoped are `tenant_id`, RLS fortat, policy pe
@@ -128,7 +128,7 @@ La fiecare prompt:
     garantat de aceeasi conexiune fizica decat cu `SingleConnectionDataSource` sau
     `hikari.maximum-pool-size=1`).
 
-## 5. Status la data acestui fisier (2026-11-03)
+## 5. Status la data acestui fisier (2026-11-04)
 
 Fazele 0-11 sunt complete si commise (`P7.1` a fost implementat de alt agent, Kiro, si corectat in
 `P7.1 (deviere)`) si P12.1 (suita E2E) si P12.2 (trasabilitate, README rescris) sunt terminate. P12.3 (verificari non-cod, `DeploymentScopeTest` in test-support) e terminat: **toate pasurile din plan sunt bifate**. Nu mai exista pas curent; orice lucru nou vine doar printr-o schimbare de cerinte (procedura din `.github/copilot-instructions.md`). Stiva pentru verificari manuale: `node scripts/infra/local-stack.mjs --up` (fara porturi publicate); stiva E2E: `node scripts/infra/e2e-stack.mjs --all`; platforma cu date demo, de incercat manual: `node scripts/infra/demo-stack.mjs --up` apoi `--seed` (ghid in `prerequisites.md` sectiunea 6, conturi `*@demo.test`). `CHROME_BIN` pe aceasta masina: vezi `ensure-dev-env.mjs --check`.
@@ -231,6 +231,8 @@ Reguli de proces (sectiunea 0, regulile 10-12 din plan): sufixele de commit sunt
 `clean verify`, trasabilitate si verificarea fata de plan.
 ## 6. Note/lectii utile (nu repeta greselile)
 
+- Testele de integrare nu au voie sa depinda de ordinea de rulare: pe Linux (CI) clasele ruleaza in alta ordine decat pe Windows. Stare globala in JVM (ex. `Introspection.enabledJvmWide` din graphql-java, setat de contextul `prod`) si tabele partajate intre clase se seteaza/verifica explicit in fiecare clasa. Reproducere locala: `mvnw -pl <modul> -am clean verify "-Dfailsafe.runOrder=reversealphabetical"` (cu ghilimele, altfel PowerShell rupe argumentul la punct).
+
 - Un test de integrare nu poate presupune o tabela goala: containerul Postgres partajat (`PostgresTestContainer`)
   e comun tuturor IT-urilor din rulare (compara numarul inainte/dupa, nu cu zero). Cu superuser-ul containerului
   `search_path` al rolului serviciului lipseste: pentru cod cu tabele necalificate (`ProcessedEventStore`) seteaza
@@ -292,6 +294,17 @@ node scripts/verify/check-traceability.mjs
 # Stiva locala pentru verificari manuale (fara porturi publicate, nu intra in conflict cu Postgres nativ)
 node scripts/infra/local-stack.mjs --up
 node scripts/infra/local-stack.mjs --down
+
+# Suita E2E pe toata platforma (proiect compose msaas-e2e, gateway pe 127.0.0.1:18080)
+node scripts/infra/e2e-stack.mjs --all
+
+# Platforma cu date demo, de incercat manual (proiect msaas-demo, gateway pe 127.0.0.1:8080; ghid: TLDR.md)
+node scripts/infra/demo-stack.mjs --up --skip-build
+node scripts/infra/demo-stack.mjs --seed
+node scripts/infra/demo-stack.mjs --down [--purge]
+
+# Teste ale scripturilor
+node --test scripts/verify/check-traceability.test.mjs scripts/verify/readme-endpoints.test.mjs scripts/infra/e2e-stack.test.mjs scripts/infra/demo-stack.test.mjs
 ```
 
 ## 8. Ce sa faci cu acest fisier

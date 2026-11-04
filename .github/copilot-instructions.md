@@ -63,6 +63,8 @@ Workspace-ul urmeaza un plan de implementare obligatoriu. Surse de adevar:
   - `scripts/env/install-prerequisites.ps1` (Windows) / `.sh` (Linux, macOS) - o singura data, pe o masina noua (Docker, JDK 21, Maven, Node). Singurele scripturi dependente de platforma, pentru ca instaleaza chiar Node.
   - `node scripts/env/ensure-dev-env.mjs` - **inainte de orice test de integrare**: `JAVA_HOME` (JDK 21), porneste Docker si asteapta, descarca imaginile cu reincercari, `CHROME_BIN`, `npm ci`, verifica cheile din `.env`. `--check` doar raporteaza.
   - `node scripts/infra/local-stack.mjs --up|--down` - stiva din docker-compose pentru verificari manuale, in proiect separat si fara porturi publicate.
+  - `node scripts/infra/e2e-stack.mjs --all` - suita E2E (modulul `e2e-tests`, profilul Maven `e2e`) pe toata platforma din compose, in proiect separat (`--up` / `--test` / `--down`, `--skip-build`).
+  - `node scripts/infra/demo-stack.mjs --up|--seed|--down [--purge]` - platforma cu date demo, de incercat manual (gateway pe `127.0.0.1:8080`); ghidul de utilizare e in [TLDR.md](../TLDR.md).
   - `node scripts/verify/check-traceability.mjs` (+ `--test ...test.mjs`) - verificari care esueaza build-ul/CI.
 - **Comenzile manuale repetate devin scripturi**: a doua rulare a aceleiasi comenzi, sau orice comanda care a avut nevoie de reincercare/corectura, se muta in scriptul potrivit (`env` / `infra` / `verify`), se documenteaza in sectiunea 2 a planului si, daca poate devia fata de cod, primeste un test (model: `DevEnvironmentScriptTest`).
 - Daca lipseste ceva din mediu, se repara `ensure-dev-env.mjs` si se ruleaza, nu se fac comenzi manuale ad-hoc.

@@ -6,7 +6,8 @@ Sursele de adevar:
 - [REQUIREMENTS.md](REQUIREMENTS.md) - ce se construieste;
 - [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) - cum si in ce ordine (catalogul REQ, pasii, jurnalul de progres);
 - [AGENT_CONTEXT.md](AGENT_CONTEXT.md) - rezumat pentru preluarea lucrului;
-- [prerequisites.md](prerequisites.md) - pregatirea mediului local si comenzile de build/test.
+- [prerequisites.md](prerequisites.md) - pregatirea mediului local si comenzile de build/test;
+- [TLDR.md](TLDR.md) - cum pornesti si folosesti aplicatia, cu conturi demo.
 
 Acest fisier e doar o privire de ansamblu; la orice diferenta, cerintele si planul au prioritate.
 
