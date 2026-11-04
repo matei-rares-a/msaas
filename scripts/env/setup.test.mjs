@@ -13,7 +13,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { checkDisk, checkMemory, checkNode, foreignContainers, parseFlags } from './setup.mjs';
+import { checkDisk, checkMemory, checkNode, foreignContainers, isCertificateError, parseFlags, systemCaBundle } from './setup.mjs';
 
 const root = new URL('../../', import.meta.url);
 const read = (relative) => readFileSync(fileURLToPath(new URL(relative, root)), 'utf8');
@@ -46,6 +46,21 @@ test('only containers of another compose project are in the way', () => {
   const listing = ['saas-postgres msaas-demo', 'saas-kafka msaas-e2e', 'saas-redis', 'unrelated-container other', ''].join('\n');
   assert.deepEqual(foreignContainers(listing), [{ name: 'saas-kafka', owner: 'msaas-e2e' }, { name: 'saas-redis', owner: 'no compose project' }]);
   assert.deepEqual(foreignContainers('saas-postgres msaas-demo\nsaas-kafka msaas-demo'), []);
+});
+
+test('a certificate problem is told apart from no connection', () => {
+  assert.ok(isCertificateError({ cause: { code: 'UNABLE_TO_GET_ISSUER_CERT_LOCALLY' } }));
+  assert.ok(isCertificateError({ cause: { code: 'SELF_SIGNED_CERT_IN_CHAIN' } }));
+  assert.ok(!isCertificateError({ cause: { code: 'ENOTFOUND' } }));
+  assert.ok(!isCertificateError(new Error('timeout')));
+});
+
+test('the system certificates go to Node on Linux and macOS, unless the person set their own', () => {
+  const present = (path) => path === '/etc/ssl/certs/ca-certificates.crt';
+  assert.equal(systemCaBundle({}, 'linux', present), '/etc/ssl/certs/ca-certificates.crt');
+  assert.equal(systemCaBundle({ NODE_EXTRA_CA_CERTS: '/my/ca.pem' }, 'linux', present), undefined);
+  assert.equal(systemCaBundle({}, 'win32', () => true), undefined);
+  assert.equal(systemCaBundle({}, 'linux', () => false), undefined);
 });
 
 test('the options of setup.mjs', () => {
@@ -83,7 +98,7 @@ test('Debian and Ubuntu: Docker from its official script, JDK 21 and Node from p
   const { status, output } = installer(['--dry-run', '--yes', '--setup']);
   assert.match(output, /\+ curl -fsSL https:\/\/get\.docker\.com -o \/tmp\/get-docker\.sh/);
   assert.match(output, /\+ sudo apt-get update/);
-  assert.match(output, /\+ sudo apt-get install -y openjdk-21-jdk/);
+  assert.match(output, /\+ sudo apt-get install -y openjdk-21-jdk-headless/);
   assert.match(output, /SHASUMS256\.txt/);
   assert.doesNotMatch(output, /docker-compose-plugin|apt-get install -y .*nodejs/, 'those packages are missing or too old on current distributions');
   assert.equal(status, 10, 'a docker group change needs a new login before anything continues');

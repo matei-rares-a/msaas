@@ -71,6 +71,24 @@ export function foreignContainers(listing, project = DEMO_PROJECT) {
     .map(([name, owner]) => ({ name, owner: owner || 'no compose project' }));
 }
 
+/** Node ignores the system's certificate store, so `npm ci` fails behind a company proxy that inspects TLS, where curl and the browser work. */
+const SYSTEM_CA_BUNDLES = ['/etc/ssl/certs/ca-certificates.crt', '/etc/pki/tls/certs/ca-bundle.crt', '/etc/ssl/cert.pem'];
+
+/** @returns the bundle to hand Node as NODE_EXTRA_CA_CERTS, or undefined when there is nothing to add or it is already set. */
+export function systemCaBundle(environment, operatingSystem, exists = existsSync) {
+  if (environment.NODE_EXTRA_CA_CERTS || operatingSystem === 'win32') {
+    return undefined;
+  }
+  return SYSTEM_CA_BUNDLES.find((candidate) => exists(candidate));
+}
+
+const CERTIFICATE_ERRORS = ['UNABLE_TO_GET_ISSUER_CERT_LOCALLY', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'SELF_SIGNED_CERT_IN_CHAIN', 'DEPTH_ZERO_SELF_SIGNED_CERT', 'CERT_UNTRUSTED'];
+
+/** A certificate problem is not the same as no connection: the first needs the company's CA, the second a network. */
+export function isCertificateError(error) {
+  return CERTIFICATE_ERRORS.includes(error?.cause?.code ?? error?.code);
+}
+
 export function parseFlags(args) {
   const has = (flag) => args.includes(flag);
   return { check: has('--check'), noUi: has('--no-ui'), skipBuild: has('--skip-build'), dev: has('--dev') };
@@ -100,9 +118,9 @@ function isPortInUse(port) {
 async function reachable(url) {
   try {
     await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(8000) });
-    return true;
-  } catch {
-    return false;
+    return 'ok';
+  } catch (error) {
+    return isCertificateError(error) ? 'certificate' : 'down';
   }
 }
 
@@ -121,7 +139,12 @@ function step(message) {
 /** The environment the child processes get: the JDK 21 that was found, because JAVA_HOME may have been set only just now. */
 function childEnvironment() {
   const jdk = findJdk21(env, platform);
-  return jdk ? { ...env, JAVA_HOME: jdk, PATH: `${join(jdk, 'bin')}${platform === 'win32' ? ';' : ':'}${env.PATH ?? env.Path ?? ''}` } : { ...env };
+  const environment = jdk ? { ...env, JAVA_HOME: jdk, PATH: `${join(jdk, 'bin')}${platform === 'win32' ? ';' : ':'}${env.PATH ?? env.Path ?? ''}` } : { ...env };
+  const bundle = systemCaBundle(environment, platform);
+  if (bundle) {
+    environment.NODE_EXTRA_CA_CERTS = bundle;
+  }
+  return environment;
 }
 
 function runNode(script, args = []) {
@@ -166,10 +189,22 @@ async function preflight() {
 
   const registries = [['Maven Central', 'https://repo.maven.apache.org/maven2/'], ['npm registry', 'https://registry.npmjs.org/'], ['Docker Hub', 'https://registry-1.docker.io/v2/']];
   const answers = await Promise.all(registries.map(async ([name, url]) => [name, await reachable(url)]));
-  const down = answers.filter(([, up]) => !up).map(([name]) => name);
-  report(down.length === 0
-    ? { status: 'ok', name: 'Internet', detail: 'Maven Central, npm and Docker Hub answer' }
-    : { status: 'warn', name: 'Internet', detail: `no answer from ${down.join(', ')}`, fix: 'the first build downloads about 1 GB; behind a proxy, configure it for Maven (.mvn), npm and Docker Desktop' });
+  const down = answers.filter(([, state]) => state === 'down').map(([name]) => name);
+  const untrusted = answers.filter(([, state]) => state === 'certificate').map(([name]) => name);
+  if (untrusted.length > 0) {
+    report({
+      status: 'warn',
+      name: 'Internet',
+      detail: `the certificate of ${untrusted.join(', ')} is not trusted by Node.js (a company proxy that inspects traffic?)`,
+      fix: platform === 'win32'
+        ? 'ask IT for the company root certificate (.pem) and set NODE_EXTRA_CA_CERTS to its path; Maven and Docker Desktop use the Windows store'
+        : 'the system certificates are handed to npm automatically; for the JDK downloaded from adoptium.net (not from the distribution) import the company CA with keytool',
+    });
+  } else {
+    report(down.length === 0
+      ? { status: 'ok', name: 'Internet', detail: 'Maven Central, npm and Docker Hub answer' }
+      : { status: 'warn', name: 'Internet', detail: `no answer from ${down.join(', ')}`, fix: 'the first build downloads about 1 GB; behind a proxy, configure it for Maven (.mvn), npm and Docker Desktop' });
+  }
 }
 
 function ensureMachine() {

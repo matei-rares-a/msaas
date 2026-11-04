@@ -50,7 +50,7 @@ jobs:
       - name: README endpoints exist
         run: node --test scripts/verify/readme-endpoints.test.mjs
       - name: Setup scripts (checks, installer dry-runs, versions)
-        run: node --test scripts/env/setup.test.mjs
+        run: node --test scripts/env/setup.test.mjs scripts/verify/clean-machine.test.mjs
       - name: Check every due REQ has a test
         run: node scripts/verify/check-traceability.mjs
 
@@ -105,3 +105,25 @@ jobs:
         with:
           name: e2e-reports
           path: e2e-tests/target/failsafe-reports/
+
+  installer:
+    name: Installer on a bare system (${{ matrix.distro }} ${{ matrix.flags }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { distro: 'ubuntu:22.04', flags: '' }
+          - { distro: 'ubuntu:24.04', flags: '' }
+          - { distro: 'ubuntu:24.04', flags: '--user' }
+          - { distro: 'debian:12', flags: '--user' }
+          - { distro: 'fedora:41', flags: '' }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # a container with nothing on it but the system: the installer, again, and --check (the full path is --full, about 20 minutes)
+      - name: Installer in a clean container
+        run: node scripts/verify/clean-machine.mjs --distro ${{ matrix.distro }} ${{ matrix.flags }}

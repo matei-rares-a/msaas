@@ -231,6 +231,8 @@ Reguli de proces (sectiunea 0, regulile 10-12 din plan): sufixele de commit sunt
 `clean verify`, trasabilitate si verificarea fata de plan.
 ## 6. Note/lectii utile (nu repeta greselile)
 
+- Scripturile de setup se verifica pe sisteme goale, nu doar cu `--dry-run`: `node scripts/verify/clean-machine.mjs` (container Linux gol; `--user`, `--full`, `--detect-ca`; matrice in CI). Pe reteaua firmei, un proxy inspecteaza TLS si containerul nu are CA-ul ei: `--detect-ca`. Windows si macOS nu se pot simula asa.
+
 - Testele de integrare nu au voie sa depinda de ordinea de rulare: pe Linux (CI) clasele ruleaza in alta ordine decat pe Windows. Stare globala in JVM (ex. `Introspection.enabledJvmWide` din graphql-java, setat de contextul `prod`) si tabele partajate intre clase se seteaza/verifica explicit in fiecare clasa. Reproducere locala: `mvnw -pl <modul> -am clean verify "-Dfailsafe.runOrder=reversealphabetical"` (cu ghilimele, altfel PowerShell rupe argumentul la punct).
 
 - Un test de integrare nu poate presupune o tabela goala: containerul Postgres partajat (`PostgresTestContainer`)
@@ -308,7 +310,7 @@ node scripts/infra/demo-stack.mjs --seed
 node scripts/infra/demo-stack.mjs --down [--purge]
 
 # Teste ale scripturilor
-node --test scripts/verify/check-traceability.test.mjs scripts/verify/readme-endpoints.test.mjs scripts/infra/e2e-stack.test.mjs scripts/infra/demo-stack.test.mjs scripts/env/setup.test.mjs
+node --test scripts/verify/check-traceability.test.mjs scripts/verify/readme-endpoints.test.mjs scripts/infra/e2e-stack.test.mjs scripts/infra/demo-stack.test.mjs scripts/env/setup.test.mjs scripts/verify/clean-machine.test.mjs
 ```
 
 ## 8. Ce sa faci cu acest fisier

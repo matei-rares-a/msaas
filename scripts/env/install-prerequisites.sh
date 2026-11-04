@@ -11,7 +11,7 @@
 # Exit codes: 0 done, 1 something failed, 10 a log out / log in (Linux) or a first start of Docker Desktop (macOS) is needed first.
 #
 # Tested only through --dry-run and the unit tests of scripts/env; no real installation has been run on Linux or macOS.
-# MSAAS_TEST_OS, MSAAS_TEST_PM and MSAAS_TEST_MISSING exist only for those tests.
+# MSAAS_TEST_OS, MSAAS_TEST_PM, MSAAS_TEST_MISSING and MSAAS_TEST_NO_JDK_PACKAGE exist only for those tests.
 
 set -euo pipefail
 
@@ -127,10 +127,11 @@ if [ "$PM" = none ] && { ! have docker || [ -z "$JDK_HOME" ] || ! node_supported
   fail "no supported package manager (apt-get, dnf, brew): install Docker, JDK 21 and Node.js $NODE_MAJOR by hand (see TLDR.md, 'Install by hand')"
 fi
 
-if [ "$OS" = Linux ] && ! have curl; then
+# the downloads below need curl, and the Node.js archive needs tar and gzip: a minimal system may lack any of them
+if [ "$OS" = Linux ] && { ! have curl || ! have tar || ! have gzip; }; then
   case "$PM" in
-    apt) pkg_install curl ca-certificates ;;
-    dnf) pkg_install curl ca-certificates ;;
+    apt) pkg_install curl ca-certificates tar gzip ;;
+    dnf) pkg_install curl ca-certificates tar gzip ;;
   esac
 fi
 
@@ -147,25 +148,76 @@ if ! have docker; then
     confirm "Install Docker Engine with Docker's official script (https://get.docker.com), run as root?"
     run curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
     run $SUDO sh /tmp/get-docker.sh
-    have systemctl && run $SUDO systemctl enable --now docker
-    NEEDS_RELOGIN=1
+    # no systemd (a container, WSL2 without systemd): the engine is installed but nothing starts it; that is a warning, not a failure
+    if have systemctl && run $SUDO systemctl enable --now docker; then :; else
+      echo "WARNING: the Docker service could not be started with systemd. Start it yourself (sudo service docker start, or on WSL2 use Docker Desktop with WSL integration)."
+    fi
+    # a person who installs Docker as root has no use for a new login; everyone else does, for the docker group
+    [ "$(id -u)" = 0 ] || NEEDS_RELOGIN=1
   fi
 fi
-if [ "$OS" = Linux ] && have docker && ! docker info >/dev/null 2>&1 && ! in_docker_group; then
+# root can use Docker without the group; everyone else needs it (and a new login for it to count)
+if [ "$OS" = Linux ] && [ "$(id -u)" != 0 ] && have docker && ! docker info >/dev/null 2>&1 && ! in_docker_group; then
   confirm "Add $ME to the docker group (needed to use Docker without sudo)?"
   run $SUDO usermod -aG docker "$ME"
   NEEDS_RELOGIN=1
 fi
 
 # --- JDK 21 ---
+# Some systems have no JDK 21 package (Debian 12 has only 17). Then Temurin comes from adoptium.net into ~/.local/jdks, which the
+# scripts look in, and JAVA_HOME is added to ~/.profile so ./mvnw run by hand finds it too.
+install_temurin() {
+  local arch api dest url file
+  case "$(uname -m)" in x86_64|amd64) arch=x64 ;; aarch64|arm64) arch=aarch64 ;; *) fail "unsupported processor: $(uname -m)" ;; esac
+  api="https://api.adoptium.net/v3/binary/latest/21/ga/linux/$arch/jdk/hotspot/normal/eclipse"
+  dest="$HOME/.local/jdks"
+  if [ "$DRY" = 1 ]; then
+    echo "+ curl -fsSI $api   (the release file it redirects to, with its .sha256.txt)"
+    echo "+ curl -fsSL <release file> -o /tmp/<file>   (checked with sha256sum)"
+    echo "+ tar -xzf /tmp/<file> -C $dest   then JAVA_HOME added to ~/.profile"
+    return 0
+  fi
+  confirm "Install Temurin JDK 21 from adoptium.net into $dest (no root needed)?"
+  url="$(curl -fsSI -o /dev/null -w '%{redirect_url}' "$api")"
+  [ -n "$url" ] || fail "could not find the Temurin 21 download through $api"
+  file="${url##*/}"
+  mkdir -p "$dest"
+  curl -fsSL "$url" -o "/tmp/$file"
+  curl -fsSL "$url.sha256.txt" -o "/tmp/$file.sha256.txt"
+  (cd /tmp && sha256sum -c "$file.sha256.txt") || fail "the download of $file does not match its published checksum"
+  tar -xzf "/tmp/$file" -C "$dest"
+  rm -f "/tmp/$file" "/tmp/$file.sha256.txt"
+  JDK_HOME="$(jdk21_home || true)"
+  [ -n "$JDK_HOME" ] || fail "Temurin 21 was unpacked to $dest but no JDK 21 was found there"
+  if ! grep -qs 'MSaaS: java' "$HOME/.profile" 2>/dev/null; then
+    printf '\n# MSaaS: java\nexport JAVA_HOME="%s"\nexport PATH="$JAVA_HOME/bin:$PATH"\n' "$JDK_HOME" >> "$HOME/.profile"
+    echo "Added JAVA_HOME=$JDK_HOME to $HOME/.profile (new terminals pick it up)."
+  fi
+  export JAVA_HOME="$JDK_HOME" PATH="$JDK_HOME/bin:$PATH"
+}
+
+install_jdk21() {
+  local packaged=1
+  if [ -n "${MSAAS_TEST_NO_JDK_PACKAGE:-}" ]; then
+    packaged=0
+  else
+    case "$PM" in
+      # headless: the build needs the compiler, not the graphical libraries that the plain package pulls in
+      apt) pkg_install openjdk-21-jdk-headless || packaged=0 ;;
+      dnf) pkg_install java-21-openjdk-devel || packaged=0 ;;
+      brew) pkg_install openjdk@21 ;;
+    esac
+  fi
+  if [ "$packaged" = 0 ]; then
+    echo "There is no JDK 21 package for this system: using Temurin from adoptium.net instead."
+    install_temurin
+  fi
+}
+
 if [ -z "$JDK_HOME" ]; then
-  case "$PM" in
-    apt) pkg_install openjdk-21-jdk ;;
-    dnf) pkg_install java-21-openjdk-devel ;;
-    brew) pkg_install openjdk@21 ;;
-  esac
+  install_jdk21
   if [ "$DRY" != 1 ] && [ -z "$(jdk21_home || true)" ]; then
-    fail "JDK 21 is not available from this system's packages. Install Temurin 21 from https://adoptium.net/temurin/releases/?version=21 (unpack it to ~/.local/jdks) and run this again"
+    fail "JDK 21 could not be installed. Install Temurin 21 from https://adoptium.net/temurin/releases/?version=21 (unpack it to ~/.local/jdks) and run this again"
   fi
 fi
 

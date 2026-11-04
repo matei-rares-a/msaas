@@ -124,6 +124,7 @@ Gata de folosit = `docker ps` arata **10 containere** `(healthy)`. Dupa o pornir
 | build-ul refuza versiunea de Java / `no JDK 21 found` | numai Java 21 e acceptat; `node scripts/env/ensure-dev-env.mjs` seteaza `JAVA_HOME` (terminal nou dupa aceea) |
 | `JDK 21 is not available from this system's packages` (Linux) | Temurin 21 de la adoptium.net, dezarhivat in `~/.local/jdks`, apoi reia scriptul |
 | `Internet: no answer from ...` | e doar avertisment; in spatele unui proxy configureaza-l pentru Maven, npm, Docker Desktop |
+| `certificate ... is not trusted` / `unable to get local issuer certificate` / `PKIX path building failed` | un proxy de firma inspecteaza traficul TLS; cere de la IT certificatul radacina (.pem): `NODE_EXTRA_CA_CERTS=<fisier>` pentru npm, iar pentru un JDK descarcat de la Adoptium `keytool -importcert -cacerts` (JDK-ul din pachetele distributiei foloseste certificatele sistemului) |
 | login-ul da eroare de retea in browser | platforma nu e pornita (`docker ps`: 10 containere sanatoase) sau `--up` nu a terminat |
 | logheaza, dar nu exista conturile | `node scripts/infra/demo-stack.mjs --seed` |
 | `There is no .env with the development secrets` | `git checkout -- .env` |
@@ -143,3 +144,17 @@ node scripts/infra/e2e-stack.mjs --all                 # 21 de teste pe toata pl
 ```
 
 Nu uita: stiva demo, cea E2E si `local-stack.mjs` folosesc aceleasi nume de containere si nu ruleaza deodata.
+
+## 9. Ce s-a verificat pe sisteme goale (si ce nu)
+
+Drumul din sectiunea 1 a fost rulat in containere Linux fara nimic instalat, cu `node scripts/verify/clean-machine.mjs`:
+
+| Sistem | Ce s-a rulat | Rezultat |
+|---|---|---|
+| Ubuntu 24.04, root | installer, a doua rulare, `--check` | PASS |
+| Ubuntu 24.04, utilizator cu `sudo` | la fel (installerul iese cu 10: grupul `docker` cere un login nou) | PASS |
+| Ubuntu 22.04, root | la fel | PASS |
+| Debian 12, utilizator cu `sudo` (nu are pachet JDK 21: Temurin de la Adoptium, cu suma de control) | la fel | PASS |
+| Fedora 41, utilizator cu `sudo` | la fel | PASS |
+| Ubuntu 24.04, cap-coada (`--full`) | si daemon Docker propriu, `setup.mjs`, build, platforma, seed, 5 login-uri | PASS (10 containere sanatoase) |
+Rulat in CI la fiecare push (jobul `installer`). **Neverificat pe sistem curat**: Windows (`winget`, Docker Desktop, WSL 2) si macOS (`brew`), unde nu am un sistem gol; pe Linux, serviciul Docker nu e pornit de installer in containere (nu au systemd), iar `logout/login` pentru grupul `docker` il face un om. Daca esueaza ceva pe masina ta, spune-mi mesajul exact.

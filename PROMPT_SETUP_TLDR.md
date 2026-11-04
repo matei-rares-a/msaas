@@ -65,8 +65,14 @@ E. Verifica, onest:
    - Scrie teste pentru logica pura (verificarile de preflight, parsarea) si pentru ce poate deriva: versiunile din scripturi sa fie
      cele din CI si din build, comenzile din TLDR sa existe, fisierul PowerShell sa fie ASCII. Verifica testele si pe o mutatie
      (stric ceva si vezi ca pica).
-   - Instalarile reale pe un OS curat probabil NU le poti face. Spune explicit ce ai testat si ce nu; nu scrie niciodata "testat pe
-     masina noua" daca nu e adevarat. Pune in script si in TLDR ce ramane netestat.
+   - Un OS curat se poate simula pentru Linux: containere Docker goale (ubuntu, debian, fedora), cu sursa montata read-only si un
+     utilizator normal cu sudo. Rulezi installerul cu adevarat (apt, dnf, scriptul oficial Docker), apoi a doua oara (idempotenta), apoi
+     --check. Pentru drumul complet porneste in container un daemon Docker propriu (--privileged) si ruleaza comanda unica. Pune
+     harness-ul ca script in repo (aici: scripts/verify/clean-machine.mjs) si ruleaza-l in CI cu o matrice de distributii. Pe o retea
+     de firma care inspecteaza TLS, containerul are nevoie de CA-ul ei (aici: --detect-ca); un esec de certificat nu e un defect al
+     scriptului. Citeste logurile: au gasit defecte reale (pachet JDK inexistent pe Debian 12, systemctl absent care oprea tot scriptul,
+     pachete GUI inutile). Windows si macOS nu se pot simula asa: spune explicit ce ai testat si ce nu; nu scrie niciodata "testat
+     pe masina noua" daca nu e adevarat. Pune in script si in TLDR ce ramane netestat.
 
 F. Respecta regulile repo-ului (AGENTS.md, copilot-instructions, conventii de commit, limba documentelor, indexul/jurnalul de
    progres). Fa commit local cu mesajul potrivit; nu face push si nu sterge nimic fara confirmare. Nu modifica cod de aplicatie.
@@ -103,5 +109,6 @@ Rezultatul aceluiasi prompt aplicat pe MSaaS (Java 21 + Docker Compose + Angular
 | Linux / macOS, la fel | [scripts/env/install-prerequisites.sh](scripts/env/install-prerequisites.sh) (`--setup`, `--check`, `--dry-run`, `--yes`) |
 | Orchestratorul cross-platform (preflight, mediu, build, pornire, date demo, interfata) | [scripts/env/setup.mjs](scripts/env/setup.mjs) (`--check`, `--no-ui`, `--skip-build`, `--dev`) |
 | Teste ale logicii si ale "drift"-ului de versiuni | [scripts/env/setup.test.mjs](scripts/env/setup.test.mjs) |
+| Harness: containere Linux goale (Ubuntu, Debian, Fedora; root sau utilizator cu sudo; `--full` = tot drumul cu daemon Docker propriu), rulat si in CI | [scripts/verify/clean-machine.mjs](scripts/verify/clean-machine.mjs), teste in [clean-machine.test.mjs](scripts/verify/clean-machine.test.mjs) |
 
-Ce a ramas netestat acolo: instalarile reale (winget, apt, dnf, brew, scriptul oficial Docker) pe un sistem curat; `--dry-run` si testele acopera doar logica scriptului.
+Ce a ramas netestat acolo: Windows (winget, Docker Desktop) si macOS (brew) pe un sistem curat; pe Linux instalarile reale au rulat in containere goale (Ubuntu 22.04/24.04, Debian 12, Fedora 41).
