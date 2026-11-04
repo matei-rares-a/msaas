@@ -3,20 +3,40 @@
 Platforma SaaS multi-tenant: fiecare organizatie isi vede doar datele ei. Backend Spring Boot (gateway + 4 servicii), frontend Angular.
 Detalii: [README.md](README.md) (arhitectura), [prerequisites.md](prerequisites.md) (mediu, comenzi), [REQUIREMENTS.md](REQUIREMENTS.md) (cerinte).
 
-## 1. Pornire (de fiecare data cand repornesti calculatorul)
+## 1. Pornire
+
+Ai nevoie de: Windows/Linux/macOS cu **Docker Desktop**, **JDK 21**, **Maven wrapper** (inclus), **Node 22** si fisierul **`.env`** din radacina (secretele de dezvoltare, vine cu clona; fara el scripturile se opresc). Pe o masina noua instalezi tot o singura data cu `pwsh scripts/env/install-prerequisites.ps1` (Windows) sau `bash scripts/env/install-prerequisites.sh` (Linux, macOS), apoi deschizi un terminal nou.
+
+Toate comenzile se dau din radacina proiectului, in doua terminale: unul pentru platforma, unul pentru interfata.
+
+### A. Prima data (sau dupa `--down --purge`, sau dupa ce schimbi cod)
 
 ```powershell
-cd C:\local_store\files\my_workspace\msaas
-node scripts/env/ensure-dev-env.mjs               # porneste Docker Desktop si asteapta (JDK 21, imagini, npm ci)
-node scripts/infra/demo-stack.mjs --up --skip-build   # ridica platforma; datele demo raman de data trecuta
+# terminal 1 - radacina proiectului
+node scripts/env/ensure-dev-env.mjs                 # pregateste mediul: porneste Docker si asteapta, JDK 21, imagini, npm ci
+node scripts/infra/demo-stack.mjs --up              # construieste jar-urile (~3-4 min) si ridica platforma (~1 min)
+node scripts/infra/demo-stack.mjs --seed            # creeaza conturile si datele demo (~1-2 min); la sfarsit afiseaza conturile si codul de invitatie
+
+# terminal 2
 cd angular_base
-npm start                                         # interfata: http://localhost:4200
+npm start                                           # interfata: http://localhost:4200 (prima compilare ~30 s)
 ```
 
-- Prima data pe o masina noua (sau dupa schimbari de cod): fara `--skip-build`, ca sa construiasca jar-urile.
-- Datele nu exista inca: `node scripts/infra/demo-stack.mjs --seed` (repetabil, fara duplicate; reafiseaza si codul de invitatie).
-- API-ul (gateway) e pe `http://localhost:8080`; nimic altceva nu e publicat.
+### B. De fiecare data cand repornesti calculatorul (datele demo raman)
 
+```powershell
+node scripts/env/ensure-dev-env.mjs                 # porneste Docker Desktop
+node scripts/infra/demo-stack.mjs --up --skip-build # ridica platforma din jar-urile existente (construieste doar daca lipsesc)
+cd angular_base; npm start
+```
+
+Nu mai rulezi `--seed`; il rulezi doar daca ai sters datele (`--purge`). Rularea lui in plus nu strica nimic.
+
+### C. Cand esti gata de folosit
+
+- `docker ps` arata **10 containere** `(healthy)`; `http://localhost:4200` raspunde; gateway-ul e pe `http://localhost:8080`.
+- Dupa o pornire la rece primele login-uri pot dura cateva zeci de secunde (aplicatiile Java se incalzesc); apoi merg normal.
+- Nimic altceva nu e publicat pe masina (nici Postgres, nici brokerii), deci un Postgres local pe 5432 nu intra in conflict. Portul **8080** si **4200** trebuie sa fie libere.
 ## 2. Conturi demo
 
 Parola tuturor: **`Demo-Passphrase-2026`**
@@ -63,7 +83,10 @@ Opreste `npm start` cu Ctrl+C.
 | Simptom | Cauza / remediu |
 |---|---|
 | `failed to connect to the docker API` | Docker Desktop nu ruleaza: `node scripts/env/ensure-dev-env.mjs` |
-| login-ul da eroare de retea in browser | stiva nu e pornita (`docker ps` trebuie sa arate 10 containere sanatoase) sau `--up` nu a terminat |
+| login-ul da eroare de retea in browser | stiva nu e pornita (`docker ps` trebuie sa arate 10 containere sanatoase) sau `--up` nu a terminat; dupa pornire la rece mai asteapta putin |
+| logheaza, dar nu exista conturile | datele lipsesc (ai facut `--purge` sau e prima pornire): `node scripts/infra/demo-stack.mjs --seed` |
+| `There is no .env with the development secrets` | lipseste `.env` din radacina; e in git, deci `git checkout -- .env` il readuce |
+| `npm start` nu gaseste pachetele | `node scripts/env/ensure-dev-env.mjs` (face `npm ci`) sau `cd angular_base; npm ci` |
 | `port 8080 already in use` | alta aplicatie pe 8080; frontend-ul are adresa fixata, deci o opresti pe cealalta |
 | numele de containere `saas-*` exista deja | alta stiva ruleaza (E2E, `local-stack.mjs`): `--down` pe ea; nu merg doua deodata |
 | 429 Too Many Requests | limita de cereri (10/s per user); asteapta o secunda |

@@ -3,7 +3,7 @@
  * A platform to try by hand, with data in it: the same compose stack as the end-to-end tests, in its own project (msaas-demo),
  * with the volumes kept between runs and the gateway on the port the Angular app talks to (8080).
  *
- *   node scripts/infra/demo-stack.mjs --up [--skip-build]   build the jars, start the stack, wait until it is healthy
+ *   node scripts/infra/demo-stack.mjs --up [--skip-build]   build the jars (also with --skip-build when one is missing), start the stack, wait until it is healthy
  *   node scripts/infra/demo-stack.mjs --seed                create the demo accounts, organizations and data (safe to repeat)
  *   node scripts/infra/demo-stack.mjs --down [--purge]      stop it; --purge also deletes the data
  *
@@ -37,8 +37,14 @@ function composeArgs() {
   return ['compose', '-p', PROJECT, '-f', join(repoRoot, 'docker-compose.yml'), '-f', override];
 }
 
+/** The services whose jar is not built yet: the Dockerfiles copy it, so a start without it cannot work. */
+export function missingJars() {
+  return SERVICES.filter((service) => !existsSync(join(repoRoot, service, 'target', `-1.0.0.jar`)));
+}
+
 function up(skipBuild) {
-  if (!skipBuild) {
+  // --skip-build is only honoured when there is something to skip
+  if (!skipBuild || missingJars().length > 0) {
     const built = buildJars();
     if (built !== 0) {
       return built;

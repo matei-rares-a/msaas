@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { DEMO, GATEWAY_PORT, PASSWORD, PROJECT, buildOverride } from './demo-stack.mjs';
+import { DEMO, GATEWAY_PORT, PASSWORD, PROJECT, buildOverride, missingJars } from './demo-stack.mjs';
 import { PROJECT as E2E_PROJECT } from './e2e-stack.mjs';
 
 const root = new URL('../../', import.meta.url);
@@ -47,4 +47,11 @@ test('the demo covers every role and a user with no organization', () => {
   const roles = new Set(DEMO.organizations.flatMap((organization) => organization.members.map(([, role]) => role)));
   assert.deepEqual([...roles].sort(), ['MANAGER', 'USER']);
   assert.ok(DEMO.invited);
+});
+
+test('--skip-build is not honoured when a jar is missing, because the images are built from the jars', () => {
+  const missing = missingJars();
+  assert.ok(Array.isArray(missing));
+  assert.ok(missing.every((service) => /-service$|^api-gateway$/.test(service)));
+  assert.match(readFileSync(fileURLToPath(new URL('scripts/infra/demo-stack.mjs', root)), 'utf8'), /!skipBuild \|\| missingJars\(\)\.length > 0/);
 });
