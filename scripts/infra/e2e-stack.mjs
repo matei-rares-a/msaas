@@ -36,9 +36,17 @@ export const INFRASTRUCTURE = ['postgres', 'pgbouncer', 'kafka', 'rabbitmq', 're
  * flows charges.
  */
 export function buildOverride() {
-  const blocks = new Map([...INFRASTRUCTURE, ...SERVICES].map((name) => [name, ['    ports: !reset []']]));
-  blocks.set('postgres', ['    ports: !override', `      - "127.0.0.1:${POSTGRES_PORT}:5432"`]);
+  const blocks = new Map([...INFRASTRUCTURE, ...SERVICES].map((name) => [name, [
+    `    container_name: ${PROJECT}-${name}`,
+    '    ports: !reset []'
+  ]]));
+  blocks.set('postgres', [
+    `    container_name: ${PROJECT}-postgres`,
+    '    ports: !override',
+    `      - "127.0.0.1:${POSTGRES_PORT}:5432"`
+  ]);
   blocks.set('api-gateway', [
+    `    container_name: ${PROJECT}-api-gateway`,
     '    ports: !override',
     `      - "127.0.0.1:${GATEWAY_PORT}:8080"`,
     '    environment:',

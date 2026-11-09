@@ -29,6 +29,14 @@ test('uses a project and ports of its own, so it cannot collide with a local Pos
   assert.notEqual(GATEWAY_PORT, 8080);
 });
 
+test('gives every container a project-specific name so parallel Compose stacks cannot collide', () => {
+  for (const name of [...['postgres', 'pgbouncer', 'kafka', 'rabbitmq', 'redis'], ...[
+    'api-gateway', 'auth-service', 'organization-service', 'billing-service', 'notification-service'
+  ]]) {
+    assert.match(block(name), new RegExp(`container_name: ${PROJECT}-${name}`));
+  }
+});
+
 test('publishes only the gateway and Postgres, and only on the loopback interface', () => {
   assert.match(block('api-gateway'), new RegExp(`"127.0.0.1:${GATEWAY_PORT}:8080"`));
   assert.match(block('postgres'), new RegExp(`"127.0.0.1:${POSTGRES_PORT}:5432"`));
