@@ -93,6 +93,8 @@ Ce nu vezi cu rolul tau nu apare in meniu, iar serverul refuza oricum cererea (4
 
 ## 6. Zilnic
 
+Pe Windows, dupa instalarea prerechizitelor din sectiunea 1, deschide `start.bat` din radacina proiectului: construieste si porneste platforma, pregateste datele demo si porneste Angular. Inchiderea ferestrei `start.bat` opreste doar Angular; containerele raman pornite. `stop.bat` opreste Angular pornit de `start.bat` si stiva demo, dar pastreaza datele si nu opreste Docker Desktop sau alte stive. Daca pornirea este in curs, `stop.bat` asteapta terminarea ei inainte de oprire. Nu inchide fereastra de pornire in acest timp.
+
 ```powershell
 # repornire dupa ce ai oprit calculatorul (datele demo raman)
 node scripts/env/ensure-dev-env.mjs                    # porneste Docker Desktop si asteapta

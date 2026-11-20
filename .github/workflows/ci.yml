@@ -80,6 +80,17 @@ jobs:
           name: playwright-traces
           path: angular_base/test-results/
 
+  windows-demo-launcher:
+    name: Windows demo launcher
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test scripts/infra/demo-launcher.test.mjs
+
   e2e:
     name: E2E (whole platform on Docker Compose)
     runs-on: ubuntu-latest

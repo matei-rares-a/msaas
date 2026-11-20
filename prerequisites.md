@@ -1,6 +1,6 @@
 # Pregatirea mediului local
 
-Totul se face prin scripturile din `scripts/`, grupate dupa scop. Sunt scrise in Node, deci ruleaza identic pe Windows, Linux si macOS. Secretele se citesc din `.env`. Nu sunt necesare servicii platite sau chei de API.
+Operatiile sunt in scripturile Node din `scripts/`, grupate dupa scop; lansatoarele `start.bat` si `stop.bat` sunt pentru Windows. Secretele se citesc din `.env`. Nu sunt necesare servicii platite sau chei de API.
 
 | Folder | Scop |
 |---|---|
@@ -19,8 +19,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\env\install-prerequi
 bash scripts/env/install-prerequisites.sh    # Linux, macOS
 ```
 
-Instaleaza Docker (Desktop pe Windows/macOS, Engine pe Linux), JDK 21 si Node.js 22 (Maven nu: `mvnw` si-l aduce singur). Cu `-Setup` (Windows) / `--setup` (Linux, macOS) continua cu `node scripts/env/setup.mjs`: preflight, mediu, build, platforma, date demo, interfata. Daca tocmai a instalat Docker, iese cu codul 10 (restart / prima pornire / logout), apoi reiei aceeasi comanda. Ghid complet pentru o masina goala: [TLDR.md](TLDR.md). Sunt singurele scripturi dependente de platforma, pentru
-ca instaleaza chiar Node, pe care ruleaza restul. Dupa instalare, deschide un terminal nou.
+Instaleaza Docker (Desktop pe Windows/macOS, Engine pe Linux), JDK 21 si Node.js 22 (Maven nu: `mvnw` si-l aduce singur). Cu `-Setup` (Windows) / `--setup` (Linux, macOS) continua cu `node scripts/env/setup.mjs`: preflight, mediu, build, platforma, date demo, interfata. Daca tocmai a instalat Docker, iese cu codul 10 (restart / prima pornire / logout), apoi reiei aceeasi comanda. Ghid complet pentru o masina goala: [TLDR.md](TLDR.md). Dupa instalare, deschide un terminal nou.
 
 ## 2. La inceputul fiecarei sesiuni de lucru (si dupa fiecare repornire)
 
@@ -76,6 +75,8 @@ Un test de lunch dureaza ~2,5 minute; intreaga suita, cateva minute dupa build.
 | `scripts/infra/local-stack.mjs`, `scripts/infra/e2e-stack.mjs`, `scripts/infra/demo-stack.mjs` | da |
 
 ## 6. Platforma cu date demo, de incercat manual
+
+Pe Windows, `start.bat` porneste platforma cu date demo si Angular. Inchiderea ferestrei lui opreste numai Angular. `stop.bat` opreste Angular pornit astfel si stiva demo, pastrand datele; nu opreste Docker Desktop sau alte stive. Daca pornirea este in curs, oprirea asteapta finalizarea ei; lasa fereastra de pornire deschisa pana atunci.
 
 ```bash
 node scripts/infra/demo-stack.mjs --up       # construieste jar-urile si ridica stiva (proiectul msaas-demo; doar gateway pe 127.0.0.1:8080)

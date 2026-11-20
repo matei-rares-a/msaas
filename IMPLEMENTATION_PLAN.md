@@ -164,7 +164,7 @@ Metode care accelereaza integrarea:
 - **Trasabilitate automata**: tag-urile `REQ-...` sunt verificate de scriptul din P0.3 contra catalogului din sectiunea 1.
 - **Ordinea fazelor** construieste intai fundatia (date, evenimente, fixture-uri), astfel incat fiecare functionalitate ulterioara are doar logica ei de scris si testat.
 
-Scripturi (grupate dupa scop; `scripts/env` = masina, `scripts/infra` = containere locale, `scripts/verify` = verificari care si esueaza build-ul, `scripts/lib` = cod comun). Sunt scrise in Node (`.mjs`), deci ruleaza identic pe Windows, Linux si macOS; singura exceptie e bootstrap-ul, care instaleaza chiar Node. Secretele nu apar niciodata in scripturi: se citesc din `.env`.
+Scripturi (grupate dupa scop; `scripts/env` = masina, `scripts/infra` = containere locale, `scripts/verify` = verificari care si esueaza build-ul, `scripts/lib` = cod comun). Sunt scrise in Node (`.mjs`); bootstrap-ul si lansatoarele demo Windows sunt specifice platformei. Secretele nu apar niciodata in scripturi: se citesc din `.env`.
 
 | Script | Cand se ruleaza | Ce face |
 |---|---|---|
@@ -178,6 +178,8 @@ Scripturi (grupate dupa scop; `scripts/env` = masina, `scripts/infra` = containe
 | `node --test scripts/infra/e2e-stack.test.mjs` | la modificarea scriptului E2E si in CI | testul scriptului (override-ul generat, porturile, comenzile) |
 | `node scripts/infra/demo-stack.mjs --up` / `--seed` / `--down [--purge]` | cand vrei sa incerci platforma cu date, de mana | stiva compose in proiectul `msaas-demo` (doar gateway pe `127.0.0.1:8080`, portul din frontend), volume pastrate; `--seed` creeaza prin API conturi, organizatii, abonamente, invitatii, concedii, lunch (idempotent); ghidul e in `prerequisites.md` sectiunea 6 |
 | `node --test scripts/infra/demo-stack.test.mjs` | la modificarea scriptului demo si in CI | testul scriptului (doar gateway publicat, portul din frontend, date incap in planuri) |
+| `start.bat` / `stop.bat` (Windows; `scripts/infra/demo-launcher.mjs`) | pornirea si oprirea platformei demo | setup cu date demo si Angular in fereastra de pornire; inchiderea ferestrei lasa stiva pornita; stop opreste Angular lansat astfel si stiva demo, fara a sterge datele |
+| `node --test scripts/infra/demo-launcher.test.mjs` | la modificarea lansatoarelor si in CI Windows | testeaza oprirea izolata si oprirea ceruta in timpul setup-ului |
 | `node scripts/verify/check-traceability.mjs` | inainte de bifarea unui pas si in CI | fiecare REQ datorat are test; tag-urile necunoscute esueaza |
 | `node --test scripts/verify/readme-endpoints.test.mjs` | la modificarea README.md sau a API-ului si in CI | fiecare endpoint din README exista in snapshot-urile OpenAPI |
 | `node --test scripts/verify/check-traceability.test.mjs` | la modificarea scriptului de trasabilitate si in CI | testul scriptului de trasabilitate |
@@ -365,6 +367,7 @@ Valorile de mai jos nu sunt fixate in REQUIREMENTS.md; se folosesc ca implicite 
 
 | Pas | Data | Note |
 |---|---|---|
+| P12.3 (proces) | 2026-11-20 | Lansatoare Windows pentru pornirea demo si oprirea Angular + stiva demo cu date pastrate, deviere confirmata. Teste Windows izolate si demo: 10 trec; teste CI si deployment: 13 trec; trasabilitate OK. Portul 4200 ocupat este detectat. Nu s-au intrerupt containerele sau interfata deja pornite; inchiderea ferestrei si fluxul complet nu au fost verificate cap-coada. |
 | - | - | Plan creat; niciun pas inceput |
 | - | 2026-09-30 | Curatare workspace: eliminate documentele depasite, prototipurile `spring_base` si `svelte_base`, folderele goale din `api-gateway`, output-urile de build, cache-ul Angular si paginile Angular nefolosite |
 | P0.1 | 2026-09-30 | `pom.xml` parinte `msaas-parent` (Boot 3.2.5, Java 21, Spring Cloud 2023.0.1, versiuni jjwt/mapstruct/springdoc/pdfbox/archunit, surefire + failsafe) + Maven Wrapper 3.9.15; modul `test-support` schelet; toate modulele mostenesc parintele. Reparate erori preexistente de build: `flyway-database-postgresql` inexistent pentru Flyway 9, `CorrelationIdFilter` (gateway) si shadowing `log` in `NotificationService`. Sterse testele legacy necompilabile/stricate (auth, org, billing, notification). `mvnw verify` din radacina: BUILD SUCCESS (0 teste momentan) |
