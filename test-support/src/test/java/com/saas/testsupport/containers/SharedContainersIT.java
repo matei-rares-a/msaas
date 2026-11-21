@@ -18,8 +18,12 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Smoke test: every shared container starts once and Spring connects to it through @ServiceConnection. */
-@SpringBootTest(classes = SharedContainersIT.SmokeApp.class)
+/**
+ * Smoke test: every shared container starts once and Spring connects to it through @ServiceConnection. Flyway is off: it has nothing to
+ * migrate here, and on the Postgres shared by the other integration tests it refuses a `public` schema that they have left tables in, so
+ * this class passed or failed depending on the order the classes ran in (it failed in the CI, where that order differs from Windows).
+ */
+@SpringBootTest(classes = SharedContainersIT.SmokeApp.class, properties = "spring.flyway.enabled=false")
 class SharedContainersIT implements PostgresTestContainer, KafkaTestContainer, RabbitMqTestContainer, RedisTestContainer {
 
     @Autowired
